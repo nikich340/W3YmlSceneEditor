@@ -1,7 +1,11 @@
+#pragma once
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
 #include <QMainWindow>
+#include <QGraphicsScene>
+#include <YmlSceneManager.h>
+#include "GraphicsSectionItem.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -17,8 +21,12 @@ public:
 
 private:
     Ui::MainWindow *ui;
+    YmlSceneManager *ymlManager;
+    QGraphicsScene *gScene;
+    void resizeEvent(QResizeEvent* event);
 
 public slots:
-    void onClicked_QuitBar();
+    void onClicked_Quit();
+    void onClicked_Load();
 };
 #endif // MAINWINDOW_H
