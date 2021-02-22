@@ -14,9 +14,13 @@ class SocketSettingsForm : public QWidget
 public:
     explicit SocketSettingsForm(QWidget *parent = nullptr);
     ~SocketSettingsForm();
+    void setupMe(QStringList sectionsList);
 
-private:
     Ui::SocketSettingsForm *ui;
+
+public slots:
+    void onChoseAction(QString);
+    void onClickedCondCheck(bool);
 };
 
 #endif // SOCKETSETTINGSFORM_H

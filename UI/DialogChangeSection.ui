@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>889</width>
-    <height>497</height>
+    <width>966</width>
+    <height>403</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -33,71 +33,166 @@
     <number>2</number>
    </property>
    <item>
-    <widget class="QLabel" name="label">
-     <property name="font">
-      <font>
-       <pointsize>10</pointsize>
-      </font>
-     </property>
-     <property name="frameShape">
-      <enum>QFrame::Box</enum>
-     </property>
-     <property name="frameShadow">
-      <enum>QFrame::Plain</enum>
-     </property>
-     <property name="text">
-      <string>Section ends with:</string>
-     </property>
+    <widget class="QWidget" name="widget" native="true">
+     <layout class="QHBoxLayout" name="horizontalLayout_4">
+      <property name="spacing">
+       <number>10</number>
+      </property>
+      <property name="leftMargin">
+       <number>6</number>
+      </property>
+      <property name="topMargin">
+       <number>6</number>
+      </property>
+      <property name="rightMargin">
+       <number>6</number>
+      </property>
+      <property name="bottomMargin">
+       <number>6</number>
+      </property>
+      <item>
+       <widget class="QLabel" name="upperLabel">
+        <property name="font">
+         <font>
+          <pointsize>10</pointsize>
+          <weight>75</weight>
+          <bold>true</bold>
+         </font>
+        </property>
+        <property name="frameShape">
+         <enum>QFrame::Box</enum>
+        </property>
+        <property name="text">
+         <string>Section name:</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLineEdit" name="lineName">
+        <property name="font">
+         <font>
+          <pointsize>10</pointsize>
+         </font>
+        </property>
+        <property name="inputMask">
+         <string/>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+        <property name="dragEnabled">
+         <bool>true</bool>
+        </property>
+        <property name="placeholderText">
+         <string>section_story_main</string>
+        </property>
+        <property name="clearButtonEnabled">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+     </layout>
     </widget>
    </item>
    <item>
-    <widget class="QWidget" name="typeButtons" native="true">
+    <widget class="QWidget" name="typeWidget" native="true">
      <layout class="QHBoxLayout" name="horizontalLayout">
       <property name="spacing">
-       <number>2</number>
+       <number>6</number>
       </property>
       <property name="leftMargin">
-       <number>2</number>
+       <number>6</number>
       </property>
       <property name="topMargin">
-       <number>2</number>
+       <number>6</number>
       </property>
       <property name="rightMargin">
-       <number>2</number>
+       <number>6</number>
       </property>
       <property name="bottomMargin">
-       <number>2</number>
+       <number>6</number>
       </property>
       <item>
-       <widget class="QRadioButton" name="radioButton_5">
+       <widget class="QLabel" name="label">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="font">
+         <font>
+          <pointsize>10</pointsize>
+          <weight>75</weight>
+          <bold>true</bold>
+         </font>
+        </property>
+        <property name="frameShape">
+         <enum>QFrame::Box</enum>
+        </property>
         <property name="text">
-         <string>Usual NEXT</string>
+         <string>Section type:</string>
         </property>
        </widget>
       </item>
       <item>
-       <widget class="QRadioButton" name="radioButton">
+       <widget class="QRadioButton" name="nextButton">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
         <property name="text">
-         <string>Conditional</string>
+         <string>Start/Usual (+conditional)</string>
         </property>
        </widget>
       </item>
       <item>
-       <widget class="QRadioButton" name="radioButton_2">
+       <spacer name="horizontalSpacer">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeType">
+         <enum>QSizePolicy::Fixed</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>30</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item>
+       <widget class="QRadioButton" name="choiceButton">
+        <property name="layoutDirection">
+         <enum>Qt::LeftToRight</enum>
+        </property>
         <property name="text">
          <string>Choice</string>
         </property>
        </widget>
       </item>
       <item>
-       <widget class="QRadioButton" name="radioButton_3">
+       <widget class="QRadioButton" name="scriptButton">
+        <property name="text">
+         <string>Script</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QRadioButton" name="randomButton">
         <property name="text">
          <string>Randomize</string>
         </property>
        </widget>
       </item>
       <item>
-       <widget class="QRadioButton" name="radioButton_4">
+       <widget class="QRadioButton" name="exitButton">
+        <property name="layoutDirection">
+         <enum>Qt::LeftToRight</enum>
+        </property>
         <property name="text">
          <string>Exit</string>
         </property>
@@ -107,7 +202,7 @@
     </widget>
    </item>
    <item>
-    <widget class="QWidget" name="widgetLabels" native="true">
+    <widget class="QWidget" name="helpWidget" native="true">
      <property name="font">
       <font>
        <family>PT Sans</family>
@@ -132,9 +227,31 @@
        <number>2</number>
       </property>
       <item>
-       <widget class="QLabel" name="label_3">
+       <widget class="QLabel" name="helpLabel2">
+        <property name="font">
+         <font>
+          <family>Segoe Print</family>
+          <pointsize>9</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>[next section]</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignCenter</set>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="helpLabel1">
         <property name="enabled">
          <bool>true</bool>
+        </property>
+        <property name="font">
+         <font>
+          <family>Segoe Print</family>
+          <pointsize>9</pointsize>
+         </font>
         </property>
         <property name="text">
          <string>[choice line]</string>
@@ -145,22 +262,20 @@
        </widget>
       </item>
       <item>
-       <widget class="QLabel" name="label_5">
-        <property name="text">
-         <string>[next section]</string>
+       <widget class="QLabel" name="helpLabel3">
+        <property name="font">
+         <font>
+          <family>Segoe Print</family>
+          <pointsize>9</pointsize>
+          <weight>50</weight>
+          <bold>false</bold>
+         </font>
         </property>
-        <property name="alignment">
-         <set>Qt::AlignCenter</set>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QLabel" name="label_4">
         <property name="text">
          <string>[extra options]</string>
         </property>
         <property name="alignment">
-         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+         <set>Qt::AlignCenter</set>
         </property>
        </widget>
       </item>
@@ -168,28 +283,101 @@
     </widget>
    </item>
    <item>
-    <widget class="SocketSettingsForm" name="widget_1" native="true"/>
+    <widget class="SocketSettingsForm" name="choice_1" native="true"/>
    </item>
    <item>
-    <widget class="SocketSettingsForm" name="widget_2" native="true"/>
+    <widget class="SocketSettingsForm" name="choice_2" native="true"/>
    </item>
    <item>
-    <widget class="SocketSettingsForm" name="widget_3" native="true"/>
+    <widget class="SocketSettingsForm" name="choice_3" native="true"/>
    </item>
    <item>
-    <widget class="SocketSettingsForm" name="widget_4" native="true"/>
+    <widget class="SocketSettingsForm" name="choice_4" native="true"/>
    </item>
    <item>
-    <widget class="SocketSettingsForm" name="widget_5" native="true"/>
+    <widget class="SocketSettingsForm" name="choice_5" native="true"/>
    </item>
    <item>
-    <widget class="SocketSettingsForm" name="widget_6" native="true"/>
+    <widget class="SocketSettingsForm" name="choice_6" native="true"/>
    </item>
    <item>
-    <widget class="SocketSettingsForm" name="widge_7" native="true"/>
+    <widget class="SocketSettingsForm" name="choice_7" native="true"/>
    </item>
    <item>
-    <widget class="Line" name="line_2">
+    <widget class="QWidget" name="timeLimitWidget" native="true">
+     <layout class="QHBoxLayout" name="horizontalLayout_3">
+      <item>
+       <widget class="QCheckBox" name="timeLimitCheck">
+        <property name="font">
+         <font>
+          <weight>75</weight>
+          <italic>false</italic>
+          <bold>true</bold>
+         </font>
+        </property>
+        <property name="autoFillBackground">
+         <bool>false</bool>
+        </property>
+        <property name="text">
+         <string>TIME_LIMIT</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QSlider" name="timeLimitSlider">
+        <property name="minimum">
+         <number>1</number>
+        </property>
+        <property name="maximum">
+         <number>100</number>
+        </property>
+        <property name="value">
+         <number>50</number>
+        </property>
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="invertedControls">
+         <bool>false</bool>
+        </property>
+        <property name="tickPosition">
+         <enum>QSlider::TicksBelow</enum>
+        </property>
+        <property name="tickInterval">
+         <number>10</number>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QDoubleSpinBox" name="timeLimitSpin">
+        <property name="prefix">
+         <string/>
+        </property>
+        <property name="suffix">
+         <string>s</string>
+        </property>
+        <property name="decimals">
+         <number>1</number>
+        </property>
+        <property name="minimum">
+         <double>0.100000000000000</double>
+        </property>
+        <property name="maximum">
+         <double>100.000000000000000</double>
+        </property>
+        <property name="singleStep">
+         <double>0.100000000000000</double>
+        </property>
+        <property name="value">
+         <double>5.000000000000000</double>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="Line" name="bottonSeparator">
      <property name="orientation">
       <enum>Qt::Horizontal</enum>
      </property>
@@ -218,6 +406,15 @@
    <container>1</container>
   </customwidget>
  </customwidgets>
+ <tabstops>
+  <tabstop>nextButton</tabstop>
+  <tabstop>scriptButton</tabstop>
+  <tabstop>randomButton</tabstop>
+  <tabstop>exitButton</tabstop>
+  <tabstop>timeLimitCheck</tabstop>
+  <tabstop>timeLimitSlider</tabstop>
+  <tabstop>timeLimitSpin</tabstop>
+ </tabstops>
  <resources/>
  <connections>
   <connection>
@@ -227,8 +424,8 @@
    <slot>accept()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>248</x>
-     <y>254</y>
+     <x>253</x>
+     <y>400</y>
     </hint>
     <hint type="destinationlabel">
      <x>157</x>
@@ -243,8 +440,8 @@
    <slot>reject()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>316</x>
-     <y>260</y>
+     <x>321</x>
+     <y>400</y>
     </hint>
     <hint type="destinationlabel">
      <x>286</x>
@@ -252,5 +449,161 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>timeLimitSpin</sender>
+   <signal>valueChanged(double)</signal>
+   <receiver>DialogChangeSection</receiver>
+   <slot>onTimeLimitChanged(double)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>899</x>
+     <y>331</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>964</x>
+     <y>361</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>timeLimitSlider</sender>
+   <signal>valueChanged(int)</signal>
+   <receiver>DialogChangeSection</receiver>
+   <slot>onTimeLimitChanged(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>601</x>
+     <y>333</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>963</x>
+     <y>361</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>timeLimitCheck</sender>
+   <signal>clicked(bool)</signal>
+   <receiver>DialogChangeSection</receiver>
+   <slot>onTimeLimitClicked(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>62</x>
+     <y>330</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>8</x>
+     <y>361</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>nextButton</sender>
+   <signal>clicked()</signal>
+   <receiver>DialogChangeSection</receiver>
+   <slot>onClicked_Next()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>210</x>
+     <y>71</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>2</x>
+     <y>90</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>scriptButton</sender>
+   <signal>clicked()</signal>
+   <receiver>DialogChangeSection</receiver>
+   <slot>onClicked_Script()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>566</x>
+     <y>68</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>5</x>
+     <y>135</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>choiceButton</sender>
+   <signal>clicked()</signal>
+   <receiver>DialogChangeSection</receiver>
+   <slot>onClicked_Choice()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>448</x>
+     <y>76</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>2</x>
+     <y>177</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>randomButton</sender>
+   <signal>clicked()</signal>
+   <receiver>DialogChangeSection</receiver>
+   <slot>onClicked_Random()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>702</x>
+     <y>68</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>4</x>
+     <y>259</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>exitButton</sender>
+   <signal>clicked()</signal>
+   <receiver>DialogChangeSection</receiver>
+   <slot>onClicked_Exit()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>829</x>
+     <y>76</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>0</x>
+     <y>318</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>lineName</sender>
+   <signal>textChanged(QString)</signal>
+   <receiver>DialogChangeSection</receiver>
+   <slot>onSectionNameChanged(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>271</x>
+     <y>27</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>303</x>
+     <y>49</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
+ <slots>
+  <slot>onTimeLimitChanged(double)</slot>
+  <slot>onTimeLimitChanged(int)</slot>
+  <slot>onTimeLimitClicked(bool)</slot>
+  <slot>onClicked_Next()</slot>
+  <slot>onClicked_Script()</slot>
+  <slot>onClicked_Choice()</slot>
+  <slot>onClicked_Start()</slot>
+  <slot>onClicked_Random()</slot>
+  <slot>onClicked_Exit()</slot>
+  <slot>onSectionNameChanged(QString)</slot>
+ </slots>
 </ui>

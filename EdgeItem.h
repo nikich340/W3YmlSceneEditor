@@ -21,7 +21,6 @@ public:
     void destroy();
 
 private:
-    QGraphicsSimpleTextItem* text;
     QString sectionNameStart, sectionNameEnd;
     QPainterPath path;
     EdgeState currentState;
