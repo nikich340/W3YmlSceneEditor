@@ -5,10 +5,23 @@
 SocketItem::SocketItem(QGraphicsItem *parent) : QGraphicsEllipseItem(parent)
 {
     setAcceptHoverEvents(true);
+    setAcceptHoverEvents(true);
+    textLabel = new QGraphicsSimpleTextItem;
+    textLabel->setParentItem(this);
+    textLabel->hide(); // disable until hover/press
+    textLabel->setBrush(QBrush(QColor(255, 0, 102)));
+    textLabel->setFont( QFont("Arial", 8) );
+    textLabel->setPos(WIDTH / 8, 0);
 }
 SocketItem::SocketItem(qreal x, qreal y, qreal width, qreal height, QGraphicsItem *parent) : QGraphicsEllipseItem(x, y, width, height, parent)
 {
-    //setFlags(QGraphicsItem::ItemIsMovable);
+    setAcceptHoverEvents(true);
+    textLabel = new QGraphicsSimpleTextItem;
+    textLabel->setParentItem(this);
+    textLabel->hide(); // disable until hover/press
+    textLabel->setBrush(QBrush(QColor(255, 0, 102)));
+    textLabel->setFont( QFont("Arial", 8) );
+    textLabel->setPos(WIDTH / 10, 0);
 }
 SocketItem::~SocketItem() {
     /*if ( !isInputSocket ) {
@@ -23,10 +36,17 @@ void SocketItem::deleteAllEdges() {
     edges.clear();
 }
 void SocketItem::redrawAllEdges() {
-    qDebug() << "redraw edges: " << edges.size();
     for (int i = 0; i < edges.size(); ++i) {
         edges[i]->draw();
     }
+}
+
+void SocketItem::setLabel(QString text) {
+    textLabel->setText(text);
+}
+
+bool SocketItem::hasEdges() {
+    return !edges.isEmpty();
 }
 
 void SocketItem::addEdge(EdgeItem *newEdge) {
@@ -76,45 +96,56 @@ void SocketItem::mouseMoveEvent(QGraphicsSceneMouseEvent *event) {
 void SocketItem::mouseReleaseEvent(QGraphicsSceneMouseEvent *event) {
     qDebug() << "Released! " << event->button();
     if (event->button() == Qt::LeftButton && (inMove || inCreate)) {
+        EdgeItem* edge = edges.last();
+        SocketItem* socketStart = static_cast<SocketItem*>( edge->socketStart );
+        socketStart->textLabel->hide();
+
+        QPointF dropPos = event->scenePos();
+        QGraphicsItem* dropItem = scene()->itemAt(dropPos, scene()->views().first()->transform());
+
         if (inMove) {
             inMove = false;
-            QPointF dropPos = event->scenePos();
-            qDebug() << "dropPos 1: " << dropPos;
 
-            // VERY dirty :D
-            QGraphicsItem* dropItem = scene()->itemAt(dropPos, scene()->views().first()->transform());
-            if (dropItem != nullptr && dropItem->data(0).toString() == "inputSocket") {
-                if ( dropItem != this ) {
+            QString key = dropItem->data(0).toString();
+            if (dropItem != nullptr && (key == "inputSocket" || key == "section")) {
+                GraphicsSectionItem* oldSection = qgraphicsitem_cast<GraphicsSectionItem*>( edge->socketEnd->parentItem() );
+                GraphicsSectionItem* startSection = qgraphicsitem_cast<GraphicsSectionItem*>( socketStart->parentItem() );
+                GraphicsSectionItem* nextSection = nullptr;
+                if (key == "inputSocket")
+                    nextSection = qgraphicsitem_cast<GraphicsSectionItem*>( dropItem->parentItem() );
+                else
+                    nextSection = qgraphicsitem_cast<GraphicsSectionItem*>( dropItem );
+
+                if ( (key == "inputSocket" && dropItem != this) ||
+                     (key == "section" && oldSection != nextSection) ) {
                     qDebug() << "Dropped at SOCKET!";
-                    EdgeItem* edge = edges.back();
-                    GraphicsSectionItem* curSection = qgraphicsitem_cast<GraphicsSectionItem*>( edge->socketStart->parentItem() );
-                    GraphicsSectionItem* nextSection = qgraphicsitem_cast<GraphicsSectionItem*>( dropItem->parentItem() );
                     edges.pop_back();
-                    curSection->addOutputEdge(nextSection, edge);
+                    oldSection->removeInputEdge(edge);
+                    startSection->addOutputEdge(nextSection, false, edge);
                 } else {
                     edges.last()->setState(EdgeItem::normal);
                     edges.last()->draw();
                 }
             } else {
-                GraphicsSectionItem* curSection = qgraphicsitem_cast<GraphicsSectionItem*>( edges.last()->socketStart->parentItem() );
-                if ( !curSection->removeOutputEdge(edges.last()) ) {
+                GraphicsSectionItem* startSection = qgraphicsitem_cast<GraphicsSectionItem*>( socketStart->parentItem() );
+                if ( !startSection->removeOutputEdge(edges.last()) ) {
                     qDebug() << "Error while removing edge!";
                 }
             }
         } else if (inCreate) {
             inCreate = false;
-            QPointF dropPos = event->scenePos();
-            qDebug() << "dropPos 2: " << dropPos;
 
-            // VERY dirty :D
-            QGraphicsItem* dropItem = scene()->itemAt(dropPos, scene()->views().first()->transform());
-            if (dropItem != nullptr && dropItem != this && dropItem->data(0).toString() == "inputSocket") {
+            QString key = dropItem->data(0).toString();
+            if (dropItem != nullptr && (key == "inputSocket" || key == "section")) {
                 qDebug() << "Dropped at SOCKET!";
-                EdgeItem* edge = edges.last();
 
-                GraphicsSectionItem* curSection = qgraphicsitem_cast<GraphicsSectionItem*>( parentItem() );
-                GraphicsSectionItem* nextSection = qgraphicsitem_cast<GraphicsSectionItem*>( dropItem->parentItem() );
-                curSection->addOutputEdge(nextSection, edge);
+                GraphicsSectionItem* startSection = qgraphicsitem_cast<GraphicsSectionItem*>( parentItem() );
+                GraphicsSectionItem* nextSection = nullptr;
+                if (key == "inputSocket")
+                    nextSection = qgraphicsitem_cast<GraphicsSectionItem*>( dropItem->parentItem() );
+                else
+                    nextSection = qgraphicsitem_cast<GraphicsSectionItem*>( dropItem );
+                startSection->addOutputEdge(nextSection, false, edge);
             } else {
                 // nobody more knows about temp edge
                 scene()->removeItem( edges.last() );
@@ -129,6 +160,24 @@ void SocketItem::mouseReleaseEvent(QGraphicsSceneMouseEvent *event) {
 }
 
 void SocketItem::hoverEnterEvent(QGraphicsSceneHoverEvent *event) {
-    qDebug() << "HOVER!";
+    if (isInputSocket) {
+        for (auto it: edges) {
+            SocketItem* begin = static_cast<SocketItem*>( it->socketStart );
+            begin->textLabel->show();
+        }
+    } else {
+        textLabel->show();
+    }
     QGraphicsEllipseItem::hoverEnterEvent(event);
+}
+void SocketItem::hoverLeaveEvent(QGraphicsSceneHoverEvent *event) {
+    if (isInputSocket) {
+        for (auto it: edges) {
+            SocketItem* begin = static_cast<SocketItem*>( it->socketStart );
+            begin->textLabel->hide();
+        }
+    } else {
+        textLabel->hide();
+    }
+    QGraphicsEllipseItem::hoverLeaveEvent(event);
 }

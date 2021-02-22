@@ -12,23 +12,33 @@ private:
     sectionLink* sLink; // PUSH UPDATE TO YML ON EVERY CHANGE!
     bool hasCleanOutput = false;
 public:
+    enum SectionState { normal, incomplete };
+    SectionState state;
+
+    void updateState();
     GraphicsSectionItem(QGraphicsItem *parent = nullptr);
     void setSectionLink(sectionLink* link);
+    void setYmlManager(YmlSceneManager* newManager);
     void setDefaults();
     void setLabel(QString text);
     SocketItem* addCleanOutput();
     void addInputEdge(EdgeItem* edge); // auto-create PathItem between sections
     bool isAllowedNewOutput();
-    void fillCleanOutputs();
+    void fillCleanSockets();
+    void createInputSocket();
     bool removeInputEdge(EdgeItem* edge);
     bool removeOutputEdge(EdgeItem* edge);
-    bool addOutputEdge(GraphicsSectionItem *next, EdgeItem* edge = nullptr);
+    bool addOutputEdge(GraphicsSectionItem *next, bool skipUpdates = true, EdgeItem* edge = nullptr);
     void updateOutputs();     // repos outputs
     void updateOutputEdges(); // repaint EdgeItems
     void updateInputEdges(); // repaint EdgeItems
 
     enum { Type = QGraphicsRectItem::UserType + 1 };
     int type() const override { return Type; }
+
+public slots:
+    void removeMe();
+    void changeMe();
 
 private:
     QGraphicsTextItem* label = nullptr;
@@ -41,6 +51,7 @@ private:
 protected:
     void mouseMoveEvent(QGraphicsSceneMouseEvent *event) override;
     void mouseDoubleClickEvent(QGraphicsSceneMouseEvent *event) override;
+    void contextMenuEvent(QGraphicsSceneContextMenuEvent *event) override;
 };
 
 #endif // GRAPHICSSECTIONITEM_H

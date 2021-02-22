@@ -12,9 +12,13 @@ private:
     bool inCreate = false;
 
 public:
+    QGraphicsSimpleTextItem* textLabel;
+
     bool isInputSocket = false;
+    bool hasEdges();
     void addEdge(EdgeItem* newEdge);
     bool removeEdge(EdgeItem* edge);
+    void setLabel(QString text);
     void redrawAllEdges();
     void deleteAllEdges();
     SocketItem(QGraphicsItem *parent = nullptr);
@@ -28,6 +32,7 @@ protected:
     void mouseMoveEvent(QGraphicsSceneMouseEvent *event) override;
     void mouseReleaseEvent(QGraphicsSceneMouseEvent *event) override;
     void hoverEnterEvent(QGraphicsSceneHoverEvent *event) override;
+    void hoverLeaveEvent(QGraphicsSceneHoverEvent *event) override;
 };
 
 #endif // GRAPHICSSOCKETITEM_H
