@@ -26,7 +26,10 @@ private:
     void resizeEvent(QResizeEvent* event);
 
 public slots:
+    void print_info(QString s);
+    void print_error(QString s);
     void onClicked_Quit();
     void onClicked_Load();
+    void onClicked_Save();
 };
 #endif // MAINWINDOW_H

@@ -29,6 +29,7 @@ HEADERS += \
     UI/DialogChangeSection.h \
     UI/SocketSettingsForm.h \
     YmlSceneManager.h \
+    YmlStructs.h \
     constants.h \
     yaml-cpp/include/yaml-cpp/anchor.h \
     yaml-cpp/include/yaml-cpp/binary.h \

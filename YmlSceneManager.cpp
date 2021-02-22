@@ -15,7 +15,8 @@ namespace YAML {
     template<>
     struct convert<QString> {
       static Node encode(const QString& rhs) {
-        return Node(rhs);
+        Node node(rhs.toStdString());
+        return node;
       }
 
       static bool decode(const Node& node, QString& rhs) {
@@ -33,6 +34,8 @@ namespace YAML {
             node.push_back(rhs.condFact);
             node.push_back(rhs.condOperand);
             node.push_back(rhs.condValue);
+            node[0].SetTag("!");
+            node[1].SetTag("!");
             return node;
         }
 
@@ -44,7 +47,16 @@ namespace YAML {
           rhs.condValue = node[2].as<int>();
           return true;
         }
-       };
+      };
+      Emitter& operator <<(Emitter& out, const QString& s) {
+          out << s.toStdString();
+          return out;
+      }
+      Emitter& operator <<(Emitter& out, const ymlCond& cond) {
+          out << Flow;
+          out << BeginSeq << cond.condFact << cond.condOperand << cond.condValue << EndSeq;
+          return out;
+      }
 }
 
 YmlSceneManager::YmlSceneManager(QObject *parent) : QObject(parent)
@@ -61,6 +73,12 @@ void debugNode(YAML::Node n) {
       case YAML::NodeType::Undefined: qDebug() << "Undefined"; break;
     }
 }
+void YmlSceneManager::error(QString s) {
+    emit print_error(s);
+}
+void YmlSceneManager::info(QString s) {
+    emit print_info(s);
+}
 
 bool YmlSceneManager::loadYmlFile(QString path) {
     filePath = path;
@@ -70,12 +88,12 @@ bool YmlSceneManager::loadYmlFile(QString path) {
     try {
         root.reset();
         root = YAML::LoadFile(path.toStdString());
-        emit debugInfo("Yml loaded: OK! " + path);
+        error("Yml loaded: OK! " + path);
     } catch (const YAML::BadFile& e) {
-        emit debugInfo(to_qstr("Error: ") + e.what());
+        error(to_qstr("Error: ") + e.what());
         return false;
     } catch (const YAML::ParserException& e) {
-        emit debugInfo(to_qstr("Error: ") + e.what());
+        error(to_qstr("Error: ") + e.what());
         return false;
     }
 
@@ -91,10 +109,25 @@ bool YmlSceneManager::loadYmlFile(QString path) {
         return false;
     }
 
-    // dump back to yml for check
-    std::ofstream fout("D:/QT_projects/build-YmlSceneEditor-Desktop_Qt_5_12_6_MinGW_64_bit-Debug/test_write.yml");
-    fout << root;
+    return true;
+}
+bool YmlSceneManager::saveYmlFile() {
+    QFile ymlFile(filePath);
 
+    if (ymlFile.exists())
+        ymlFile.copy(filePath + ".backup");
+    else
+        return false;
+    ymlFile.close();
+
+    std::ofstream out(filePath.toStdString() + ".yml");
+    out.clear();
+    if (out.good())
+        out << root;
+    else
+        return false;
+
+    out.close();
     return true;
 }
 
@@ -107,20 +140,21 @@ bool YmlSceneManager::loadSectionsInfo() {
                // section
             if ( sectionName.startsWith("section_") || sectionName.startsWith("script_") ) {
                 if (sectionGraph.contains(sectionName)) {
-                    emit debugInfo("Error: duplicated section name: " + sectionName);
+                    error("Error: duplicated section name: " + sectionName);
                     return false;
                 }
 
                 // analyze for linked sections
                 YAML::Node sectionNode(it->YY);
                 if (!sectionNode.IsSequence()) {
-                    emit debugInfo("Error: section [" + sectionName + "] not a sequence");
+                    error("Error: section [" + sectionName + "] not a sequence");
                     return false;
                 }
 
                   // CHECK: only last element?
                 YAML::Node lastSectionNode(sectionNode[sectionNode.size() - 1]);
                 sectionLink* tmpLink = new sectionLink;
+                tmpLink->sectionName = sectionName;
 
                    // NEXT, (RANDOM, CHOICE)
                 if (lastSectionNode.IsMap()) {
@@ -128,7 +162,7 @@ bool YmlSceneManager::loadSectionsInfo() {
                     if (lastSectionCue == "NEXT") {
                             // simple NEXT
                         if (lastSectionNode.begin()->YY.IsScalar()) {
-                            tmpLink->names.push_back( lastSectionNode.begin()->YY.as<QString>() );
+                            tmpLink->addChoice( lastSectionNode.begin()->YY.as<QString>() );
                             // advanced NEXT with condition
                         } else if (lastSectionNode.begin()->YY.IsMap()
                                    && lastSectionNode.begin()->YY["condition"]
@@ -137,11 +171,10 @@ bool YmlSceneManager::loadSectionsInfo() {
                                    && lastSectionNode.begin()->YY["on_true"]
                                    && lastSectionNode.begin()->YY["on_false"]) {
                             tmpLink->isCondition = true;
-                            tmpLink->names.push_back( lastSectionNode.begin()->YY["on_true"].as<QString>() );
-                            tmpLink->names.push_back( lastSectionNode.begin()->YY["on_false"].as<QString>() );
-                            tmpLink->conditions.push_back( lastSectionNode.begin()->YY["condition"].as<ymlCond>() );
+                            tmpLink->addChoice( lastSectionNode.begin()->YY["on_true"].as<QString>(), QString(), choiceAction(), lastSectionNode.begin()->YY["condition"].as<ymlCond>() );
+                            tmpLink->addChoice( lastSectionNode.begin()->YY["on_false"].as<QString>() );
                         } else {
-                            emit debugInfo("Error: [" + sectionName + "]: incorrect last element");
+                            error("Error: [" + sectionName + "]: incorrect last element");
                             return false;
                         }
                     } else if (lastSectionCue == "CHOICE"
@@ -152,47 +185,49 @@ bool YmlSceneManager::loadSectionsInfo() {
                         for (auto jt = lastSectionNode.begin()->YY.begin(); jt != lastSectionNode.begin()->YY.end(); ++jt) {
                             YAML::Node tmpNode = *jt;
                             if (tmpNode.IsSequence()) {
-                                tmpLink->choiceLines.push_back( tmpNode[0].as<QString>() );
-                                tmpLink->names.push_back( tmpNode[1].as<QString>() );
-
-                                if ( tmpNode.size() > 2 ) {
-                                    tmpLink->actionTypes.push_back( tmpNode[2].as<QString>() );
-                                } else {
-                                    tmpLink->actionTypes.push_back( QString() );
+                                choiceAction act = choiceAction();
+                                if ( tmpNode["choice"].size() > 2 ) {
+                                    act.action = tmpNode["choice"][2].as<QString>();
+                                    if ( tmpNode["choice"].size() > 3 ) {
+                                        act.amount = tmpNode["choice"][3].as<int>();
+                                        if ( tmpNode["choice"].size() > 4 ) {
+                                            act.grantExp = tmpNode["choice"][4].as<bool>();
+                                        }
+                                    }
                                 }
+
+                                tmpLink->addChoice( tmpNode[1].as<QString>(), tmpNode[0].as<QString>(), act );
                             } else if (tmpNode.IsMap()) {
                                 if ( tmpNode["choice"] ) {
-                                    tmpLink->choiceLines.push_back( tmpNode["choice"][0].as<QString>() );
-                                    tmpLink->names.push_back( tmpNode["choice"][1].as<QString>() );
-
+                                    bool emphasize = false, single_use = false;
+                                    ymlCond condition;
+                                    choiceAction act = choiceAction();
                                     if ( tmpNode["choice"].size() > 2 ) {
-                                        tmpLink->actionTypes.push_back( tmpNode["choice"][2].as<QString>() );
-                                    } else {
-                                        tmpLink->actionTypes.push_back( QString() );
+                                        act.action = tmpNode["choice"][2].as<QString>();
+                                        if ( tmpNode["choice"].size() > 3 ) {
+                                            act.amount = tmpNode["choice"][3].as<int>();
+                                            if ( tmpNode["choice"].size() > 4 ) {
+                                                act.grantExp = tmpNode["choice"][4].as<bool>();
+                                            }
+                                        }
                                     }
-
                                     if ( tmpNode["emphasize"] ) {
-                                        tmpLink->emphasize.push_back( tmpNode["emphasize"].as<bool>() );
-                                    } else {
-                                        tmpLink->emphasize.push_back( false );
+                                        emphasize = tmpNode["emphasize"].as<bool>();
                                     }
-
                                     if ( tmpNode["single_use"] ) {
-                                        tmpLink->emphasize.push_back( tmpNode["single_use"].as<bool>() );
-                                    } else {
-                                        tmpLink->emphasize.push_back( false );
+                                        single_use = tmpNode["single_use"].as<bool>();
+                                    }
+                                    if ( tmpNode["condition"] ) {
+                                        condition = tmpNode["condition"].as<ymlCond>();
                                     }
 
-                                    if ( tmpNode["condition"] ) {
-                                        tmpLink->conditions.push_back( tmpNode["condition"].as<ymlCond>() );
-                                    } else {
-                                        tmpLink->conditions.push_back( ymlCond() );
-                                    }
+                                    tmpLink->addChoice( tmpNode["choice"][1].as<QString>(), tmpNode["choice"][0].as<QString>(),
+                                                        act, condition, single_use, emphasize );
                                 } else if ( tmpNode["TIME_LIMIT"] ) {
                                     tmpLink->timeLimit = tmpNode["TIME_LIMIT"].as<float>();
                                 }
                             } else {
-                                emit debugInfo("Error: [" + sectionName + "]: incorrect choices syntax");
+                                error("Error: [" + sectionName + "]: incorrect choices syntax");
                             }
                             /*if (!jt->YY["choice"] || jt->YY["choice"].size() < 2) {
                                 emit debugInfo("Error: [" + sectionName + "]: incorrect choice element");
@@ -208,9 +243,9 @@ bool YmlSceneManager::loadSectionsInfo() {
                         for (auto jt = lastSectionNode.begin()->YY.begin(); jt != lastSectionNode.begin()->YY.end(); ++jt) {
                             YAML::Node tmpNode = *jt;
                             if (tmpNode.IsScalar()) {
-                                tmpLink->names.push_back(tmpNode.as<QString>());
+                                tmpLink->addChoice( tmpNode.as<QString>() );
                             } else {
-                                emit debugInfo("Error: [" + sectionName + "]: incorrect RANDOM syntax");
+                                error("Error: [" + sectionName + "]: incorrect RANDOM syntax");
                                 return false;
                             }
                         }
@@ -230,24 +265,31 @@ bool YmlSceneManager::loadSectionsInfo() {
                     for (auto jt = sectionNode.begin()->YY.begin(); jt != sectionNode.begin()->YY.end(); ++jt) {
                         YAML::Node tmpNode = *jt;
                         if (tmpNode.IsScalar()) {
-                            tmpLink->names.push_back(tmpNode.as<QString>());
+                            tmpLink->addChoice( tmpNode.as<QString>() );
                         } else {
-                            emit debugInfo("Error: [" + sectionName + "]: incorrect randomizer syntax");
+                            error("Error: [" + sectionName + "]: incorrect randomizer syntax");
                             return false;
                         }
                     }
                 }
 
-                // all is fine, add to graph
-                sectionGraph.insert(sectionName, tmpLink);
+                if ( sectionName.startsWith("script_") ) {
+                    tmpLink->isScript = true;
+                }
+
                 if ( sectionName.startsWith("section_start") ) {
                     startSections.push_back( sectionName );
+                    tmpLink->isStart = true;
                 }
+
+                // all is fine, add to graph
+                sectionNames.append(sectionName);
+                sectionGraph.insert(sectionName, tmpLink);
                 qDebug() << "ADD: " << sectionName;
             }
         }
     } else {
-        emit debugInfo("Error: no dialogscript sections found!");
+        error("Error: no dialogscript sections found!");
         return false;
     }
 
@@ -285,7 +327,8 @@ bool YmlSceneManager::drawSectionsGraph(QGraphicsScene* gScene) {
 
     // fill sockets
     for (auto it : itemBySection) {
-        it->fillCleanOutputs();
+        it->fillCleanSockets();
+        it->updateState();
     }
     return true;
 
@@ -305,6 +348,7 @@ bool YmlSceneManager::dfsPrepareGraph(QString sectionName, int depth) {
     GraphicsSectionItem* newSect = new GraphicsSectionItem;
     newSect->setLabel(sectionName);
     newSect->setSectionLink(getSectionLink(sectionName));
+    newSect->setYmlManager(this);
     pScene->addItem( newSect );
     itemBySection[sectionName] = newSect;
 
@@ -334,19 +378,104 @@ bool YmlSceneManager::dfsDrawGraph(QString sectionName) {
         if ( !dfsDrawGraph(next) ) {
             return false;
         }
+        //qDebug() << "Dfs draw graph: [" << sectionName << "]->[" << next << "]";
         if ( !pSect->addOutputEdge(itemBySection[next]) ) {
-            // FAILED to add new socket, incorrect yml!
+            qDebug() << "FAILED to add new socket, incorrect yml!";
             return false;
         }
     }
     return true;
 }
 
+void YmlSceneManager::updateSectionLink(QString sectionName) {
+    sectionLink* link = sectionGraph[sectionName];
+    if (root["dialogscript"][sectionName]) {
+        YAML::Node sNode = root["dialogscript"][sectionName];
+        YAML::Node sNode2;
+        if ( link->isExit ) {
+            // simple EXIT scalar
+            sNode2 = "EXIT";
+        } else if ( link->isRandomizer ) {
+            YAML::Node tempSeq;
+            for (auto s : link->names) {
+                tempSeq.push_back(s);
+            }
+            sNode2["RANDOM"] = tempSeq;
+        } else if ( link->isChoice ) {
+            YAML::Node tempSeq;
+            YAML::Node tempMap;
+            for (int i = 0; i < link->names.size(); ++i) {
+                if (link->names[i] == "NOT SET" || link->names[i].isEmpty())
+                    continue;
+                tempMap.SetStyle(YAML::EmitterStyle::Block);
+                tempMap["choice"].SetStyle(YAML::EmitterStyle::Flow);
 
+                // dialog line
+                tempMap["choice"].push_back( link->choiceLines[i] );
+                // next section name
+                tempMap["choice"].push_back( link->names[i] );
+                // add action values
+                if ( !link->choiceActions[i].action.isEmpty() ) {
+                    tempMap["choice"].push_back( link->choiceActions[i].action );
+                    if ( link->choiceActions[i].amount != -1 ) {
+                        tempMap["choice"].push_back( link->choiceActions[i].amount );
+                        if ( link->choiceActions[i].grantExp ) {
+                            tempMap["choice"].push_back( true );
+                        }
+                    }
+                }
+                // add conition block
+                if ( !link->conditions[i].condFact.isEmpty() ) {
+                    tempMap["condition"] = link->conditions[i];
+                    tempMap["condition"].SetStyle(YAML::EmitterStyle::Flow);
+                }
+                tempMap["choice"][0].SetTag("!"); // hack to add quotes
+                tempMap["choice"][1].SetTag("!"); // hack to add quotes
+                // single_use block
+                if ( link->single_use[i] )
+                    tempMap["single_use"] = true;
+                // emphasize block
+                if ( link->emphasize[i] )
+                    tempMap["emphasize"] = true;
+
+                // push -choice to CHOICE block
+                tempSeq.push_back(tempMap);
+                tempMap.reset();
+            }
+            // add TIME_LIMIT if exists
+            if ( link->timeLimit > 0.0 ) {
+                tempMap["TIME_LIMIT"] = link->timeLimit;
+                tempSeq.push_back(tempMap);
+            }
+            sNode2["CHOICE"] = tempSeq;
+
+        } else if ( link->isCondition ) {
+            YAML::Node tempMap;
+            tempMap["condition"] = link->conditions[0];
+            tempMap["condition"].SetStyle(YAML::EmitterStyle::Flow);
+            tempMap["on_true"] = link->names[0];
+            tempMap["on_false"] = link->names[1];
+            sNode2["NEXT"] = tempMap;
+        } else {
+            // simple block NEXT: section_next
+            sNode2["NEXT"] = link->names[0];
+        }
+        // update last element in section node
+        sNode[sNode.size() - 1] = sNode2;
+    } else {
+        error("ERROR: section [" + sectionName + "] not found during update!");
+    }
+}
 void YmlSceneManager::removeSectionLink(QString sectionName) {
     delete sectionGraph[sectionName];
-    sectionGraph.remove(sectionName);
+    sectionGraph.remove( sectionName );
+    sectionNames.removeOne( sectionName );
+    // TODO
 }
 sectionLink* YmlSceneManager::getSectionLink(QString sectionName) {
      return sectionGraph[sectionName];
+}
+
+QStringList YmlSceneManager::getSectionNames() {
+    return sectionNames;
 }

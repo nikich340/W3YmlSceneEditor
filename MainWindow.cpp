@@ -18,14 +18,22 @@ MainWindow::MainWindow(QWidget *parent)
 
     ui->gView->setScene(gScene);
 
-    qDebug() << "Main window size1: " << this->size();
-    connect(ymlManager, SIGNAL(debugInfo(QString)), ui->infoLabel, SLOT(setText(QString)));
+    connect(ymlManager, SIGNAL(print_info(QString)), this, SLOT(print_info(QString)));
+    connect(ymlManager, SIGNAL(print_error(QString)), this, SLOT(print_error(QString)));
     connect(ui->actionQuit, SIGNAL(triggered()), this, SLOT(onClicked_Quit()));
     connect(ui->actionLoad, SIGNAL(triggered()), this, SLOT(onClicked_Load()));
+    connect(ui->actionSave, SIGNAL(triggered()), this, SLOT(onClicked_Save()));
+}
+void MainWindow::print_info(QString s) {
+    ui->infoLabel->setText(s);
+    ui->infoLabel->setStyleSheet("color: blue");
+}
+void MainWindow::print_error(QString s) {
+    ui->infoLabel->setText(s);
+    ui->infoLabel->setStyleSheet("color: red");
 }
 void MainWindow::onClicked_Quit()
 {
-    qDebug() << "Main window size2: " << this->size();
     QApplication::quit();
 }
 void MainWindow::onClicked_Load()
@@ -37,16 +45,27 @@ void MainWindow::onClicked_Load()
     // TODO: ymlManager->requestSave();
 
     if ( ymlManager->loadYmlFile(fileName) ) {
-        setWindowTitle("W3 YML Scene Editor [" + fileName + "]");
+        setWindowTitle("Radish YML Scene Editor [" + fileName + "]");
+    } else {
+        print_error("Failed to load YML!");
     }
 
     if ( ymlManager->drawSectionsGraph(gScene) ) {
-        ui->infoLabel->setText("Sections graph was successfully drawn.");
+        print_info("Sections graph was successfully drawn.");
     } else {
-        ui->infoLabel->setText("Failed to draw sections: INCORRECT YML!");
+        print_error("Failed to draw sections: INCORRECT YML!");
     }
 
 }
+void MainWindow::onClicked_Save()
+{
+    if ( ymlManager->saveYmlFile() ) {
+        print_info("Successfully saved.");
+    } else {
+        print_error("Faile to save yml!");
+    }
+}
+
 void MainWindow::resizeEvent(QResizeEvent* event)
 {
     //ui->gView->setMinimumSize(QSize(event->size().width() / 3, 0));
