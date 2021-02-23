@@ -11,6 +11,51 @@ DialogChangeSection::DialogChangeSection(QWidget *parent) :
     connect(ui->choice_1->ui->conditionCheck, SIGNAL(clicked(bool)), this, SLOT(onClicked_Cond(bool)));
 }
 
+void DialogChangeSection::fillLinkData() {
+	if ( ui->nextButton->isChecked() ) {
+		if ( sk[0]->ui->conditionCheck->isChecked() ) {
+			sLink->type = conditionS;
+			sLink->addChoice( sk[0]->ui->nextSectionBox->currentText(), QString(), choiceAction(),
+					ymlCond(sk[0]->ui->factNameLine->text(), sk[0]->ui->factOperandBox->currentText(), sk[0]->ui->factValSpin->value()) );
+			sLink->addChoice( sk[1]->ui->nextSectionBox->currentText() );
+		} else {
+			sLink->type = nextS;
+			sLink->addChoice( sk[0]->ui->nextSectionBox->currentText() );
+		}
+	} else if ( ui->exitButton->isChecked() ) {
+		sLink->type = exitS;
+	} else if ( ui->randomButton->isChecked() ) {
+		sLink->type = randomS;
+		upn(i, 0, 6) {
+			sLink->addChoice( sk[i]->ui->nextSectionBox->currentText() );
+		}
+	} else if ( ui->scriptButton->isChecked() ) {
+		sLink->type = scriptS;
+		sLink->addChoice( sk[0]->ui->nextSectionBox->currentText() );
+	} else if ( ui->choiceButton->isChecked() ) {
+		sLink->type = choiceS;
+		upn(i, 0, 6) {
+			ymlCond cond = ymlCond();
+			if ( sk[i]->ui->conditionCheck->isChecked() ) {
+				cond = ymlCond( sk[i]->ui->factNameLine->text(), sk[i]->ui->factOperandBox->currentText(),
+								sk[i]->ui->factValSpin->value() );
+			}
+			choiceAction act = choiceAction( sk[i]->ui->actionBox->currentText() );
+			if ( act.action == "haircut" || act.action == "shave" ) {
+				act.amount = sk[i]->ui->actionPaySpin->value();
+			} else if ( act.action == "pay" ) {
+				act.amount = sk[i]->ui->actionPaySpin->value();
+				act.grantExp = sk[i]->ui->actionGrantCheck->isChecked();
+			}
+			sLink->addChoice( sk[i]->ui->nextSectionBox->currentText(), sk[i]->ui->choiceLine->text(),
+							  act, cond, sk[i]->ui->singleCheck->isChecked(), sk[i]->ui->emphasizeCheck->isChecked() );
+		}
+		if ( ui->timeLimitCheck->isChecked() ) {
+			sLink->timeLimit = ui->timeLimitSpin->value();
+		}
+	}
+}
+
 void DialogChangeSection::updateChoiceForms(sectionLink* link, QStringList sectionsList) {
     sLink = link;
     sectionsLst = sectionsList;
@@ -27,7 +72,7 @@ void DialogChangeSection::updateChoiceForms(sectionLink* link, QStringList secti
 
     // filter out start sections
     QStringList filteredList = sectionsList;
-    for (int i = 0; i < sectionsList.size(); ++i) {
+	for (int i = sectionsList.size() - 1; i >= 0; --i) {
         if (sectionsList[i].startsWith("section_start")) {
             filteredList.removeAt(i);
         }
@@ -108,9 +153,8 @@ void DialogChangeSection::updateChoiceForms(sectionLink* link, QStringList secti
 }
 
 void DialogChangeSection::onClicked_Next() {
-	//ui->lineName->setValidator( new QRegExpValidator(QRegExp("^section_(start)?[a-z0-9]*$")) );
-	validator.setRegExp( QRegExp("^section_(start)?[a-z0-9]*$") );
-	ui->lineName->setPlaceholderText("section_story");
+	validator.setRegExp( QRegExp("^section_[a-z0-9_]*$") );
+	ui->lineName->setPlaceholderText("section_start_story, section_story");
 	onSectionNameChanged("!");
 
     // choice-related
@@ -151,8 +195,7 @@ void DialogChangeSection::onClicked_Cond(bool enable) {
 }
 
 void DialogChangeSection::onClicked_Script() {
-	//ui->lineName->setValidator( new QRegExpValidator(QRegExp("^script_[a-z0-9]*$")) );
-	validator.setRegExp( QRegExp("^script_[a-z0-9]*$") );
+	validator.setRegExp( QRegExp("^script_[a-z0-9_]*$") );
 	ui->lineName->setPlaceholderText("script_story");
 	onSectionNameChanged("!");
 
@@ -171,9 +214,8 @@ void DialogChangeSection::onClicked_Script() {
 }
 
 void DialogChangeSection::onClicked_Choice() {
-	//ui->lineName->setValidator( new QRegExpValidator(QRegExp("^section_choice(_[a-z0-9]*)?$")) );
-	validator.setRegExp( QRegExp("^section_choice(_[a-z0-9]*)?$") );
-	ui->lineName->setPlaceholderText("section_choice_story");
+	validator.setRegExp( QRegExp("^section_[a-z0-9_]*$") );
+	ui->lineName->setPlaceholderText("section_start_story, section_story, section_choice_story");
 	onSectionNameChanged("!");
 
     ui->timeLimitWidget->setEnabled(true);
@@ -191,9 +233,8 @@ void DialogChangeSection::onClicked_Choice() {
 }
 
 void DialogChangeSection::onClicked_Random() {
-	//ui->lineName->setValidator( new QRegExpValidator(QRegExp("^section_[a-z0-9]*$")) );
-	validator.setRegExp( QRegExp("^section_[a-z0-9]*$") );
-	ui->lineName->setPlaceholderText("section_story, section_start_story");
+	validator.setRegExp( QRegExp("^section_[a-z0-9_]*$") );
+	ui->lineName->setPlaceholderText("section_story, section_start_story, section_randomizer_story");
 	onSectionNameChanged("!");
 
     // choice-related
@@ -210,8 +251,7 @@ void DialogChangeSection::onClicked_Random() {
 }
 
 void DialogChangeSection::onClicked_Exit() {
-	//ui->lineName->setValidator( new QRegExpValidator(QRegExp("^section_exit(_[a-z0-9]*)?$")) );
-	validator.setRegExp( QRegExp("^section_exit(_[a-z0-9]*)?$") );
+	validator.setRegExp( QRegExp("^section_exit(_[a-z0-9_]*)?$") );
 	ui->lineName->setPlaceholderText("section_exit_story");
 	onSectionNameChanged("!");
 
@@ -246,7 +286,7 @@ void DialogChangeSection::onSectionNameChanged(QString str) {
         ui->lineName->setStyleSheet("color: red");
 	} else if ( state == QValidator::Intermediate ) {
 		ui->lineName->setStyleSheet("color: rgb(204, 82, 0)");
-	} else { // QValidator::Valid
+	} else { // QValidator::Acceptable
 		ui->lineName->setStyleSheet("color: black");
 	}
 }
@@ -254,7 +294,10 @@ void DialogChangeSection::onSectionNameChanged(QString str) {
 void DialogChangeSection::accept() {
     qDebug()<<"internal accept";
 
-    if ( !ui->lineName->hasAcceptableInput() ) {
+	QString str = ui->lineName->text();
+	int pos = 0;
+
+	if ( validator.validate(str, pos) != QValidator::Acceptable ) {
 		QMessageBox msg(QMessageBox::Warning, "Incorrect settings", "Wrong section name format!\nCorrect examples: " + ui->lineName->placeholderText(), QMessageBox::Ok, this);
         msg.setModal(true);
         int ret = msg.exec(); // QMessageBox::Ok

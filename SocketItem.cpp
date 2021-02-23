@@ -12,7 +12,7 @@ SocketItem::SocketItem(QGraphicsItem *parent) : QGraphicsEllipseItem(parent)
 	//textLabel->setParentItem(this);
     textLabel->hide(); // disable until hover/press
 	textLabel->setBrush(QBrush(QColor(255, 51, 133)));
-	textLabel->setFont( QFont("Arial", 8) );
+	textLabel->setFont( QFont("Arial", 7) );
 }
 SocketItem::SocketItem(qreal x, qreal y, qreal width, qreal height, QGraphicsItem *parent) : QGraphicsEllipseItem(x, y, width, height, parent)
 {
@@ -25,7 +25,7 @@ SocketItem::SocketItem(qreal x, qreal y, qreal width, qreal height, QGraphicsIte
 	//textLabel->setParentItem(this);
     textLabel->hide(); // disable until hover/press
     textLabel->setBrush(QBrush(QColor(255, 0, 102)));
-	textLabel->setFont( QFont("Arial", 8) );
+	textLabel->setFont( QFont("Arial", 7) );
 }
 SocketItem::~SocketItem() {
     /*if ( !isInputSocket ) {
@@ -117,8 +117,12 @@ void SocketItem::mouseReleaseEvent(QGraphicsSceneMouseEvent *event) {
         if (inMove) {
             inMove = false;
 
+			if (dropItem == nullptr)
+				return;
+
             QString key = dropItem->data(0).toString();
-            if (dropItem != nullptr && (key == "inputSocket" || key == "section")) {
+			qDebug() << "Drop! Key: " << key;
+			if (key == "inputSocket" || key == "section") {
                 GraphicsSectionItem* oldSection = qgraphicsitem_cast<GraphicsSectionItem*>( edge->socketEnd->parentItem() );
                 GraphicsSectionItem* startSection = qgraphicsitem_cast<GraphicsSectionItem*>( socketStart->parentItem() );
                 GraphicsSectionItem* nextSection = nullptr;
@@ -146,8 +150,11 @@ void SocketItem::mouseReleaseEvent(QGraphicsSceneMouseEvent *event) {
         } else if (inCreate) {
             inCreate = false;
 
+			if (dropItem == nullptr)
+				return;
+
             QString key = dropItem->data(0).toString();
-            if (dropItem != nullptr && (key == "inputSocket" || key == "section")) {
+			if (key == "inputSocket" || key == "section") {
                 qDebug() << "Dropped at SOCKET!";
 
                 GraphicsSectionItem* startSection = qgraphicsitem_cast<GraphicsSectionItem*>( parentItem() );

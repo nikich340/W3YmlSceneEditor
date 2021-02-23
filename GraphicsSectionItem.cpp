@@ -20,8 +20,8 @@ void GraphicsSectionItem::setLabel(QString text) {
         label->setDefaultTextColor( QColor(0, 0, 0) );
         QFont f("Arial");
         f.setPixelSize(14);
+		label->setData(0, "inputSocket"); // hack for edge drag event
         label->setFont(f);
-        label->setPos( 0, HEIGHT / 6 );
         label->setParentItem(this);
     }
 
@@ -44,11 +44,23 @@ void GraphicsSectionItem::setLabel(QString text) {
     for (int i = 0; i < text.length(); ++i) {
         newText.push_back(text[i]);
         if (last < insPos.size() && i == insPos[last]) {
+			if (last > 2) {
+				newText.push_back("...");
+				break;
+			}
             newText.push_back('\n');
             ++last;
         }
     }
-    label->setPlainText(newText);
+
+	qreal labelH = 0;
+	if (last == 0)
+		labelH = HEIGHT / 3.5;
+	else if (last == 1)
+		labelH = HEIGHT / 6;
+
+	label->setPos( WIDTH / 20, labelH );
+	label->setPlainText(newText);
 }
 SocketItem* GraphicsSectionItem::addCleanOutput() {
     hasCleanOutput = true;
@@ -196,13 +208,24 @@ bool GraphicsSectionItem::addOutputEdge(GraphicsSectionItem *next, bool skipUpda
     if (socketIdx != -1) {
         //qDebug() << "socketIdx: " << socketIdx << ", choice size: " << sLink->choiceLines.size();
 		if (sLink->type == choiceS && socketIdx < sLink->choiceLines.size()) {
-            output->setLabel(sLink->choiceLines[socketIdx]);
+			QString s = sLink->choiceLines[socketIdx];
+			bool needN = false;
+			for (int i = 1; i < s.length(); ++i) {
+				if (i % 25 == 0) {
+					needN = true;
+				}
+				if (needN && s[i] == ' ') {
+					needN = false;
+					s[i] = '\n';
+				}
+			}
+			output->setLabel( s );
 		} else if (sLink->type == conditionS && !sLink->conditions[0].condFact.isEmpty()) {
             ymlCond cond = sLink->conditions[0];
             if (socketIdx == 0)
-                output->setLabel(cond.condFact + cond.condOperand + QString::number(cond.condValue) + ": [on_true]");
+				output->setLabel(cond.condFact + "\n" + cond.condOperand + QString::number(cond.condValue) + ": [on_true]");
             else if (socketIdx == 1)
-                output->setLabel(cond.condFact + cond.condOperand + QString::number(cond.condValue) + ": [on_false]");
+				output->setLabel(cond.condFact + "\n" + cond.condOperand + QString::number(cond.condValue) + ": [on_false]");
 		} else if (sLink->type == randomS) {
             output->setLabel("[random #" + QString::number(socketIdx + 1) + "]");
         } else {
@@ -285,8 +308,6 @@ void GraphicsSectionItem::contextMenuEvent(QGraphicsSceneContextMenuEvent *event
 }
 
 void GraphicsSectionItem::changeMe() {
-    qDebug() << "CHANGE ME :)";
-
     DialogChangeSection dialog;
     dialog.setModal(true);
     dialog.updateChoiceForms( this->sLink, ymlManager->getSectionNames() );
@@ -294,6 +315,20 @@ void GraphicsSectionItem::changeMe() {
     int ret = dialog.exec();
     if (ret == QDialog::Accepted) {
         qDebug() << "accepted!";
+		sectionLink oldData = *sLink;
+		sLink->reset();
+		dialog.fillLink();
+		/*
+		 * 1) RESET ALL
+		 * 2) PUSH all data from dialog
+		 * 3) UPDATE everything (check if outputs/inputs were changed -> update edges)
+		 */
+
+
+		// choice -> any except cond = reset all conditions
+		// cond -> any except choice = reset condition [0]
+
+		// any -> random/choice = show all outputs
     }
 }
 void GraphicsSectionItem::removeMe() {

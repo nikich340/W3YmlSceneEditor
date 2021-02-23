@@ -144,7 +144,7 @@
          </sizepolicy>
         </property>
         <property name="text">
-         <string>Start/Usual (+conditional)</string>
+         <string>Usual (+condition)</string>
         </property>
        </widget>
       </item>

@@ -16,14 +16,15 @@ class DialogChangeSection : public QDialog
 
 private:
     QRegExpValidator validator;
-    QVector<SocketSettingsForm*> sk;
     QStringList sectionsLst;
     sectionLink* sLink;
 
 public:
+	QVector<SocketSettingsForm*> sk;
     explicit DialogChangeSection(QWidget *parent = nullptr);
-    ~DialogChangeSection();
+	~DialogChangeSection() override;
     void updateChoiceForms(sectionLink* link, QStringList sectionsList);
+	void fillLinkData();
 
     Ui::DialogChangeSection *ui;
 
