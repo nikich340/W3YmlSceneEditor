@@ -27,22 +27,22 @@ struct choiceAction {
     }
 };
 
+enum sectionType { nextS, choiceS, randomS, conditionS, scriptS, exitS };
+
 struct sectionLink {
     QVector<QString> names; // [0] - on_true, [1] - on_false if [condition]
     QString sectionName;
 
-    bool isChoice     = false;
-    bool isRandomizer = false;
-    bool isCondition  = false;
-    bool isExit       = false;
-    bool isStart       = false;
-    bool isScript       = false;
+    sectionType type = nextS;
     QVector<ymlCond> conditions;
     QVector<QString> choiceLines;
     QVector<choiceAction> choiceActions;
     QVector<bool>    single_use;
     QVector<bool>    emphasize;
     double timeLimit = -1.0;
+    bool isStart() {
+        return sectionName.startsWith("section_start");
+    }
     void addChoice(QString name = "NOT SET", QString choice = QString(), choiceAction action = choiceAction(),
                    ymlCond condition = ymlCond(), bool single = false, bool emphasiz = false) {
         names.push_back(name);

@@ -59,8 +59,9 @@ namespace YAML {
       }
 }
 
-YmlSceneManager::YmlSceneManager(QObject *parent) : QObject(parent)
+YmlSceneManager::YmlSceneManager(QObject *parent, QGraphicsScene* gScene) : QObject(parent)
 {
+    pScene = gScene;
     qDebug() << "YmlSceneManager()";
 }
 
@@ -101,8 +102,12 @@ bool YmlSceneManager::loadYmlFile(QString path) {
     sectionGraph.clear();
     startSections.clear();
     wasDrawn.clear();
-    itemBySection.clear();
+    itemBySectionName.clear();
     sectionsByDepth.clear();
+    for (auto item : unusedItems) {
+        delete item;
+    }
+    unusedItems.clear();
 
     // load extra info
     if (!loadSectionsInfo()) {
@@ -170,7 +175,7 @@ bool YmlSceneManager::loadSectionsInfo() {
                                    && lastSectionNode.begin()->YY["condition"].size() == 3
                                    && lastSectionNode.begin()->YY["on_true"]
                                    && lastSectionNode.begin()->YY["on_false"]) {
-                            tmpLink->isCondition = true;
+                            tmpLink->type = conditionS;
                             tmpLink->addChoice( lastSectionNode.begin()->YY["on_true"].as<QString>(), QString(), choiceAction(), lastSectionNode.begin()->YY["condition"].as<ymlCond>() );
                             tmpLink->addChoice( lastSectionNode.begin()->YY["on_false"].as<QString>() );
                         } else {
@@ -179,7 +184,7 @@ bool YmlSceneManager::loadSectionsInfo() {
                         }
                     } else if (lastSectionCue == "CHOICE"
                                && lastSectionNode.begin()->YY.IsSequence()) {
-                        tmpLink->isChoice = true;
+                        tmpLink->type = choiceS;
 
                         // iterate through all choices
                         for (auto jt = lastSectionNode.begin()->YY.begin(); jt != lastSectionNode.begin()->YY.end(); ++jt) {
@@ -237,7 +242,7 @@ bool YmlSceneManager::loadSectionsInfo() {
                         }
                     } else if (lastSectionCue == "RANDOM"
                                && lastSectionNode.begin()->YY.IsSequence()) {
-                        tmpLink->isRandomizer = true;
+                        tmpLink->type = randomS;
 
                         // iterate through all randoms
                         for (auto jt = lastSectionNode.begin()->YY.begin(); jt != lastSectionNode.begin()->YY.end(); ++jt) {
@@ -255,11 +260,11 @@ bool YmlSceneManager::loadSectionsInfo() {
                 } else if (lastSectionNode.IsScalar()
                            && lastSectionNode.as<QString>() == "EXIT"
                            && sectionName.startsWith("section_exit")) {
-                    tmpLink->isExit = true;
+                    tmpLink->type = exitS;
                    // usual randomizer section
                 } else if (sectionNode.IsSequence()
                            && sectionName.startsWith("section_randomizer")) {
-                    tmpLink->isRandomizer = true;
+                    tmpLink->type = randomS;
 
                     // iterate through all randoms
                     for (auto jt = sectionNode.begin()->YY.begin(); jt != sectionNode.begin()->YY.end(); ++jt) {
@@ -274,12 +279,12 @@ bool YmlSceneManager::loadSectionsInfo() {
                 }
 
                 if ( sectionName.startsWith("script_") ) {
-                    tmpLink->isScript = true;
+                    tmpLink->type = scriptS;
                 }
 
                 if ( sectionName.startsWith("section_start") ) {
                     startSections.push_back( sectionName );
-                    tmpLink->isStart = true;
+                    tmpLink->type = nextS;
                 }
 
                 // all is fine, add to graph
@@ -297,9 +302,7 @@ bool YmlSceneManager::loadSectionsInfo() {
     return true;
 }
 
-bool YmlSceneManager::drawSectionsGraph(QGraphicsScene* gScene) {
-    pScene = gScene;
-
+bool YmlSceneManager::drawSectionsGraph() {
     for (auto s : startSections) {
         if ( !dfsPrepareGraph(s, 0) )
             return false;
@@ -312,7 +315,7 @@ bool YmlSceneManager::drawSectionsGraph(QGraphicsScene* gScene) {
         qreal y_offset = 1000.0 / (sectionsByDepth[i].size() + 1);
         for (int j = 0; j < sectionsByDepth[i].size(); ++j) {
             y += y_offset;
-            GraphicsSectionItem* pItem = itemBySection[sectionsByDepth[i][j]];
+            GraphicsSectionItem* pItem = itemBySectionName[sectionsByDepth[i][j]];
             pItem->setPos(x, y);
         }
         x += x_offset;
@@ -326,7 +329,7 @@ bool YmlSceneManager::drawSectionsGraph(QGraphicsScene* gScene) {
     }
 
     // fill sockets
-    for (auto it : itemBySection) {
+    for (auto it : itemBySectionName) {
         it->fillCleanSockets();
         it->updateState();
     }
@@ -346,11 +349,18 @@ bool YmlSceneManager::dfsPrepareGraph(QString sectionName, int depth) {
 
     wasDrawn.insert(sectionName);
     GraphicsSectionItem* newSect = new GraphicsSectionItem;
+    /*? if ( unusedItems.isEmpty() ) {
+        newSect = new GraphicsSectionItem;
+    } else {
+        // Reuse deleted items!
+        newSect = unusedItems.last();
+        unusedItems.pop_back();
+    }*/
     newSect->setLabel(sectionName);
     newSect->setSectionLink(getSectionLink(sectionName));
     newSect->setYmlManager(this);
     pScene->addItem( newSect );
-    itemBySection[sectionName] = newSect;
+    itemBySectionName[sectionName] = newSect;
 
     if ( sectionsByDepth.size() < depth + 1) {
         sectionsByDepth.push_back(QVector<QString>());
@@ -372,14 +382,14 @@ bool YmlSceneManager::dfsDrawGraph(QString sectionName) {
     }
 
     wasDrawn.insert(sectionName);
-    GraphicsSectionItem* pSect = itemBySection[sectionName];
+    GraphicsSectionItem* pSect = itemBySectionName[sectionName];
 
     for (auto next : sectionGraph[sectionName]->names) {
         if ( !dfsDrawGraph(next) ) {
             return false;
         }
         //qDebug() << "Dfs draw graph: [" << sectionName << "]->[" << next << "]";
-        if ( !pSect->addOutputEdge(itemBySection[next]) ) {
+        if ( !pSect->addOutputEdge(itemBySectionName[next]) ) {
             qDebug() << "FAILED to add new socket, incorrect yml!";
             return false;
         }
@@ -392,88 +402,120 @@ void YmlSceneManager::updateSectionLink(QString sectionName) {
     if (root["dialogscript"][sectionName]) {
         YAML::Node sNode = root["dialogscript"][sectionName];
         YAML::Node sNode2;
-        if ( link->isExit ) {
-            // simple EXIT scalar
-            sNode2 = "EXIT";
-        } else if ( link->isRandomizer ) {
-            YAML::Node tempSeq;
-            for (auto s : link->names) {
-                tempSeq.push_back(s);
+        switch ( link->type ) {
+            case exitS: {
+                // simple EXIT scalar
+                sNode2 = "EXIT";
+                break;
             }
-            sNode2["RANDOM"] = tempSeq;
-        } else if ( link->isChoice ) {
-            YAML::Node tempSeq;
-            YAML::Node tempMap;
-            for (int i = 0; i < link->names.size(); ++i) {
-                if (link->names[i] == "NOT SET" || link->names[i].isEmpty())
-                    continue;
-                tempMap.SetStyle(YAML::EmitterStyle::Block);
-                tempMap["choice"].SetStyle(YAML::EmitterStyle::Flow);
+            case choiceS: {
+                YAML::Node tempSeq;
+                YAML::Node tempMap;
+                for (int i = 0; i < link->names.size(); ++i) {
+                    if (link->names[i] == "NOT SET" || link->names[i].isEmpty())
+                        continue;
+                    tempMap.SetStyle(YAML::EmitterStyle::Block);
+                    tempMap["choice"].SetStyle(YAML::EmitterStyle::Flow);
 
-                // dialog line
-                tempMap["choice"].push_back( link->choiceLines[i] );
-                // next section name
-                tempMap["choice"].push_back( link->names[i] );
-                // add action values
-                if ( !link->choiceActions[i].action.isEmpty() ) {
-                    tempMap["choice"].push_back( link->choiceActions[i].action );
-                    if ( link->choiceActions[i].amount != -1 ) {
-                        tempMap["choice"].push_back( link->choiceActions[i].amount );
-                        if ( link->choiceActions[i].grantExp ) {
-                            tempMap["choice"].push_back( true );
+                    // dialog line
+                    tempMap["choice"].push_back( link->choiceLines[i] );
+                    // next section name
+                    tempMap["choice"].push_back( link->names[i] );
+                    // add action values
+                    if ( !link->choiceActions[i].action.isEmpty() ) {
+                        tempMap["choice"].push_back( link->choiceActions[i].action );
+                        if ( link->choiceActions[i].amount != -1 ) {
+                            tempMap["choice"].push_back( link->choiceActions[i].amount );
+                            if ( link->choiceActions[i].grantExp ) {
+                                tempMap["choice"].push_back( true );
+                            }
                         }
                     }
-                }
-                // add conition block
-                if ( !link->conditions[i].condFact.isEmpty() ) {
-                    tempMap["condition"] = link->conditions[i];
-                    tempMap["condition"].SetStyle(YAML::EmitterStyle::Flow);
-                }
-                tempMap["choice"][0].SetTag("!"); // hack to add quotes
-                tempMap["choice"][1].SetTag("!"); // hack to add quotes
-                // single_use block
-                if ( link->single_use[i] )
-                    tempMap["single_use"] = true;
-                // emphasize block
-                if ( link->emphasize[i] )
-                    tempMap["emphasize"] = true;
+                    // add conition block
+                    if ( !link->conditions[i].condFact.isEmpty() ) {
+                        tempMap["condition"] = link->conditions[i];
+                        tempMap["condition"].SetStyle(YAML::EmitterStyle::Flow);
+                    }
+                    tempMap["choice"][0].SetTag("!"); // hack to add quotes
+                    // single_use block
+                    if ( link->single_use[i] )
+                        tempMap["single_use"] = true;
+                    // emphasize block
+                    if ( link->emphasize[i] )
+                        tempMap["emphasize"] = true;
 
-                // push -choice to CHOICE block
-                tempSeq.push_back(tempMap);
-                tempMap.reset();
+                    // push -choice to CHOICE block
+                    tempSeq.push_back(tempMap);
+                    tempMap.reset();
+                }
+                // add TIME_LIMIT if exists
+                if ( link->timeLimit > 0.0 ) {
+                    tempMap["TIME_LIMIT"] = link->timeLimit;
+                    tempSeq.push_back(tempMap);
+                }
+                sNode2["CHOICE"] = tempSeq;
+                break;
             }
-            // add TIME_LIMIT if exists
-            if ( link->timeLimit > 0.0 ) {
-                tempMap["TIME_LIMIT"] = link->timeLimit;
-                tempSeq.push_back(tempMap);
+            case conditionS: {
+                YAML::Node tempMap;
+                tempMap["condition"] = link->conditions[0];
+                tempMap["condition"].SetStyle(YAML::EmitterStyle::Flow);
+                tempMap["on_true"] = link->names[0];
+                tempMap["on_false"] = link->names[1];
+                sNode2["NEXT"] = tempMap;
+                break;
             }
-            sNode2["CHOICE"] = tempSeq;
-
-        } else if ( link->isCondition ) {
-            YAML::Node tempMap;
-            tempMap["condition"] = link->conditions[0];
-            tempMap["condition"].SetStyle(YAML::EmitterStyle::Flow);
-            tempMap["on_true"] = link->names[0];
-            tempMap["on_false"] = link->names[1];
-            sNode2["NEXT"] = tempMap;
-        } else {
-            // simple block NEXT: section_next
-            sNode2["NEXT"] = link->names[0];
+            case randomS: {
+                YAML::Node tempSeq;
+                for (auto s : link->names) {
+                    tempSeq.push_back(s);
+                }
+                sNode2["RANDOM"] = tempSeq;
+                break;
+            }
+            default: {
+                // { scriptS/nextS }
+                // simple block NEXT: section_next
+                sNode2["NEXT"] = link->names[0];
+                break;
+            }
         }
+
         // update last element in section node
         sNode[sNode.size() - 1] = sNode2;
     } else {
         error("ERROR: section [" + sectionName + "] not found during update!");
     }
 }
-void YmlSceneManager::removeSectionLink(QString sectionName) {
+
+void YmlSceneManager::deleteSection(QString sectionName) {
     delete sectionGraph[sectionName];
     sectionGraph.remove( sectionName );
     sectionNames.removeOne( sectionName );
-    // TODO
+
+    GraphicsSectionItem* pItem = itemBySectionName[sectionName];
+    pScene->removeItem( pItem );
+    itemBySectionName.remove( sectionName );
+    unusedItems.push_back( pItem ); // instead of unsafe(?) deleting from heap
+
+    if (root["dialogscript"][sectionName]) {
+        root["dialogscript"].remove( sectionName );
+    }
+    if (root["storyboard"][sectionName]) {
+        root["storyboard"].remove( sectionName );
+    }
 }
 sectionLink* YmlSceneManager::getSectionLink(QString sectionName) {
-     return sectionGraph[sectionName];
+    if ( sectionGraph.contains(sectionName) )
+        return sectionGraph[sectionName];
+    else
+        return nullptr;
+}
+GraphicsSectionItem* YmlSceneManager::getSectionItem(QString sectionName) {
+    if ( itemBySectionName.contains(sectionName) )
+        return itemBySectionName[sectionName];
+    else
+        return nullptr;
 }
 
 QStringList YmlSceneManager::getSectionNames() {
