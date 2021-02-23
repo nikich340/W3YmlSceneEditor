@@ -52,8 +52,8 @@ void GraphicsSectionItem::setLabel(QString text) {
 }
 SocketItem* GraphicsSectionItem::addCleanOutput() {
     hasCleanOutput = true;
-    SocketItem* output = new SocketItem(0, 0, DIAMETER, DIAMETER);
-    output->setParentItem(this);
+	SocketItem* output = new SocketItem(0, 0, DIAMETER, DIAMETER, this);
+	//output->setParentItem(this);
     output->setPen(QPen(Qt::black));
     output->setBrush(QBrush(Qt::cyan));
     output->isInputSocket = false;
@@ -61,7 +61,7 @@ SocketItem* GraphicsSectionItem::addCleanOutput() {
     outputs.push_back(output);
     if (outputs.size() > sLink->names.size()) {
         sLink->addChoice();
-        if ( !sLink->isChoice && !sLink->isRandomizer )
+		if ( sLink->type != choiceS || sLink->type != randomS )
             output->hide();
     }
     updateOutputs();
@@ -77,13 +77,13 @@ void GraphicsSectionItem::setSectionLink(sectionLink *link) {
 bool GraphicsSectionItem::isAllowedNewOutput() {
     int cnt = outputs.size();
 
-    if (sLink->isChoice || sLink->isRandomizer) {
+	if (sLink->type == choiceS || sLink->type == randomS) {
         return (cnt < 7);
     }
-    if (sLink->isCondition) {
+	if (sLink->type == conditionS) {
         return (cnt < 2);
     }
-    return (cnt < 1 && !sLink->isExit);
+	return (cnt < 1 && sLink->type != exitS);
 }
 void GraphicsSectionItem::updateState() {
     int hasOutput = 0;
@@ -98,9 +98,10 @@ void GraphicsSectionItem::updateState() {
     }
 
     bool ok = true;
-    ok &= ( (input != nullptr && input->hasEdges() > 0) ^ sLink->isStart );
-    ok &= ( (outputCnt > 0 && hasOutput > 0) || sLink->isExit );
-    ok &= ( (outputCnt == 2 && hasOutput == 2) || !sLink->isCondition );
+	if (input != nullptr)
+		ok &= ( (input->hasEdges() > 0) ^ sLink->isStart() );
+	ok &= ( (outputCnt > 0 && hasOutput > 0) || sLink->type == exitS );
+	ok &= ( (outputCnt == 2 && hasOutput == 2) || sLink->type != conditionS );
 
     if (ok) {
         state = SectionState::normal;
@@ -112,12 +113,12 @@ void GraphicsSectionItem::updateState() {
 }
 void GraphicsSectionItem::createInputSocket() {
     if (input == nullptr) {
-        input = new SocketItem(0, 0, DIAMETER, DIAMETER);
+		input = new SocketItem(0, 0, DIAMETER, DIAMETER, this);
         input->setPen(QPen(Qt::black));
         input->setBrush(QBrush(Qt::cyan));
         input->setPos( -DIAMETER/2, (HEIGHT - DIAMETER)/2 );
         input->setData(0, "inputSocket");
-        input->setParentItem(this);
+		//input->setParentItem(this);
         input->isInputSocket = true;
     }
 }
@@ -194,15 +195,15 @@ bool GraphicsSectionItem::addOutputEdge(GraphicsSectionItem *next, bool skipUpda
     int socketIdx = outputs.indexOf(output);
     if (socketIdx != -1) {
         //qDebug() << "socketIdx: " << socketIdx << ", choice size: " << sLink->choiceLines.size();
-        if (sLink->isChoice && socketIdx < sLink->choiceLines.size()) {
+		if (sLink->type == choiceS && socketIdx < sLink->choiceLines.size()) {
             output->setLabel(sLink->choiceLines[socketIdx]);
-        } else if (sLink->isCondition && !sLink->conditions[0].condFact.isEmpty()) {
+		} else if (sLink->type == conditionS && !sLink->conditions[0].condFact.isEmpty()) {
             ymlCond cond = sLink->conditions[0];
             if (socketIdx == 0)
                 output->setLabel(cond.condFact + cond.condOperand + QString::number(cond.condValue) + ": [on_true]");
             else if (socketIdx == 1)
                 output->setLabel(cond.condFact + cond.condOperand + QString::number(cond.condValue) + ": [on_false]");
-        } else if (sLink->isRandomizer) {
+		} else if (sLink->type == randomS) {
             output->setLabel("[random #" + QString::number(socketIdx + 1) + "]");
         } else {
             output->setLabel("NEXT");
@@ -216,7 +217,7 @@ bool GraphicsSectionItem::addOutputEdge(GraphicsSectionItem *next, bool skipUpda
         ymlManager->updateSectionLink(sLink->sectionName);
     }
 
-    next->addInputEdge( edge );
+	next->addInputEdge( edge );
     updateState();
     return true;
 }
@@ -269,15 +270,15 @@ void GraphicsSectionItem::mouseMoveEvent(QGraphicsSceneMouseEvent *event) {
 
 void GraphicsSectionItem::contextMenuEvent(QGraphicsSceneContextMenuEvent *event) {
     QMenu menu;
-    QAction *changeAction = menu.addAction("Change");
-    QAction *removeAction = menu.addAction("Remove");
+	QAction *editAction = menu.addAction("Edit");
+	QAction *deleteAction = menu.addAction("Delete");
     QAction *selectedAction = menu.exec(event->screenPos());
     if (selectedAction == nullptr) {
         event->ignore();
-    } else if (selectedAction == changeAction) {
+	} else if (selectedAction == editAction) {
         event->accept();
         changeMe();
-    } else if (selectedAction == removeAction) {
+	} else if (selectedAction == deleteAction) {
         event->accept();
         removeMe();
     }
@@ -296,5 +297,39 @@ void GraphicsSectionItem::changeMe() {
     }
 }
 void GraphicsSectionItem::removeMe() {
-    qDebug() << "REMOVE ME :(";
+	QMessageBox msgBox;
+	msgBox.setText("Do you want to delete section [" + sLink->sectionName + "] ?");
+	msgBox.setInformativeText("It will remove all it's connection and shots.");
+	msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+	msgBox.setDefaultButton(QMessageBox::Yes);
+	int ret = msgBox.exec();
+
+	if ( ret != QMessageBox::Yes ) {
+		return;
+	}
+
+	qDebug() << "Deleting section [" + sLink->sectionName + "]..";
+	if (input != nullptr) {
+		while ( input->hasEdges() ) {
+			EdgeItem* edge = input->getLastEdge();
+			GraphicsSectionItem* startSection = qgraphicsitem_cast<GraphicsSectionItem*>( edge->socketStart->parentItem() );
+			startSection->removeOutputEdge(edge);
+		}
+		scene()->removeItem(input);
+		delete input;
+		input = nullptr;
+	}
+	for (auto out : outputs) {
+		if (out != nullptr) {
+			EdgeItem* edge = out->getLastEdge();
+			removeOutputEdge(edge);
+		}
+		scene()->removeItem(out);
+		delete out;
+		out = nullptr;
+	}
+	outputs.clear();
+
+	// I'll be back
+	ymlManager->deleteSection( sLink->sectionName );
 }

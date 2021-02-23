@@ -15,6 +15,7 @@ class DialogChangeSection : public QDialog
     Q_OBJECT
 
 private:
+    QRegExpValidator validator;
     QVector<SocketSettingsForm*> sk;
     QStringList sectionsLst;
     sectionLink* sLink;

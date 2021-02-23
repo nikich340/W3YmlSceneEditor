@@ -3,7 +3,7 @@
 
 EdgeItem::EdgeItem(QGraphicsItem *parent) : QGraphicsPathItem(parent)
 {
-    setZValue(-1.0);
+	setZValue(-1.0);
 }
 
 void EdgeItem::setStartPoint(QGraphicsEllipseItem *socket) {

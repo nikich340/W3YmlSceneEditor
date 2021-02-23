@@ -18,6 +18,7 @@ public:
     bool hasEdges();
     void addEdge(EdgeItem* newEdge);
     bool removeEdge(EdgeItem* edge);
+    EdgeItem* getLastEdge();
     void setLabel(QString text);
     void redrawAllEdges();
     void deleteAllEdges();

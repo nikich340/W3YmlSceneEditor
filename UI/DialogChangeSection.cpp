@@ -76,32 +76,42 @@ void DialogChangeSection::updateChoiceForms(sectionLink* link, QStringList secti
     }
 
     ui->timeLimitWidget->setEnabled(false);
-    if ( sLink->isChoice ) {
-        ui->timeLimitWidget->setEnabled(true);
-        ui->choiceButton->setChecked(true);
-        onClicked_Choice();
+	switch ( sLink->type ) {
+		case choiceS: {
+			ui->timeLimitWidget->setEnabled(true);
+			ui->choiceButton->setChecked(true);
+			onClicked_Choice();
+			break;
+		}
+		case scriptS: {
+			ui->scriptButton->setChecked( true );
+			onClicked_Script();
+			break;
+		}
+		case randomS: {
+			ui->randomButton->setChecked( true );
+			onClicked_Random();
+			break;
+		}
+		case exitS: {
+			ui->exitButton->setChecked( true );
+			onClicked_Exit();
+			break;
+		}
+		default: {
+			ui->nextButton->setChecked( true );
+			onClicked_Next();
+			break;
+		}
 
-    } else if ( sLink->isScript ) {
-        ui->scriptButton->setChecked( true );
-        onClicked_Script();
-
-    } else if ( sLink->isRandomizer ) {
-        ui->randomButton->setChecked( true );
-        onClicked_Random();
-
-    } else if ( sLink->isExit ) {
-        ui->exitButton->setChecked( true );
-        onClicked_Exit();
-
-    } else {
-        ui->nextButton->setChecked( true );
-        onClicked_Next();
-    }
+	}
 }
 
 void DialogChangeSection::onClicked_Next() {
-    ui->lineName->setValidator( new QRegExpValidator(QRegExp("^section_(start)?(\\S)*$")) );
-    ui->lineName->setPlaceholderText("section_story");
+	//ui->lineName->setValidator( new QRegExpValidator(QRegExp("^section_(start)?[a-z0-9]*$")) );
+	validator.setRegExp( QRegExp("^section_(start)?[a-z0-9]*$") );
+	ui->lineName->setPlaceholderText("section_story");
+	onSectionNameChanged("!");
 
     // choice-related
     ui->timeLimitWidget->setEnabled(false);
@@ -141,8 +151,10 @@ void DialogChangeSection::onClicked_Cond(bool enable) {
 }
 
 void DialogChangeSection::onClicked_Script() {
-    ui->lineName->setValidator( new QRegExpValidator(QRegExp("^script_(\\S)*$")) );
-    ui->lineName->setPlaceholderText("script_story");
+	//ui->lineName->setValidator( new QRegExpValidator(QRegExp("^script_[a-z0-9]*$")) );
+	validator.setRegExp( QRegExp("^script_[a-z0-9]*$") );
+	ui->lineName->setPlaceholderText("script_story");
+	onSectionNameChanged("!");
 
     sk[0]->ui->choiceLabel->setText( "NEXT" );
     sk[0]->setEnabled(true);
@@ -159,8 +171,10 @@ void DialogChangeSection::onClicked_Script() {
 }
 
 void DialogChangeSection::onClicked_Choice() {
-    ui->lineName->setValidator( new QRegExpValidator(QRegExp("^section_choice(_(\\S)*)?$")) );
-    ui->lineName->setPlaceholderText("section_choice_story");
+	//ui->lineName->setValidator( new QRegExpValidator(QRegExp("^section_choice(_[a-z0-9]*)?$")) );
+	validator.setRegExp( QRegExp("^section_choice(_[a-z0-9]*)?$") );
+	ui->lineName->setPlaceholderText("section_choice_story");
+	onSectionNameChanged("!");
 
     ui->timeLimitWidget->setEnabled(true);
 
@@ -177,8 +191,10 @@ void DialogChangeSection::onClicked_Choice() {
 }
 
 void DialogChangeSection::onClicked_Random() {
-    ui->lineName->setValidator( new QRegExpValidator(QRegExp("^section_(\\S)*$")) );
-    ui->lineName->setPlaceholderText("section_story");
+	//ui->lineName->setValidator( new QRegExpValidator(QRegExp("^section_[a-z0-9]*$")) );
+	validator.setRegExp( QRegExp("^section_[a-z0-9]*$") );
+	ui->lineName->setPlaceholderText("section_story, section_start_story");
+	onSectionNameChanged("!");
 
     // choice-related
     ui->timeLimitWidget->setEnabled( false );
@@ -194,8 +210,10 @@ void DialogChangeSection::onClicked_Random() {
 }
 
 void DialogChangeSection::onClicked_Exit() {
-    ui->lineName->setValidator( new QRegExpValidator(QRegExp("^section_exit(_(\\S)*)?$")) );
-    ui->lineName->setPlaceholderText("section_exit_story");
+	//ui->lineName->setValidator( new QRegExpValidator(QRegExp("^section_exit(_[a-z0-9]*)?$")) );
+	validator.setRegExp( QRegExp("^section_exit(_[a-z0-9]*)?$") );
+	ui->lineName->setPlaceholderText("section_exit_story");
+	onSectionNameChanged("!");
 
     // choice-related
     ui->timeLimitWidget->setEnabled(false);
@@ -221,20 +239,23 @@ void DialogChangeSection::onTimeLimitClicked(bool enabled) {
 }
 
 void DialogChangeSection::onSectionNameChanged(QString str) {
-    if ( !ui->lineName->hasAcceptableInput() ) {
+	str = ui->lineName->text();
+	int pos = 0;
+	QValidator::State state = validator.validate( str, pos );
+	if ( state == QValidator::Invalid ) {
         ui->lineName->setStyleSheet("color: red");
-    } else {
-        ui->lineName->setStyleSheet("color: black");
-    }
+	} else if ( state == QValidator::Intermediate ) {
+		ui->lineName->setStyleSheet("color: rgb(204, 82, 0)");
+	} else { // QValidator::Valid
+		ui->lineName->setStyleSheet("color: black");
+	}
 }
 
 void DialogChangeSection::accept() {
     qDebug()<<"internal accept";
 
-    QMessageBox* msg = nullptr;
-
     if ( !ui->lineName->hasAcceptableInput() ) {
-        QMessageBox msg(QMessageBox::Warning, "Incorrect settings", "Wrong section name format!", QMessageBox::Ok, this);
+		QMessageBox msg(QMessageBox::Warning, "Incorrect settings", "Wrong section name format!\nCorrect examples: " + ui->lineName->placeholderText(), QMessageBox::Ok, this);
         msg.setModal(true);
         int ret = msg.exec(); // QMessageBox::Ok
         return;
@@ -263,7 +284,9 @@ void DialogChangeSection::accept() {
             return;
         }
     }
-    if ( (ui->choiceButton->isChecked() && cnt < 1) ||
+
+	// -- CHECK it in section on saving only! --
+	/*if ( (ui->choiceButton->isChecked() && cnt < 1) ||
          (ui->randomButton->isChecked() && cnt < 1) ||
          (ui->nextButton->isChecked() && cnt < 1) ) {
         QMessageBox msg(QMessageBox::Warning, "Incorrect settings", "At least one output must be linked to existing section!", QMessageBox::Ok, this);
@@ -276,7 +299,7 @@ void DialogChangeSection::accept() {
         msg.setModal(true);
         int ret = msg.exec(); // QMessageBox::Ok
         return;
-    }
+	}*/
 
     QDialog::accept();
 }

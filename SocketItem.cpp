@@ -5,23 +5,27 @@
 SocketItem::SocketItem(QGraphicsItem *parent) : QGraphicsEllipseItem(parent)
 {
     setAcceptHoverEvents(true);
-    setAcceptHoverEvents(true);
     textLabel = new QGraphicsSimpleTextItem;
-    textLabel->setParentItem(this);
+	// fuck Z-system
+	textLabel->setZValue(1.0);
+	scene()->addItem(textLabel);
+	//textLabel->setParentItem(this);
     textLabel->hide(); // disable until hover/press
-    textLabel->setBrush(QBrush(QColor(255, 0, 102)));
-    textLabel->setFont( QFont("Arial", 8) );
-    textLabel->setPos(WIDTH / 8, 0);
+	textLabel->setBrush(QBrush(QColor(255, 51, 133)));
+	textLabel->setFont( QFont("Arial", 8) );
 }
 SocketItem::SocketItem(qreal x, qreal y, qreal width, qreal height, QGraphicsItem *parent) : QGraphicsEllipseItem(x, y, width, height, parent)
 {
     setAcceptHoverEvents(true);
-    textLabel = new QGraphicsSimpleTextItem;
-    textLabel->setParentItem(this);
+	textLabel = new QGraphicsSimpleTextItem;
+
+	// fuck Z-system
+	textLabel->setZValue(1.0);
+	scene()->addItem(textLabel);
+	//textLabel->setParentItem(this);
     textLabel->hide(); // disable until hover/press
     textLabel->setBrush(QBrush(QColor(255, 0, 102)));
-    textLabel->setFont( QFont("Arial", 8) );
-    textLabel->setPos(WIDTH / 10, 0);
+	textLabel->setFont( QFont("Arial", 8) );
 }
 SocketItem::~SocketItem() {
     /*if ( !isInputSocket ) {
@@ -39,6 +43,13 @@ void SocketItem::redrawAllEdges() {
     for (int i = 0; i < edges.size(); ++i) {
         edges[i]->draw();
     }
+}
+
+EdgeItem* SocketItem::getLastEdge() {
+	if (edges.isEmpty())
+		return nullptr;
+	else
+		return edges.last();
 }
 
 void SocketItem::setLabel(QString text) {
@@ -163,9 +174,11 @@ void SocketItem::hoverEnterEvent(QGraphicsSceneHoverEvent *event) {
     if (isInputSocket) {
         for (auto it: edges) {
             SocketItem* begin = static_cast<SocketItem*>( it->socketStart );
+			begin->textLabel->setPos( begin->scenePos() + QPointF(WIDTH / 10, 0) );
             begin->textLabel->show();
         }
     } else {
+		textLabel->setPos( scenePos() + QPointF(WIDTH / 10, 0) );
         textLabel->show();
     }
     QGraphicsEllipseItem::hoverEnterEvent(event);

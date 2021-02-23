@@ -7,13 +7,13 @@ MainWindow::MainWindow(QWidget *parent)
     , ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
-    ymlManager = new YmlSceneManager(this);
     gScene = new QGraphicsScene(this);
     gScene->setSceneRect(0,0, 5000, 1000);
+	ymlManager = new YmlSceneManager(this, gScene);
 
     QLinearGradient gradient(0, 0, 0, 1000);
-    gradient.setColorAt(0, QColor(194, 194, 163));
-    gradient.setColorAt(1.0, QColor(122, 122, 82));
+	gradient.setColorAt(0, QColor(235, 235, 224));
+	gradient.setColorAt(1.0, QColor(195, 195, 162));
     gScene->setBackgroundBrush(gradient);
 
     ui->gView->setScene(gScene);
@@ -41,21 +41,20 @@ void MainWindow::onClicked_Load()
     QString fileName = QFileDialog::getOpenFileName(this,
                        tr("Open scene yml"), "", tr("Yaml Files (*.yml *.yaml)"));
 
-    gScene->clear();
-    // TODO: ymlManager->requestSave();
-
+	// TODO: ymlManager->requestSave();
+	gScene->clear();
     if ( ymlManager->loadYmlFile(fileName) ) {
         setWindowTitle("Radish YML Scene Editor [" + fileName + "]");
     } else {
         print_error("Failed to load YML!");
     }
 
-    if ( ymlManager->drawSectionsGraph(gScene) ) {
+
+	if ( ymlManager->drawSectionsGraph() ) {
         print_info("Sections graph was successfully drawn.");
     } else {
         print_error("Failed to draw sections: INCORRECT YML!");
     }
-
 }
 void MainWindow::onClicked_Save()
 {
