@@ -14,12 +14,12 @@ void SocketSettingsForm::setupMe(QStringList sectionsList) {
     ui->factOperandBox->addItems( operandLst );
 
     QStringList actionLst;
-    actionLst << "NOT SET" << "shop" << "blacksmith" << "betting" << "gwent"
+	actionLst << "--NOT SET--" << "shop" << "blacksmith" << "betting" << "gwent"
               << "axii" << "exit" << "pay" << "shave" << "haircut";
     actionLst.sort();
     ui->actionBox->addItems( actionLst );
 
-    ui->nextSectionBox->addItem("NOT SET");
+	ui->nextSectionBox->addItem("--NOT SET--");
     sectionsList.sort();
     ui->nextSectionBox->addItems( sectionsList );
 }

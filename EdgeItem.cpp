@@ -20,11 +20,11 @@ void EdgeItem::draw() {
 void EdgeItem::setState(EdgeState state) {
     currentState = state;
     if (state == normal) {
-        setPen( QPen(QColor(0, 0, 102)) );
-    } else if (state == loop) {
-        setPen( QPen(QColor(0, 77, 0)) );
-    } else if (state == change) {
-        setPen( QPen(QColor(128, 0, 0)) );
+		setPen( QPen(colorEdgeNormal) );
+	} else if (state == highlight) {
+		setPen( QPen(colorEdgeHighlight) );
+	} else if (state == change) {
+		setPen( QPen(colorEdgeChange) );
     }
 }
 void EdgeItem::drawToPoint(QPointF endPoint) {

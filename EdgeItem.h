@@ -7,7 +7,7 @@
 class EdgeItem : public QGraphicsPathItem
 {
 public:
-    enum EdgeState { normal, loop, change };
+	enum EdgeState { normal, loop, highlight, change };
     bool hasStart = false;
 
     QGraphicsEllipseItem *socketStart = nullptr, *socketEnd = nullptr;

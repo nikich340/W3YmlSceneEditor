@@ -137,7 +137,6 @@ bool YmlSceneManager::saveYmlFile() {
 }
 
 bool YmlSceneManager::loadSectionsInfo() {
-
     if (root["dialogscript"]) {
         for(YAML::const_iterator it = root["dialogscript"].begin(); it != root["dialogscript"].end(); ++it) {
 			QString sectionName = it->XX.as<QString>().toLower(); // make all names toLower!
@@ -408,8 +407,32 @@ bool YmlSceneManager::dfsDrawGraph(QString sectionName) {
     return true;
 }
 
+void YmlSceneManager::renameSectionLink(QString sectionName, QString oldName) {
+	sectionLink* link = sectionGraph[oldName];
+	GraphicsSectionItem* item = itemBySectionName[oldName];
+
+	// rename all entries!
+	if (oldName != sectionName) {
+		sectionGraph.remove(oldName);
+		sectionGraph[sectionName] = link;
+		itemBySectionName.remove(oldName);
+		itemBySectionName[sectionName] = item;
+		sectionNames.removeOne(oldName);
+		sectionNames << sectionName;
+
+		YAML::Node tempNode = root["dialogscript"];
+		for (auto it = tempNode.begin(); it != tempNode.end(); ++it) {
+			if (it->first.as<QString>() == oldName) {
+				it->first = sectionName;
+				break;
+			}
+		}
+	}
+}
+
 void YmlSceneManager::updateSectionLink(QString sectionName) {
-    sectionLink* link = sectionGraph[sectionName];
+	sectionLink* link = sectionGraph[sectionName];
+
     if (root["dialogscript"][sectionName]) {
         YAML::Node sNode = root["dialogscript"][sectionName];
         YAML::Node sNode2;
@@ -423,7 +446,7 @@ void YmlSceneManager::updateSectionLink(QString sectionName) {
 				YAML::Node tempSeq;
 				YAML::Node tempMap;
 				for (int i = 0; i < link->names.size(); ++i) {
-					if (link->names[i] == "NOT SET" || link->names[i].isEmpty())
+					if ( link->names[i].isEmpty() )
 						continue;
 					tempMap.SetStyle(YAML::EmitterStyle::Block);
 					tempMap["choice"].SetStyle(YAML::EmitterStyle::Flow);

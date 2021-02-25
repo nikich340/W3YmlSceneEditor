@@ -12,6 +12,8 @@ DialogChangeSection::DialogChangeSection(QWidget *parent) :
 }
 
 void DialogChangeSection::fillLinkData() {
+	sLink->sectionName = ui->lineName->text();
+
 	if ( ui->nextButton->isChecked() ) {
 		if ( sk[0]->ui->conditionCheck->isChecked() ) {
 			sLink->type = conditionS;
@@ -36,6 +38,7 @@ void DialogChangeSection::fillLinkData() {
 		sLink->type = choiceS;
 		upn(i, 0, 6) {
 			ymlCond cond = ymlCond();
+
 			if ( sk[i]->ui->conditionCheck->isChecked() ) {
 				cond = ymlCond( sk[i]->ui->factNameLine->text(), sk[i]->ui->factOperandBox->currentText(),
 								sk[i]->ui->factValSpin->value() );
@@ -53,6 +56,11 @@ void DialogChangeSection::fillLinkData() {
 		if ( ui->timeLimitCheck->isChecked() ) {
 			sLink->timeLimit = ui->timeLimitSpin->value();
 		}
+	} else {
+		qDebug() << "Seems like none of buttons checked...";
+	}
+	while ( sLink->names.size() < 7 ) {
+		sLink->addChoice();
 	}
 }
 
@@ -60,7 +68,7 @@ void DialogChangeSection::updateChoiceForms(sectionLink* link, QStringList secti
     sLink = link;
     sectionsLst = sectionsList;
 
-    ui->lineName->setText(sLink->sectionName);
+	ui->lineName->setText(sLink->sectionName);
 
     sk.push_back(ui->choice_1);
     sk.push_back(ui->choice_2);
@@ -303,7 +311,7 @@ void DialogChangeSection::accept() {
         int ret = msg.exec(); // QMessageBox::Ok
         return;
     }
-    if ( ui->lineName->text() != sLink->sectionName && sectionsLst.contains(ui->lineName->text()) ) {
+	if ( ui->lineName->text() != sLink->sectionName && sectionsLst.contains(ui->lineName->text()) ) {
         QMessageBox msg(QMessageBox::Warning, "Incorrect settings", "Section with the same name already exists!", QMessageBox::Ok, this);
         msg.setModal(true);
         int ret = msg.exec(); // QMessageBox::Ok
@@ -311,7 +319,7 @@ void DialogChangeSection::accept() {
     }
     int cnt = 0;
     for (int i = 0; i < 7; ++i) {
-        if ( !sk[i]->isEnabled() || sk[i]->ui->nextSectionBox->currentText() == "NOT SET" )
+		if ( !sk[i]->isEnabled() || sk[i]->ui->nextSectionBox->currentText() == "--NOT SET--" )
             continue;
         cnt += 1;
         if ( ui->choiceButton->isChecked() && sk[i]->ui->choiceLine->text().isEmpty() ) {
@@ -320,7 +328,7 @@ void DialogChangeSection::accept() {
             int ret = msg.exec(); // QMessageBox::Ok
             return;
         }
-        if ( ui->choiceButton->isChecked() && sk[i]->ui->conditionCheck && sk[i]->ui->factNameLine->text() == "NOT SET" ) {
+		if ( ui->choiceButton->isChecked() && sk[i]->ui->conditionCheck->isChecked() && sk[i]->ui->factNameLine->text().isEmpty() ) {
             QMessageBox msg(QMessageBox::Warning, "Incorrect settings", "Condition #" + QString::number(i+1) + " fact name should not be empty!", QMessageBox::Ok, this);
             msg.setModal(true);
             int ret = msg.exec(); // QMessageBox::Ok

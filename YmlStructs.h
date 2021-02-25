@@ -5,11 +5,14 @@
 #include <QString>
 #include <QMap>
 #include <QSet>
+#include <QString>
+
 #define upn(x, init, n) for (int x = init; x <= n; ++x)
 #define upiter(x, container) for (auto x = container.begin(); x != container.end(); ++x)
 #define dn(x, init, n) for(int x = init; x >= n; --x)
 #define diter(x, container) for (auto x = container.rbegin(); x != container.rend(); ++x)
 #define pb push_back
+#define qn(x) QString::number(x)
 
 struct ymlCond { // [moddlg_facts_dan_storytime, "<", 1]
     QString condFact;
@@ -20,16 +23,36 @@ struct ymlCond { // [moddlg_facts_dan_storytime, "<", 1]
         condOperand = operand;
         condValue = value;
     }
+	friend bool operator==(const ymlCond& lhs, const ymlCond& rhs) {
+		bool ret = true;
+		ret = ret & (lhs.condFact == rhs.condFact);
+		ret = ret & (lhs.condOperand == rhs.condOperand);
+		ret = ret & (lhs.condValue == rhs.condValue);
+		return ret;
+	}
+	friend bool operator!=(const ymlCond& lhs, const ymlCond& rhs) {
+		return !(lhs == rhs);
+	}
 };
 struct choiceAction {
     QString action;
     int amount;
     bool grantExp; // - [ "pay 100, add experience?", section_pay, pay, 100, true ]
-    choiceAction(QString actionn = QString(), int amountt = -1, bool grantExpp = false) {
+	choiceAction(QString actionn = QString(), int amountt = -1, bool grantExpp = false) {
 		action = actionn;
         amount = amountt;
         grantExp = grantExpp;
     }
+	friend bool operator==(const choiceAction& lhs, const choiceAction& rhs) {
+		bool ret = true;
+		ret = ret & (lhs.action == rhs.action);
+		ret = ret & (lhs.amount == rhs.amount);
+		ret = ret & (lhs.grantExp == rhs.grantExp);
+		return ret;
+	}
+	friend bool operator!=(const choiceAction& lhs, const choiceAction& rhs) {
+		return !(lhs == rhs);
+	}
 };
 
 enum sectionType { nextS, choiceS, randomS, conditionS, scriptS, exitS };
@@ -48,8 +71,14 @@ struct sectionLink {
 	bool isStart() {
 		return sectionName.startsWith("section_start");
 	}
-    void addChoice(QString name = "NOT SET", QString choice = QString(), choiceAction action = choiceAction(),
+	void addChoice(QString name = QString(), QString choice = QString(), choiceAction action = choiceAction(),
                    ymlCond condition = ymlCond(), bool single = false, bool emphasiz = false) {
+		if (name == "--NOT SET--") {
+			name = QString();
+		}
+		if (action.action == "--NOT SET--") {
+			action.action = QString();
+		}
 		action.action = action.action.toLower();
 
 		names.push_back( name.toLower() );
@@ -69,8 +98,25 @@ struct sectionLink {
 		emphasize.clear();
 		timeLimit = -1.0;
 	}
+	friend bool operator==(const sectionLink& lhs, const sectionLink& rhs) {
+		bool ret = true;
+		ret = ret & (lhs.type == rhs.type);
+		ret = ret & (lhs.sectionName == rhs.sectionName);
+		ret = ret & (lhs.names == rhs.names);
+		ret = ret & (lhs.choiceLines == rhs.choiceLines);
+		ret = ret & (lhs.choiceActions == rhs.choiceActions);
+		ret = ret & (lhs.conditions == rhs.conditions);
+		ret = ret & (lhs.single_use == rhs.single_use);
+		ret = ret & (lhs.emphasize == rhs.emphasize);
+		ret = ret & ( abs(lhs.timeLimit - rhs.timeLimit) < 1e-5 );
+		return ret;
+	}
+	friend bool operator!=(const sectionLink& lhs, const sectionLink& rhs) {
+		return !(lhs == rhs);
+	}
     sectionLink() {}
 };
+
 
 
 #endif // YMLSTRUCTS_H

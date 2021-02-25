@@ -11,7 +11,7 @@ class YmlSceneManager : public QObject
 {
     Q_OBJECT
 private:
-    QVector<GraphicsSectionItem*> unusedItems;
+	QVector<GraphicsSectionItem*> unusedItems;
     QGraphicsScene* pScene = nullptr;
     QString filePath;
     QStringList sectionNames;
@@ -30,7 +30,8 @@ public:
     bool drawSectionsGraph();
     bool dfsPrepareGraph(QString sectionName, int depth);
     bool dfsDrawGraph(QString sectionName);
-    void updateSectionLink(QString sectionName);
+	void updateSectionLink(QString sectionName);
+	void renameSectionLink(QString sectionName, QString oldName);
     void removeSectionLink(QString sectionName);
     sectionLink* getSectionLink(QString sectionName);
     GraphicsSectionItem* getSectionItem(QString sectionName);

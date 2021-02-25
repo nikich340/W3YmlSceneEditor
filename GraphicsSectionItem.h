@@ -15,12 +15,14 @@ public:
     enum SectionState { normal, incomplete };
     SectionState state;
 
+	const QString sName() { return sLink->sectionName; }
     void updateState();
     GraphicsSectionItem(QGraphicsItem *parent = nullptr);
     void setSectionLink(sectionLink* link);
     void setYmlManager(YmlSceneManager* newManager);
     void setDefaults();
     void setLabel(QString text);
+	void updateSocketLabel(SocketItem* socket);
     SocketItem* addCleanOutput();
     void addInputEdge(EdgeItem* edge); // auto-create PathItem between sections
     bool isAllowedNewOutput();

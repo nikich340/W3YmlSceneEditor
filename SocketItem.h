@@ -7,7 +7,7 @@ class SocketItem : public QGraphicsEllipseItem
 {
     //Q_OBJECT
 private:
-    QVector<EdgeItem*> edges;
+	QVector<EdgeItem*> edges;
     bool inMove = false;
     bool inCreate = false;
 
@@ -18,7 +18,8 @@ public:
     bool hasEdges();
     void addEdge(EdgeItem* newEdge);
     bool removeEdge(EdgeItem* edge);
-    EdgeItem* getLastEdge();
+	EdgeItem* getLastEdge();
+	QVector<EdgeItem*> getEges();
     void setLabel(QString text);
     void redrawAllEdges();
     void deleteAllEdges();
