@@ -328,7 +328,7 @@ void DialogChangeSection::accept() {
             int ret = msg.exec(); // QMessageBox::Ok
             return;
         }
-		if ( ui->choiceButton->isChecked() && sk[i]->ui->conditionCheck->isChecked() && sk[i]->ui->factNameLine->text().isEmpty() ) {
+		if ( (ui->choiceButton->isChecked() || ui->nextButton->isChecked()) && sk[i]->ui->conditionCheck->isChecked() && sk[i]->ui->factNameLine->text().isEmpty() ) {
             QMessageBox msg(QMessageBox::Warning, "Incorrect settings", "Condition #" + QString::number(i+1) + " fact name should not be empty!", QMessageBox::Ok, this);
             msg.setModal(true);
             int ret = msg.exec(); // QMessageBox::Ok

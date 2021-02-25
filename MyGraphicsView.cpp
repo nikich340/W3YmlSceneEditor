@@ -13,6 +13,11 @@ MyGraphicsView::MyGraphicsView(QWidget *parent)
     //viewport()->setAttribute(Qt::WA_Hover);
 }
 
+void MyGraphicsView::setYmlManager(YmlSceneManager *manager) {
+	ymlManager = manager;
+	qDebug() << "anchor? " << transformationAnchor();
+}
+
 #if QT_CONFIG(wheelevent)
 void MyGraphicsView::wheelEvent(QWheelEvent *event)
 {
@@ -78,4 +83,21 @@ void MyGraphicsView::mouseMoveEvent(QMouseEvent* event)
         m_originY = event->y();
     }
     QGraphicsView::mouseMoveEvent(event);
+}
+
+void MyGraphicsView::contextMenuEvent(QContextMenuEvent *event) {
+	QPointF scenePos = this->mapToScene(event->pos());
+	if (scene()->itemAt(scenePos, transform()) == nullptr) {
+		QMenu menu;
+		QAction *editAction = menu.addAction("New section");
+		QAction *selectedAction = menu.exec( event->globalPos() );
+		if (selectedAction == nullptr) {
+			event->ignore();
+		} else if (selectedAction == editAction) {
+			event->accept();
+			ymlManager->addSectionLink( scenePos );
+		}
+	} else {
+		QGraphicsView::contextMenuEvent(event);
+	}
 }

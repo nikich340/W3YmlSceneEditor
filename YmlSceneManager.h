@@ -30,6 +30,7 @@ public:
     bool drawSectionsGraph();
     bool dfsPrepareGraph(QString sectionName, int depth);
     bool dfsDrawGraph(QString sectionName);
+	void addSectionLink(QPointF pos);
 	void updateSectionLink(QString sectionName);
 	void renameSectionLink(QString sectionName, QString oldName);
     void removeSectionLink(QString sectionName);

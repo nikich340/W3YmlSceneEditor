@@ -10,9 +10,11 @@ class MyGraphicsView : public QGraphicsView
 {
 private:
     int m_originX, m_originY;
+	YmlSceneManager* ymlManager = nullptr;
 
 public:
-    MyGraphicsView(QWidget *parent = nullptr);
+	MyGraphicsView(QWidget *parent = nullptr);
+	void setYmlManager(YmlSceneManager* manager);
 
 protected:
 #if QT_CONFIG(wheelevent)
@@ -21,6 +23,7 @@ protected:
     void mousePressEvent(QMouseEvent* event) override;
     void mouseReleaseEvent(QMouseEvent* event) override;
     void mouseMoveEvent(QMouseEvent* event) override;
+	void contextMenuEvent(QContextMenuEvent *event) override;
     //void mouseDoubleClickEvent(QMouseEvent *event) override;
 };
 

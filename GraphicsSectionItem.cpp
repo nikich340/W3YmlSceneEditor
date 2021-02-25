@@ -74,7 +74,7 @@ SocketItem* GraphicsSectionItem::addCleanOutput() {
     if (outputs.size() > sLink->names.size()) {
         sLink->addChoice();
 		qDebug() << "add clean output {" << qn(sLink->names.size() - 1) << "}, type: " << sLink->type;
-		if ( sLink->type != choiceS && sLink->type != randomS )
+		if ( (sLink->type != choiceS && sLink->type != randomS) && (outputs.size() > 1 || sLink->type == exitS) )
             output->hide();
     }
     updateOutputs();
@@ -179,7 +179,8 @@ void GraphicsSectionItem::fillCleanSockets() {
     }
     if (input == nullptr) {
         createInputSocket();
-        input->hide();
+		if (sLink->isStart())
+			input->hide();
     }
     updateState();
 }
@@ -501,5 +502,5 @@ void GraphicsSectionItem::removeMe() {
 
 	// I'll be back
 	ymlManager->deleteSection( sName() );
-	ymlManager->info("Section [" + sName() + "] was deleted in " + QString::number(timer.elapsed()) + " ms");
+	ymlManager->info("Section was deleted in " + QString::number(timer.elapsed()) + " ms");
 }

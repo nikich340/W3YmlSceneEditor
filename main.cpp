@@ -11,19 +11,19 @@ void logMessageOutput(QtMsgType type, const QMessageLogContext &context, const Q
 	switch (type) {
 		case QtDebugMsg:
 			if (logDebug)
-				logFile  << "[Debug]: " << msg.toStdString() << "\n";
+				logFile  << "[Debug] " << msg.toStdString() << "\n";
 			break;
 		case QtInfoMsg:
-			logFile  << "[Info]: " << msg.toStdString() << "\n";
+			logFile  << "[Info] " << msg.toStdString() << "\n";
 			break;
 		case QtWarningMsg:
-			logFile  << "[Warning]: " << msg.toStdString() << "\n";
+			logFile  << "[Warning] " << msg.toStdString() << "\n";
 			break;
 		case QtCriticalMsg:
-			logFile  << "[Critical]: " << msg.toStdString() << "\n";
+			logFile  << "[Critical] " << msg.toStdString() << "\n";
 			break;
 		case QtFatalMsg:
-			logFile  << "[Fatal]: " << msg.toStdString() << "\n";
+			logFile  << "[Fatal] " << msg.toStdString() << "\n";
 			abort();
 	}
 	if (logDebug)

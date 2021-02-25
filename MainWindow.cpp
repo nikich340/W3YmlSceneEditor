@@ -18,6 +18,7 @@ MainWindow::MainWindow(QWidget *parent)
     gScene->setBackgroundBrush(gradient);
 
     ui->gView->setScene(gScene);
+	ui->gView->setYmlManager(ymlManager);
 
     connect(ymlManager, SIGNAL(print_info(QString)), this, SLOT(print_info(QString)));
     connect(ymlManager, SIGNAL(print_error(QString)), this, SLOT(print_error(QString)));
@@ -62,10 +63,12 @@ void MainWindow::onClicked_Load()
 }
 void MainWindow::onClicked_Save()
 {
+	QElapsedTimer timer;
+	timer.start();
     if ( ymlManager->saveYmlFile() ) {
-        print_info("Successfully saved.");
+		print_info("Successfully saved in " + qn(timer.elapsed()) + " ms.");
     } else {
-        print_error("Faile to save yml!");
+		print_error("Failed to save yml!");
     }
 }
 

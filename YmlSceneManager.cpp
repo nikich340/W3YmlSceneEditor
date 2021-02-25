@@ -127,6 +127,20 @@ bool YmlSceneManager::saveYmlFile() {
 
     std::ofstream out(filePath.toStdString() + ".yml");
     out.clear();
+
+	for (auto name : sectionNames) {
+		if ( itemBySectionName[name]->state ) {
+			QMessageBox msgBox;
+			msgBox.setText("Save is not allowed: section [" + name + "] is incomplete!");
+			msgBox.setInformativeText("Make double click on it to edit settings.");
+			msgBox.setStandardButtons(QMessageBox::Ok);
+			msgBox.setDefaultButton(QMessageBox::Ok);
+			int ret = msgBox.exec();
+
+			return false;
+		}
+	}
+
     if (out.good())
         out << root;
     else
@@ -292,7 +306,7 @@ bool YmlSceneManager::loadSectionsInfo() {
                 // all is fine, add to graph
                 sectionNames.append(sectionName);
                 sectionGraph.insert(sectionName, tmpLink);
-                qDebug() << "ADD: " << sectionName;
+				qInfo() << "ADD: " << sectionName;
             }
         }
     } else {
@@ -405,6 +419,34 @@ bool YmlSceneManager::dfsDrawGraph(QString sectionName) {
         }
     }
     return true;
+}
+
+void YmlSceneManager::addSectionLink(QPointF pos) {
+	QString sectionName = "section_new_";
+	int j = 1;
+	while ( sectionNames.contains(sectionName + qn(j)) ) {
+		++j;
+	}
+	sectionName = sectionName + qn(j);
+	sectionNames.append(sectionName);
+	sectionLink* tmpLink = new sectionLink;
+	tmpLink->type = nextS;
+	tmpLink->sectionName = sectionName;
+	sectionGraph.insert(sectionName, tmpLink);
+
+	GraphicsSectionItem* newSect = new GraphicsSectionItem;
+	newSect->setLabel(sectionName);
+	newSect->setSectionLink(tmpLink);
+	newSect->setYmlManager(this);
+	newSect->setPos(pos);
+	pScene->addItem( newSect );
+	newSect->fillCleanSockets();
+
+	itemBySectionName[sectionName] = newSect;
+
+	root["dialogscript"][sectionName] = YAML::Load("- NEXT: invalid_link");
+
+	qInfo() << "ADD: " << sectionName;
 }
 
 void YmlSceneManager::renameSectionLink(QString sectionName, QString oldName) {
