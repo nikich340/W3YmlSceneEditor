@@ -40,10 +40,17 @@ void MainWindow::onClicked_Quit()
 }
 void MainWindow::onClicked_Load()
 {
+	if ( ymlManager->hasChanges && ymlManager->requestSave() ) {
+		return;
+	}
+
     QString fileName = QFileDialog::getOpenFileName(this,
                        tr("Open scene yml"), "", tr("Yaml Files (*.yml *.yaml)"));
+	if (fileName.isEmpty()) {
+		qInfo() << "Loading file canceled by user";
+		return;
+	}
 
-	// TODO: ymlManager->requestSave();
 	QElapsedTimer timer;
 	timer.start();
 	gScene->clear();

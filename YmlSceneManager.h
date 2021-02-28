@@ -23,6 +23,7 @@ private:
     QSet<QString> wasDrawn;                      // for init drawing
 
 public:
+	bool hasChanges = false;
     YmlSceneManager(QObject *parent = nullptr, QGraphicsScene* gScene = nullptr);
     bool loadYmlFile(QString path);
     bool saveYmlFile();
@@ -30,6 +31,7 @@ public:
     bool drawSectionsGraph();
     bool dfsPrepareGraph(QString sectionName, int depth);
     bool dfsDrawGraph(QString sectionName);
+	bool requestSave();
 	void addSectionLink(QPointF pos);
 	void updateSectionLink(QString sectionName);
 	void renameSectionLink(QString sectionName, QString oldName);

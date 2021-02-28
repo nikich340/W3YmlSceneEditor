@@ -114,6 +114,7 @@ bool YmlSceneManager::loadYmlFile(QString path) {
         return false;
     }
 
+	hasChanges = false;
     return true;
 }
 bool YmlSceneManager::saveYmlFile() {
@@ -125,6 +126,16 @@ bool YmlSceneManager::saveYmlFile() {
         return false;
     ymlFile.close();
 
+	if ( sectionNames.empty() ) {
+		QMessageBox msgBox;
+		msgBox.setText("Save is not allowed: no sections found!");
+		msgBox.setInformativeText("Scene should contain at least start and exit sections.");
+		msgBox.setStandardButtons(QMessageBox::Ok);
+		msgBox.setDefaultButton(QMessageBox::Ok);
+		int ret = msgBox.exec();
+
+		return false;
+	}
 	for (auto name : sectionNames) {
 		if ( itemBySectionName[name]->state == GraphicsSectionItem::incomplete ) {
 			QMessageBox msgBox;
@@ -147,7 +158,19 @@ bool YmlSceneManager::saveYmlFile() {
         return false;
 
     out.close();
+	hasChanges = false;
     return true;
+}
+
+bool YmlSceneManager::requestSave() {
+	QMessageBox msgBox;
+	msgBox.setText("WARNING: Current scene contains unsaved changes.");
+	msgBox.setInformativeText("Do you want to proceed anyway?");
+	msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+	msgBox.setDefaultButton(QMessageBox::No);
+	int ret = msgBox.exec();
+
+	return (ret == QMessageBox::No);
 }
 
 bool YmlSceneManager::loadSectionsInfo() {
