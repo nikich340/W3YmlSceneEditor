@@ -1,6 +1,6 @@
-#include "MyGraphicsView.h"
+#include "SectionsGraphicsView.h"
 
-MyGraphicsView::MyGraphicsView(QWidget *parent)
+SectionsGraphicsView::SectionsGraphicsView(QWidget *parent)
     : QGraphicsView(parent)
 {
     setCacheMode(CacheBackground);
@@ -13,12 +13,12 @@ MyGraphicsView::MyGraphicsView(QWidget *parent)
     //viewport()->setAttribute(Qt::WA_Hover);
 }
 
-void MyGraphicsView::setYmlManager(YmlSceneManager *manager) {
+void SectionsGraphicsView::setYmlManager(YmlSceneManager *manager) {
 	ymlManager = manager;
 }
 
 #if QT_CONFIG(wheelevent)
-void MyGraphicsView::wheelEvent(QWheelEvent *event)
+void SectionsGraphicsView::wheelEvent(QWheelEvent *event)
 {
     if (event->modifiers() & Qt::ControlModifier) {
         qreal scaleOffset = (event->angleDelta().y() > 0 ? 1.08 : 0.92);
@@ -39,7 +39,7 @@ void MyGraphicsView::wheelEvent(QWheelEvent *event)
 }
 #endif
 
-void MyGraphicsView::mousePressEvent(QMouseEvent* event)
+void SectionsGraphicsView::mousePressEvent(QMouseEvent* event)
 {
     if (event->button() == Qt::MiddleButton)
     {
@@ -51,7 +51,7 @@ void MyGraphicsView::mousePressEvent(QMouseEvent* event)
     QGraphicsView::mousePressEvent(event);
 }
 /*
-void MyGraphicsView::mouseDoubleClickEvent(QMouseEvent *event) {
+void SectionsGraphicsView::mouseDoubleClickEvent(QMouseEvent *event) {
     if (event->button() == Qt::LeftButton) {
         qDebug() << "Double click!";
         event->accept();
@@ -60,7 +60,7 @@ void MyGraphicsView::mouseDoubleClickEvent(QMouseEvent *event) {
     }
 }*/
 
-void MyGraphicsView::mouseReleaseEvent(QMouseEvent* event)
+void SectionsGraphicsView::mouseReleaseEvent(QMouseEvent* event)
 {
     if (event->button() == Qt::MiddleButton)
     {
@@ -72,7 +72,7 @@ void MyGraphicsView::mouseReleaseEvent(QMouseEvent* event)
     QGraphicsView::mouseReleaseEvent(event);
 }
 
-void MyGraphicsView::mouseMoveEvent(QMouseEvent* event)
+void SectionsGraphicsView::mouseMoveEvent(QMouseEvent* event)
 {
     if (event->buttons() & Qt::MiddleButton)
     {
@@ -84,7 +84,7 @@ void MyGraphicsView::mouseMoveEvent(QMouseEvent* event)
     QGraphicsView::mouseMoveEvent(event);
 }
 
-void MyGraphicsView::contextMenuEvent(QContextMenuEvent *event) {
+void SectionsGraphicsView::contextMenuEvent(QContextMenuEvent *event) {
 	QPointF scenePos = this->mapToScene(event->pos());
 	if (scene()->itemAt(scenePos, transform()) == nullptr) {
 		QMenu menu;

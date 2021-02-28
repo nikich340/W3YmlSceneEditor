@@ -1,19 +1,19 @@
 #pragma once
-#ifndef MYGRAPHICSVIEW_H
-#define MYGRAPHICSVIEW_H
+#ifndef SectionsGraphicsView_H
+#define SectionsGraphicsView_H
 
 #include <QObject>
 #include <QtWidgets>
 #include "GraphicsSectionItem.h"
 
-class MyGraphicsView : public QGraphicsView
+class SectionsGraphicsView : public QGraphicsView
 {
 private:
     int m_originX, m_originY;
 	YmlSceneManager* ymlManager = nullptr;
 
 public:
-	MyGraphicsView(QWidget *parent = nullptr);
+	SectionsGraphicsView(QWidget *parent = nullptr);
 	void setYmlManager(YmlSceneManager* manager);
 
 protected:
@@ -27,4 +27,4 @@ protected:
     //void mouseDoubleClickEvent(QMouseEvent *event) override;
 };
 
-#endif // MYGRAPHICSVIEW_H
+#endif // SectionsGraphicsView_H

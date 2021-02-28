@@ -18,14 +18,15 @@ DEFINES += QT_DEPRECATED_WARNINGS
 INCLUDEPATH += \
     yaml-cpp/include \
     yaml-cpp/src \
-    UI
+    UI \
+	SectionsEditor
 
 HEADERS += \
-    EdgeItem.h \
-    GraphicsSectionItem.h \
+    SectionsEditor/EdgeItem.h \
+    SectionsEditor/GraphicsSectionItem.h \
     MainWindow.h \
-    MyGraphicsView.h \
-    SocketItem.h \
+    SectionsEditor/SectionsGraphicsView.h \
+    SectionsEditor/SocketItem.h \
     UI/DialogChangeSection.h \
     UI/SocketSettingsForm.h \
     YmlSceneManager.h \
@@ -102,11 +103,11 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
 
 SOURCES += \
-    EdgeItem.cpp \
-    GraphicsSectionItem.cpp \
+    SectionsEditor/EdgeItem.cpp \
+    SectionsEditor/GraphicsSectionItem.cpp \
     MainWindow.cpp \
-    MyGraphicsView.cpp \
-    SocketItem.cpp \
+    SectionsEditor/SectionsGraphicsView.cpp \
+    SectionsEditor/SocketItem.cpp \
     UI/DialogChangeSection.cpp \
     UI/SocketSettingsForm.cpp \
     YmlSceneManager.cpp \

@@ -132,6 +132,7 @@ void GraphicsSectionItem::updateState() {
         state = SectionState::incomplete;
 		setBrush( QBrush(colorSectionIncomplete) );
     }
+	ymlManager->hasChanges = true;
 }
 void GraphicsSectionItem::updateSocketLabel(SocketItem* socket) {
 	int socketIdx = outputs.indexOf(socket);

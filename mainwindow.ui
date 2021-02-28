@@ -98,7 +98,7 @@
            </attribute>
           </widget>
          </widget>
-         <widget class="MyGraphicsView" name="gView">
+         <widget class="SectionsGraphicsView" name="gView">
           <property name="sizePolicy">
            <sizepolicy hsizetype="Preferred" vsizetype="MinimumExpanding">
             <horstretch>0</horstretch>
@@ -252,9 +252,9 @@
  </widget>
  <customwidgets>
   <customwidget>
-   <class>MyGraphicsView</class>
+   <class>SectionsGraphicsView</class>
    <extends>QGraphicsView</extends>
-   <header>mygraphicsview.h</header>
+   <header>SectionsGraphicsView.h</header>
   </customwidget>
  </customwidgets>
  <resources/>
