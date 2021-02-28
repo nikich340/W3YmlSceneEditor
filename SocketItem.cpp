@@ -68,6 +68,9 @@ void SocketItem::addEdge(EdgeItem *newEdge) {
     edges.push_back(newEdge);
 }
 bool SocketItem::removeEdge(EdgeItem *edge) {
+	qDebug() << "call remove edge! my edges:" << edges;
+	if (edges.isEmpty())
+		return false;
 	int idx = edges.indexOf(edge);
 	if (idx != -1) {
 		edges.remove(idx);

@@ -16,7 +16,7 @@ class DialogChangeSection : public QDialog
 
 private:
     QRegExpValidator validator;
-    QStringList sectionsLst;
+	QStringList sectionsLst;
     sectionLink* sLink;
 
 public:

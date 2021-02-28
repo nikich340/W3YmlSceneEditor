@@ -11,8 +11,9 @@ private:
     YmlSceneManager* ymlManager; // <- here
     sectionLink* sLink; // PUSH UPDATE TO YML ON EVERY CHANGE!
     bool hasCleanOutput = false;
+	bool isUpdating = false;
 public:
-    enum SectionState { normal, incomplete };
+	enum SectionState { normal, incomplete };
     SectionState state;
 
 	const QString sName() { return sLink->sectionName; }

@@ -12,5 +12,7 @@ static QColor colorEdgeNormal(0, 0, 100), colorEdgeChange(128, 0, 50), colorEdge
 const qreal DIAMETER = 6.0;
 const qreal HEIGHT = 60.0;
 const qreal WIDTH = 125.0;
+const qreal SCENE_HEIGHT = 1250.0;
+const qreal SCENE_WIDTH = 5000.0;
 
 #endif // CONSTANTS_H

@@ -66,8 +66,8 @@ void DialogChangeSection::fillLinkData() {
 
 void DialogChangeSection::updateChoiceForms(sectionLink* link, QStringList sectionsList) {
     sLink = link;
-    sectionsLst = sectionsList;
-
+	sectionsLst = sectionsList;
+	qDebug() << "updateChoiceForms: received list with {" << qn(sectionsList.size()) << "} names";
 	ui->lineName->setText(sLink->sectionName);
 
     sk.push_back(ui->choice_1);
@@ -79,9 +79,9 @@ void DialogChangeSection::updateChoiceForms(sectionLink* link, QStringList secti
     sk.push_back(ui->choice_7);
 
     // filter out start sections
-    QStringList filteredList = sectionsList;
-	for (int i = sectionsList.size() - 1; i >= 0; --i) {
-        if (sectionsList[i].startsWith("section_start")) {
+	QStringList filteredList = sectionsLst;
+	for (int i = sectionsLst.size() - 1; i >= 0; --i) {
+		if (sectionsLst[i].startsWith("section_start")) {
             filteredList.removeAt(i);
         }
     }
@@ -288,9 +288,11 @@ void DialogChangeSection::onTimeLimitClicked(bool enabled) {
 
 void DialogChangeSection::onSectionNameChanged(QString str) {
 	str = ui->lineName->text();
+	bool validChoice = ( str.startsWith("section_choice") && ui->choiceButton->isChecked() )
+					|| ( !str.startsWith("section_choice") && !ui->choiceButton->isChecked() );
 	int pos = 0;
 	QValidator::State state = validator.validate( str, pos );
-	if ( state == QValidator::Invalid ) {
+	if ( state == QValidator::Invalid || !validChoice ) {
         ui->lineName->setStyleSheet("color: red");
 	} else if ( state == QValidator::Intermediate ) {
 		ui->lineName->setStyleSheet("color: rgb(204, 82, 0)");
@@ -305,7 +307,10 @@ void DialogChangeSection::accept() {
 	QString str = ui->lineName->text();
 	int pos = 0;
 
-	if ( validator.validate(str, pos) != QValidator::Acceptable ) {
+	bool validChoice = ( str.startsWith("section_choice") && ui->choiceButton->isChecked() )
+					|| ( !str.startsWith("section_choice") && !ui->choiceButton->isChecked() );
+
+	if ( (validator.validate(str, pos) != QValidator::Acceptable) || !validChoice ) {
 		QMessageBox msg(QMessageBox::Warning, "Incorrect settings", "Wrong section name format!\nCorrect examples: " + ui->lineName->placeholderText(), QMessageBox::Ok, this);
         msg.setModal(true);
         int ret = msg.exec(); // QMessageBox::Ok

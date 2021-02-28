@@ -9,7 +9,7 @@ MainWindow::MainWindow(QWidget *parent)
 {
     ui->setupUi(this);
     gScene = new QGraphicsScene(this);
-    gScene->setSceneRect(0,0, 5000, 1000);
+	gScene->setSceneRect(0,0, SCENE_WIDTH, SCENE_HEIGHT);
 	ymlManager = new YmlSceneManager(this, gScene);
 
     QLinearGradient gradient(0, 0, 0, 1000);

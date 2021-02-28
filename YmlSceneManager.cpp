@@ -125,11 +125,8 @@ bool YmlSceneManager::saveYmlFile() {
         return false;
     ymlFile.close();
 
-    std::ofstream out(filePath.toStdString() + ".yml");
-    out.clear();
-
 	for (auto name : sectionNames) {
-		if ( itemBySectionName[name]->state ) {
+		if ( itemBySectionName[name]->state == GraphicsSectionItem::incomplete ) {
 			QMessageBox msgBox;
 			msgBox.setText("Save is not allowed: section [" + name + "] is incomplete!");
 			msgBox.setInformativeText("Make double click on it to edit settings.");
@@ -140,6 +137,9 @@ bool YmlSceneManager::saveYmlFile() {
 			return false;
 		}
 	}
+
+	std::ofstream out(filePath.toStdString());
+	out.clear();
 
     if (out.good())
         out << root;
@@ -325,15 +325,27 @@ bool YmlSceneManager::drawSectionsGraph() {
     }
 
     qreal x = 50;
-    qreal x_offset = qMin( WIDTH * 2.0, 4900.0 / sectionsByDepth.size() );
-	qreal y_max = -1, y_min = 5000;
+	qreal x_offset = qMin( WIDTH * 2.5, (SCENE_WIDTH * 0.95) / sectionsByDepth.size() );
+	qreal y_max = -1, y_min = SCENE_HEIGHT + 1;
     for (int i = 0; i < sectionsByDepth.size(); ++i) {
-        qreal y = 0;
-        qreal y_offset = 1000.0 / (sectionsByDepth[i].size() + 1);
+		qreal y = 0;
+		qreal y_offset = (SCENE_HEIGHT * 0.95) / (sectionsByDepth[i].size() + 1);
+
+		bool wasStep = true;
+		qreal x_offset2 = 0;
+		if (y_offset < HEIGHT) {
+			x_offset2 = WIDTH / 1.25;
+		}
         for (int j = 0; j < sectionsByDepth[i].size(); ++j) {
-            y += y_offset;
+			y += y_offset;
 			GraphicsSectionItem* pItem = itemBySectionName[sectionsByDepth[i][j]];
-            pItem->setPos(x, y);
+			if (wasStep) {
+				pItem->setPos(x, y);
+				wasStep = false;
+			} else {
+				pItem->setPos(x + x_offset2, y);
+				wasStep = true;
+			}
 			y_max = qMax(y_max, y);
 			y_min = qMin(y_min, y);
         }
@@ -459,7 +471,7 @@ void YmlSceneManager::renameSectionLink(QString sectionName, QString oldName) {
 		sectionGraph[sectionName] = link;
 		itemBySectionName.remove(oldName);
 		itemBySectionName[sectionName] = item;
-		sectionNames.removeOne(oldName);
+		sectionNames.removeAll(oldName);
 		sectionNames << sectionName;
 
 		YAML::Node tempNode = root["dialogscript"];
@@ -544,6 +556,8 @@ void YmlSceneManager::updateSectionLink(QString sectionName) {
 			case randomS: {
 				YAML::Node tempSeq;
 				for (auto s : link->names) {
+					if ( s.isEmpty() )
+						continue;
 					tempSeq.push_back(s);
 				}
 				sNode2["RANDOM"] = tempSeq;
@@ -567,7 +581,7 @@ void YmlSceneManager::updateSectionLink(QString sectionName) {
 void YmlSceneManager::deleteSection(QString sectionName) {
     delete sectionGraph[sectionName];
     sectionGraph.remove( sectionName );
-	sectionNames.removeOne( sectionName );
+	sectionNames.removeAll( sectionName );
 
 	GraphicsSectionItem* pItem = itemBySectionName[sectionName];
 	pScene->removeItem( pItem );

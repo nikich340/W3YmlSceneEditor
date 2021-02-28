@@ -15,7 +15,6 @@ MyGraphicsView::MyGraphicsView(QWidget *parent)
 
 void MyGraphicsView::setYmlManager(YmlSceneManager *manager) {
 	ymlManager = manager;
-	qDebug() << "anchor? " << transformationAnchor();
 }
 
 #if QT_CONFIG(wheelevent)

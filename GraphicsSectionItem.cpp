@@ -204,8 +204,10 @@ bool GraphicsSectionItem::removeOutputEdge(EdgeItem *edge) {
 		if ( outputs[i] != nullptr && outputs[i]->removeEdge(edge) ) {
             scene()->removeItem(edge);
             delete edge;
-			sLink->names[i] = "";
-            updateState();
+			if (!isUpdating) {
+				sLink->names[i] = "";
+				updateState();
+			}
 
             return true;
         }
@@ -330,6 +332,7 @@ void GraphicsSectionItem::changeMe() {
 		QElapsedTimer timer;
 		timer.start();
 		qInfo() << "Editing section [" + sName() + "]..";
+		isUpdating = true;
 
 		sectionLink oldData = *sLink;
 		sLink->reset();
@@ -345,14 +348,21 @@ void GraphicsSectionItem::changeMe() {
 
 		// upd output edges
 		upn(i, 0, 6) {
-			// remove old if changed
-			if ( outputs[i]->hasEdges() && (sLink->names[i] != oldData.names[i]) ) {
-				qDebug() << "Was changed: remove output {" << qn(i) << "}";
-				EdgeItem* edge = outputs[i]->getLastEdge();
-				this->removeOutputEdge(edge);
-			}
-			// add new if set
-			if ( !outputs[i]->hasEdges() && !sLink->names[i].isEmpty() ) {
+			// if changed
+			if ( sLink->names[i] != oldData.names[i] ) {
+				if ( outputs[i]->hasEdges() ) {
+					qDebug() << "Was changed: remove output {" << qn(i) << "}";
+					EdgeItem* edge = outputs[i]->getLastEdge();
+					removeOutputEdge(edge);
+				}
+				if ( outputs[i]->hasEdges() ) {
+					qCritical() << "Still has edge after removing!";
+					continue;
+				}
+				if ( sLink->names[i].isEmpty() ) {
+					qDebug() << "Was changed: new empty";
+					continue;
+				}
 				qDebug() << "Was changed: add output {" << qn(i) << "} to [" << sLink->names[i] << "]";
 				GraphicsSectionItem* nextSection = ymlManager->getSectionItem(sLink->names[i]);
 				EdgeItem* newEdge = new EdgeItem;
@@ -446,6 +456,7 @@ void GraphicsSectionItem::changeMe() {
 
 		ymlManager->updateSectionLink(sName());
 		ymlManager->info("Section [" + sName() + "] was updated in " + QString::number(timer.elapsed()) + " ms");
+		isUpdating = false;
 		updateState();
 		/*
 		 * 1) RESET ALL
@@ -468,7 +479,33 @@ void GraphicsSectionItem::removeMe() {
 
 	QElapsedTimer timer;
 	timer.start();
+	isUpdating = true;
 	qInfo() << "Deleting section [" + sName() + "]..";
+
+	upn(i, 0, outputs.size() - 1) {
+		if ( outputs[i] == nullptr )
+			continue;
+		// if changed
+		if ( outputs[i]->hasEdges() ) {
+			qDebug() << "Was removed: remove output {" << qn(i) << "}";
+			EdgeItem* edge = outputs[i]->getLastEdge();
+			removeOutputEdge(edge);
+		}
+		if ( outputs[i]->hasEdges() ) {
+			qCritical() << "Still has edge after removing!";
+			continue;
+		}
+	}
+
+	upn(i, 0, outputs.size() - 1) {
+		if ( outputs[i] == nullptr )
+			continue;
+		scene()->removeItem(outputs[i]);
+		delete outputs[i];
+		outputs[i] = nullptr;
+	}
+	outputs.clear();
+
 	if (input != nullptr) {
 		while ( input->hasEdges() ) {
 			EdgeItem* edge = input->getLastEdge();
@@ -484,23 +521,7 @@ void GraphicsSectionItem::removeMe() {
 		delete input;
 		input = nullptr;
 	}
-	for (auto out : outputs) {
-		if (out != nullptr && out->hasEdges()) {
-			EdgeItem* edge = out->getLastEdge();
-			if ( !removeOutputEdge(edge) ) {
-				qCritical() << "Removing output edge failed!";
-			}
-		}
-		if (out->hasEdges()) {
-			qCritical() << "Unexpected: output edge has edge after deletion??";
-		}
-		scene()->removeItem(out);
-		delete out;
-		out = nullptr;
-	}
-	outputs.clear();
 
-	// I'll be back
 	ymlManager->deleteSection( sName() );
 	ymlManager->info("Section was deleted in " + QString::number(timer.elapsed()) + " ms");
 }

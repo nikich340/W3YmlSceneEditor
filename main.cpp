@@ -37,7 +37,7 @@ int main(int argc, char *argv[])
 	if (argc > 1 && !strncmp(argv[1], "--debug", 7) ) {
 		logDebug = true;
 	}
-	qInstallMessageHandler(logMessageOutput);
+	//qInstallMessageHandler(logMessageOutput);
 
     QApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
     QApplication a(argc, argv);
