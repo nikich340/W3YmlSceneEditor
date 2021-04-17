@@ -6,6 +6,7 @@
 #include <QGraphicsScene>
 #include <YmlSceneManager.h>
 #include "GraphicsSectionItem.h"
+#include "ShotManager.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -22,7 +23,11 @@ public:
 private:
     Ui::MainWindow *ui;
     YmlSceneManager *ymlManager;
-    QGraphicsScene *gScene;
+	ShotManager *shotManager;
+	QGraphicsScene *gScene;
+	QGraphicsScene *gDgScene;
+	QGraphicsScene *gShotScene;
+	QGraphicsScene *gLabelScene;
     void resizeEvent(QResizeEvent* event);
 
 public slots:

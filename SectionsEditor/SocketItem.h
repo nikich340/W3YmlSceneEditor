@@ -18,6 +18,7 @@ public:
     bool hasEdges();
     void addEdge(EdgeItem* newEdge);
     bool removeEdge(EdgeItem* edge);
+	bool makeTop(EdgeItem* edge);
 	EdgeItem* getLastEdge();
 	QVector<EdgeItem*> getEges();
     void setLabel(QString text);

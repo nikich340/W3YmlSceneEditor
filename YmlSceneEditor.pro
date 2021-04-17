@@ -4,6 +4,10 @@ greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
 CONFIG += c++17
 QMAKE_CXXFLAGS += -std=c++17
+QMAKE_CXXFLAGS_WARN_OFF -= -Wunused-parameter -Wunused-variable
+
+# External files
+RESOURCES = w3.data/ymlSceneEditor.qrc
 
 # The following define makes your compiler emit warnings if you use
 # any Qt feature that has been marked deprecated (the exact warnings
@@ -19,7 +23,8 @@ INCLUDEPATH += \
     yaml-cpp/include \
     yaml-cpp/src \
     UI \
-	SectionsEditor
+    SectionsEditor \
+    ShotEditor
 
 HEADERS += \
     SectionsEditor/EdgeItem.h \
@@ -27,6 +32,8 @@ HEADERS += \
     MainWindow.h \
     SectionsEditor/SectionsGraphicsView.h \
     SectionsEditor/SocketItem.h \
+    ShotEditor/ShotManager.h \
+    ShotEditor/ShotViewer.h \
     UI/DialogChangeSection.h \
     UI/SocketSettingsForm.h \
     YmlSceneManager.h \
@@ -108,6 +115,8 @@ SOURCES += \
     MainWindow.cpp \
     SectionsEditor/SectionsGraphicsView.cpp \
     SectionsEditor/SocketItem.cpp \
+    ShotEditor/ShotManager.cpp \
+    ShotEditor/ShotViewer.cpp \
     UI/DialogChangeSection.cpp \
     UI/SocketSettingsForm.cpp \
     YmlSceneManager.cpp \
@@ -143,3 +152,5 @@ SOURCES += \
     yaml-cpp/src/singledocparser.cpp \
     yaml-cpp/src/stream.cpp \
     yaml-cpp/src/tag.cpp
+
+DISTFILES +=

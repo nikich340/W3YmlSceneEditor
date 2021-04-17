@@ -6,13 +6,69 @@
 #include <QMap>
 #include <QSet>
 #include <QString>
+#include <QVariant>
 
 #define upn(x, init, n) for (int x = init; x <= n; ++x)
+#define ups(x, init, n) for (size_t x = init; x <= n; ++x)
 #define upiter(x, container) for (auto x = container.begin(); x != container.end(); ++x)
 #define dn(x, init, n) for(int x = init; x >= n; --x)
 #define diter(x, container) for (auto x = container.rbegin(); x != container.rend(); ++x)
 #define pb push_back
 #define qn(x) QString::number(x)
+
+struct dialogLine {
+	QString text;
+	QString id;
+	QString hex;
+	double duration;
+};
+
+struct shotAction {
+	QString actionName;
+	double start;
+	QHash<QString, QVariant> values;  // super abstract, but perfomance ??
+	// variant.setData(QVariant::fromValue<QVector3D>(vec));
+	// vec = variant.value<QVector3D>();
+	shotAction(QString _actionName = QString(), double _start = -1.0) {
+		actionName = _actionName;
+		start = _start;
+	}
+};
+
+struct shot {
+	QVector<shotAction> actions;
+	QString shotName;
+};
+
+struct dialogLink {
+	QVector< shot > shots;
+	QVector< QString > speakers;
+	QVector< QString > lines;
+	QVector< double > durations;
+
+	double totalDuration = -1.0;
+
+	void calculateTotalDuration() {
+		totalDuration = 0.0;
+		for (auto d : durations) {
+			totalDuration += d;
+		}
+	}
+	int getIdx(QString shotName) {
+		upn(i, 0, shots.size() - 1) {
+			if (shots[i].shotName == shotName)
+				return i;
+		}
+		return -1;
+	}
+
+	void clear() {
+		shots.clear();
+		speakers.clear();
+		lines.clear();
+		durations.clear();
+	}
+};
 
 struct ymlCond { // [moddlg_facts_dan_storytime, "<", 1]
     QString condFact;
@@ -116,7 +172,5 @@ struct sectionLink {
 	}
     sectionLink() {}
 };
-
-
 
 #endif // YMLSTRUCTS_H

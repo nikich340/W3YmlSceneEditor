@@ -10,19 +10,44 @@ MainWindow::MainWindow(QWidget *parent)
     ui->setupUi(this);
     gScene = new QGraphicsScene(this);
 	gScene->setSceneRect(0,0, SCENE_WIDTH, SCENE_HEIGHT);
-	ymlManager = new YmlSceneManager(this, gScene);
 
-    QLinearGradient gradient(0, 0, 0, 1000);
+	gDgScene = new QGraphicsScene(this);
+	gDgScene->setSceneRect(0,0, SHOT_SCENE_WIDTH, SHOT_DG_HEIGHT);
+
+	gShotScene = new QGraphicsScene(this);
+	gShotScene->setSceneRect(0,0, SHOT_SCENE_WIDTH, SHOT_SCENE_HEIGHT);
+
+	gLabelScene = new QGraphicsScene(this);
+	gLabelScene->setSceneRect(0,0, SHOT_LABEL_WIDTH, SHOT_SCENE_HEIGHT);
+
+	ymlManager = new YmlSceneManager(this, gScene);
+	ymlManager->setShotScenes(gDgScene, gLabelScene, gShotScene);
+
+	ui->gView->setScene(gScene);
+	ui->gViewDgEditor->setScene(gDgScene);
+	ui->gViewShotEditor->setScene(gShotScene);
+	ui->gViewLabel->setScene(gLabelScene);
+	ui->gView->setYmlManager(ymlManager);
+	//ui->gViewShotEditor->setYmlManager(ymlManager);
+	ui->gViewShotEditor->setChildViews(ui->gViewLabel, ui->gViewDgEditor);
+
+	shotManager = new ShotManager(ymlManager, this);
+	shotManager->setShotScenes(gDgScene, gLabelScene, gShotScene);
+
+	QLinearGradient gradient(0, 0, 987, SCENE_HEIGHT);
 	gradient.setColorAt(0, colorSceneGradient0);
 	gradient.setColorAt(1.0, colorSceneGradient1);
     gScene->setBackgroundBrush(gradient);
-
-    ui->gView->setScene(gScene);
-	ui->gView->setYmlManager(ymlManager);
+	gDgScene->setBackgroundBrush(gradient);
+	gShotScene->setBackgroundBrush(gradient);
+	gLabelScene->setBackgroundBrush(gradient);
 
     connect(ymlManager, SIGNAL(print_info(QString)), this, SLOT(print_info(QString)));
     connect(ymlManager, SIGNAL(print_error(QString)), this, SLOT(print_error(QString)));
-    connect(ui->actionQuit, SIGNAL(triggered()), this, SLOT(onClicked_Quit()));
+	connect(ymlManager, SIGNAL(loadShots(QString)), shotManager, SLOT(onLoadShots(QString)));
+	connect(ui->gViewShotEditor, SIGNAL(wasScaled(double)), shotManager, SLOT(onScaledView(double)));
+
+	connect(ui->actionQuit, SIGNAL(triggered()), this, SLOT(onClicked_Quit()));
     connect(ui->actionLoad, SIGNAL(triggered()), this, SLOT(onClicked_Load()));
     connect(ui->actionSave, SIGNAL(triggered()), this, SLOT(onClicked_Save()));
 }

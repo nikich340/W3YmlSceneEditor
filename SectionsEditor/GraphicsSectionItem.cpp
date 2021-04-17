@@ -12,7 +12,7 @@ void GraphicsSectionItem::setDefaults() {
     setPen( QPen(Qt::black) );
     //setBrush( QBrush(QColor(128, 255, 170)) );
 	setBrush( QBrush(colorSectionNormal) );
-	setFlags( QGraphicsItem::ItemIsMovable );
+	setFlags( QGraphicsItem::ItemIsMovable | QGraphicsItem::ItemIsSelectable );
 }
 void GraphicsSectionItem::setLabel(QString text) {
     if (label == nullptr) {
@@ -73,7 +73,7 @@ SocketItem* GraphicsSectionItem::addCleanOutput() {
     outputs.push_back(output);
     if (outputs.size() > sLink->names.size()) {
         sLink->addChoice();
-		qDebug() << "add clean output {" << qn(sLink->names.size() - 1) << "}, type: " << sLink->type;
+		//qDebug() << "add clean output {" << qn(sLink->names.size() - 1) << "}, type: " << sLink->type;
 		if ( (sLink->type != choiceS && sLink->type != randomS) && (outputs.size() > 1 || sLink->type == exitS) )
             output->hide();
     }
@@ -292,6 +292,18 @@ void GraphicsSectionItem::updateInputEdges() {
         input->redrawAllEdges();
 }
 
+void GraphicsSectionItem::putOutputEdgesOnTop() {
+	for (int i = 0; i < outputs.size(); ++i) {
+		if ( outputs[i]->hasEdges() ) {
+			EdgeItem* edge = outputs[i]->getLastEdge();
+			SocketItem* outputSocket = static_cast<SocketItem*>(edge->socketEnd);
+			if ( outputSocket->makeTop(edge) == false ) {
+				qCritical() << "GraphicsSectionItem::putOutputEdgesOnTop(): failed to put on top!";
+			}
+		}
+	}
+}
+
 void GraphicsSectionItem::mouseDoubleClickEvent(QGraphicsSceneMouseEvent *event) {
     if (event->button() == Qt::LeftButton) {
         event->accept();
@@ -312,15 +324,29 @@ void GraphicsSectionItem::contextMenuEvent(QGraphicsSceneContextMenuEvent *event
 	QAction *editAction = menu.addAction("Edit");
 	QAction *deleteAction = menu.addAction("Delete");
     QAction *selectedAction = menu.exec(event->screenPos());
-    if (selectedAction == nullptr) {
-        event->ignore();
-	} else if (selectedAction == editAction) {
+	if (selectedAction == editAction) {
         event->accept();
         changeMe();
 	} else if (selectedAction == deleteAction) {
         event->accept();
         removeMe();
-    }
+	} else {
+		event->ignore();
+	}
+}
+
+QVariant GraphicsSectionItem::itemChange(QGraphicsItem::GraphicsItemChange change, const QVariant &value) {
+	if ( change == QGraphicsItem::ItemSelectedHasChanged ) {
+		if ( value.toBool() ) {
+			ymlManager->loadShotEditor( sLink->sectionName );
+
+			// push output edges on top
+			putOutputEdgesOnTop();
+		} else {
+			qDebug() << "Section de-selected.";
+		}
+	}
+	return QGraphicsItem::itemChange(change, value);
 }
 
 void GraphicsSectionItem::changeMe() {

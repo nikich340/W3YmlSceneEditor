@@ -35,6 +35,7 @@ public:
     void updateOutputs();     // repos outputs
     void updateOutputEdges(); // repaint EdgeItems
     void updateInputEdges(); // repaint EdgeItems
+	void putOutputEdgesOnTop();
 
     enum { Type = QGraphicsRectItem::UserType + 1 };
     int type() const override { return Type; }
@@ -55,6 +56,7 @@ protected:
     void mouseMoveEvent(QGraphicsSceneMouseEvent *event) override;
     void mouseDoubleClickEvent(QGraphicsSceneMouseEvent *event) override;
     void contextMenuEvent(QGraphicsSceneContextMenuEvent *event) override;
+	QVariant itemChange(QGraphicsItem::GraphicsItemChange change, const QVariant &value) override;
 };
 
 #endif // GRAPHICSSECTIONITEM_H

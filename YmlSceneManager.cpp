@@ -1,7 +1,6 @@
 #include "YmlSceneManager.h"
 #include "GraphicsSectionItem.h"
 #include <yaml-cpp/exceptions.h>
-#include "constants.h"
 
 #include <QDebug>
 #include <fstream>
@@ -26,6 +25,26 @@ namespace YAML {
         return true;
       }
      };
+
+	template<>
+	struct convert<QVector3D> {
+	  static Node encode(const QVector3D& rhs) {
+		Node node;
+		node.push_back(rhs.x());
+		node.push_back(rhs.y());
+		node.push_back(rhs.z());
+		return node;
+	  }
+
+	  static bool decode(const Node& node, QVector3D& rhs) {
+		if (!node.IsSequence())
+			return false;
+		rhs.setX( node[0].as<float>() );
+		rhs.setY( node[1].as<float>() );
+		rhs.setZ( node[2].as<float>() );
+		return true;
+	  }
+	 };
 
       template<>
       struct convert<ymlCond> {
@@ -63,6 +82,36 @@ YmlSceneManager::YmlSceneManager(QObject *parent, QGraphicsScene* gScene) : QObj
 {
 	pScene = gScene;
     qDebug() << "YmlSceneManager()";
+
+	/* read vanilla lines info */
+	QFile inputFile(":/lines.en.csv");
+	if (inputFile.open(QIODevice::ReadOnly | QIODevice::Text))
+	{
+	   QTextStream in(&inputFile);
+	   dialogLine newLine;
+	   QStringList lst;
+	   int cnt = 0;
+
+	   while (!in.atEnd())
+	   {
+		  lst = in.readLine().split("|");
+		  if (lst.size() < 4) {
+			  qWarning() << "Bad line: " << lst;
+			  continue;
+		  }
+		  ++cnt;
+		  newLine.id = lst[0];
+		  newLine.hex = lst[1];
+		  newLine.duration = lst[2].toDouble();
+		  newLine.text = lst[3];
+
+		  lineById[newLine.id] = newLine;
+	   }
+	   inputFile.close();
+	   qInfo() << "Loaded {" << lineById.size() << "} dg lines of total {" << cnt << "}.";
+	} else {
+		qCritical() << "Failed to read lines.en.csv!";
+	}
 }
 
 void debugNode(YAML::Node n) {
@@ -113,6 +162,10 @@ bool YmlSceneManager::loadYmlFile(QString path) {
     if (!loadSectionsInfo()) {
         return false;
     }
+
+	if (!loadShotsInfo()) {
+		return false;
+	}
 
 	hasChanges = false;
     return true;
@@ -268,7 +321,7 @@ bool YmlSceneManager::loadSectionsInfo() {
                                     tmpLink->addChoice( tmpNode["choice"][1].as<QString>(), tmpNode["choice"][0].as<QString>(),
                                                         act, condition, single_use, emphasize );
                                 } else if ( tmpNode["TIME_LIMIT"] ) {
-                                    tmpLink->timeLimit = tmpNode["TIME_LIMIT"].as<float>();
+									tmpLink->timeLimit = tmpNode["TIME_LIMIT"].as<double>();
                                 }
                             } else {
                                 error("Error: [" + sectionName + "]: incorrect choices syntax");
@@ -330,7 +383,25 @@ bool YmlSceneManager::loadSectionsInfo() {
                 sectionNames.append(sectionName);
                 sectionGraph.insert(sectionName, tmpLink);
 				qInfo() << "ADD: " << sectionName;
-            }
+			} else if ( sectionName == "actors" ) {
+				YAML::Node actorsNode(it->YY);
+				if (!actorsNode.IsSequence()) {
+					error("Error: actors list [" + sectionName + "] not a sequence");
+					return false;
+				}
+				for (size_t j = 0; j < actorsNode.size(); ++j) {
+					dgActors.insert( actorsNode[j].as<QString>() );
+				}
+			} else if ( sectionName == "props" ) {
+				YAML::Node propsNode(it->YY);
+				if (!propsNode.IsSequence()) {
+					error("Error: actors list [" + sectionName + "] not a sequence");
+					return false;
+				}
+				for (size_t j = 0; j < propsNode.size(); ++j) {
+					dgProps.insert( propsNode[j].as<QString>() );
+				}
+			}
         }
     } else {
         error("Error: no dialogscript sections found!");
@@ -339,6 +410,393 @@ bool YmlSceneManager::loadSectionsInfo() {
 
     qDebug() << "Loaded " << sectionGraph.size() << " sections";
     return true;
+}
+
+bool YmlSceneManager::loadShotActions(const YAML::Node actsNode, shot& sh) {
+	upn(k, 0, (int) actsNode.size() - 1) {
+		YAML::Node actionNode = actsNode[k];
+		shotAction newAction;
+		newAction.actionName = actionNode.begin()->XX.as<QString>().toLower();
+
+		QStringList keys = newAction.actionName.split(".");
+		YAML::Node paramNode = actionNode.begin()->YY;
+		bool isExtended = paramNode.IsMap();
+		qDebug() << "** " << keys;
+
+		if ( keys.isEmpty() ) {
+			qCritical() << "Empty shot action keys! Skipped";
+			continue;
+		}
+
+		if ( keys[0] == "cam" ) {
+			newAction.start = paramNode[0].as<double>();
+			newAction.values["cam_name"] = paramNode[1].as<QString>();
+
+			// rapid, smooth
+			if ( keys.size() > 2 && (keys[2] == "start" || keys[2] == "end") && paramNode.size() > 2 ) {
+				newAction.values["cam_ease"] = paramNode[2].as<QString>();
+			}
+		} else if ( keys[0] == "actor" || keys[0] == "prop" ) {
+			if ( keys[1] == "anim" )
+			{
+				if (isExtended) {
+					newAction.start = paramNode[".@pos"][0].as<double>();
+					newAction.values["animation"] = paramNode[".@pos"][1].as<QString>();
+					if (paramNode["actor"])
+						newAction.values["actor"] = paramNode["actor"].as<QString>();
+
+					if (paramNode["blendin"])
+						newAction.values["blendin"] = paramNode["blendin"].as<double>();
+
+					if (paramNode["blendout"])
+						newAction.values["blendout"] = paramNode["blendout"].as<double>();
+
+					if (paramNode["clipfront"])
+						newAction.values["clipfront"] = paramNode["clipfront"].as<double>();
+
+					if (paramNode["clipend"])
+						newAction.values["clipend"] = paramNode["clipend"].as<double>();
+
+					if (paramNode["weight"])
+						newAction.values["weight"] = paramNode["weight"].as<double>();
+
+					if (paramNode["stretch"])
+						newAction.values["stretch"] = paramNode["stretch"].as<double>();
+				} else {
+					newAction.start = paramNode[0].as<double>();
+					newAction.values["animation"] = paramNode[1].as<QString>();
+				}
+			}
+			else if ( keys[1] == "mimic" )
+			{
+				if (isExtended) {
+					newAction.start = paramNode[".@pos"][0].as<double>();
+					newAction.values["mimic"] = paramNode[".@pos"][1].as<QString>();
+					if (paramNode["actor"])
+						newAction.values["actor"] = paramNode["actor"].as<QString>();
+
+					if (paramNode["emotional_state"])
+						newAction.values["emotional_state"] = paramNode["emotional_state"].as<QString>();
+
+					if (paramNode["pose"])
+						newAction.values["pose"] = paramNode["pose"].as<QString>();
+
+					if (paramNode["eyes"])
+						newAction.values["eyes"] = paramNode["eyes"].as<QString>();
+
+					if (paramNode["anim"])
+						newAction.values["anim"] = paramNode["anim"].as<QString>();
+
+					if (paramNode["weight"])
+						newAction.values["weight"] = paramNode["weight"].as<double>();
+
+					if (paramNode["duration"])
+						newAction.values["duration"] = paramNode["duration"].as<double>();
+				} else {
+					newAction.start = paramNode[0].as<double>();
+					newAction.values["mimic"] = paramNode[1].as<QString>();
+				}
+			}
+			else if ( keys[1] == "gamestate" )
+			{
+				if (isExtended) {
+					newAction.start = paramNode[".@pos"][0].as<double>();
+					newAction.values["actor"] = paramNode[".@pos"][1].as<QString>();
+					if (paramNode["action"])
+						newAction.values["action"] = paramNode["action"].as<QString>();
+					if (paramNode["behavior"])
+						newAction.values["behavior"] = paramNode["behavior"].as<QString>();
+				} else {
+					newAction.start = paramNode[0].as<double>();
+					newAction.values["actor"] = paramNode[1].as<QString>();
+				}
+			}
+			else if ( keys[1] == "placement" )
+			{
+				newAction.start = paramNode[0].as<double>();
+				newAction.values["actor"] = paramNode[1].as<QString>();
+				newAction.values["pos"] = paramNode[2].as<QVector3D>();
+				newAction.values["rot"] = paramNode[3].as<QVector3D>();
+
+				if ( keys.size() > 2 && (keys[2] == "start" || keys[2] == "end") && paramNode.size() > 4 ) {
+					newAction.values["ease"] = paramNode[4].as<QString>();
+				}
+			}
+			else if ( keys[1] == "pose" )
+			{
+				newAction.start = paramNode[0].as<double>();
+				newAction.values["pose"] = paramNode[1].as<QString>();
+			}
+			else if ( keys[1] == "lookat" )
+			{
+				if (isExtended) {
+					newAction.start = paramNode[".@pos"][0].as<double>();
+					newAction.values["actor"] = paramNode[".@pos"][1].as<QString>();
+					if (paramNode[".@pos"][2].IsSequence()) {
+						newAction.values["lookat_pos"] = paramNode[".@pos"][2].as<QVector3D>();
+					} else {
+						newAction.values["lookat_actor"] = paramNode[".@pos"][2].as<QString>();
+					}
+
+					if (paramNode["turn"])
+						newAction.values["turn"] = paramNode["turn"].as<QString>();
+
+					if (paramNode["speed"])
+						newAction.values["speed"] = paramNode["speed"].as<double>();
+				} else {
+					newAction.start = paramNode[0].as<double>();
+					newAction.values["actor"] = paramNode[1].as<QString>();
+					if (paramNode[2].IsSequence()) {
+						newAction.values["lookat_pos"] = paramNode[2].as<QVector3D>();
+					} else {
+						newAction.values["lookat_actor"] = paramNode[2].as<QString>();
+					}
+				}
+			}
+			else if ( keys[1] == "show" || keys[1] == "hide" || keys[1] == "scabbard" )
+			{
+				newAction.start = paramNode[0].as<double>();
+				newAction.values["actor"] = paramNode[1].as<QString>();
+			}
+			else if ( keys[1] == "effect" )
+			{
+				newAction.start = paramNode[0].as<double>();
+				newAction.values["actor"] = paramNode[1].as<QString>();
+				newAction.values["effect"] = paramNode[2].as<QString>();
+			}
+			else if ( keys[1] == "sound" )
+			{
+				newAction.start = paramNode[0].as<double>();
+				newAction.values["actor"] = paramNode[1].as<QString>();
+				newAction.values["soundEvent"] = paramNode[2].as<QString>();
+			}
+			else if ( keys[1] == "appearance" )
+			{
+				newAction.start = paramNode[0].as<double>();
+				newAction.values["actor"] = paramNode[1].as<QString>();
+				newAction.values["appearance"] = paramNode[2].as<QString>();
+			}
+			else if ( keys[1] == "equip" )
+			{
+				newAction.start = paramNode[0].as<double>();
+				newAction.values["actor"] = paramNode[1].as<QString>();
+				newAction.values["item"] = paramNode[2].as<QString>();
+			}
+		} else if ( keys[0] == "world" ) {
+			if ( keys[1] == "addfact" )
+			{
+				newAction.start = paramNode[0].as<double>();
+				newAction.values["fact"] = paramNode[1].as<QString>();
+				newAction.values["value"] = paramNode[2].as<int>();
+
+				if ( paramNode.size() > 3 ) {
+					newAction.values["validFor"] = paramNode[3].as<int>();
+				}
+			}
+			else if ( keys[1] == "weather" )
+			{
+				newAction.start = paramNode[0].as<double>();
+				newAction.values["weatherId"] = paramNode[1].as<QString>();
+
+				if ( paramNode.size() > 2 ) {
+					newAction.values["blendTime"] = paramNode[2].as<int>();
+				}
+			}
+			else if ( keys[1] == "effect" )
+			{
+				newAction.start = paramNode[0].as<double>();
+				newAction.values["tag"] = paramNode[1].as<QString>();
+				newAction.values["effect"] = paramNode[2].as<QString>();
+			}
+		} else if ( keys[0] == "env" ) {
+			if (isExtended) {
+				newAction.start = paramNode[".@pos"][0].as<double>();
+				newAction.values["envPath"] = paramNode[".@pos"][1].as<QString>();
+
+				if (paramNode[".@pos"].size() > 2)
+					newAction.values["blendTime"] = paramNode[".@pos"][2].as<double>();
+
+				if (paramNode["priority"])
+					newAction.values["priority"] = paramNode["priority"].as<int>();
+
+				if (paramNode["blendFactor"])
+					newAction.values["blendFactor"] = paramNode["blendFactor"].as<double>();
+			} else {
+				newAction.start = paramNode[0].as<double>();
+				newAction.values["envPath"] = paramNode[1].as<QString>();
+
+				if (paramNode.size() > 2)
+					newAction.values["blendTime"] = paramNode[2].as<double>();
+			}
+		} else if ( keys[0] == "fade" ) {
+			newAction.start = paramNode[0].as<double>();
+			newAction.values["duration"] = paramNode[1].as<double>();
+
+			if (paramNode.size() > 2) {
+				newAction.values["color"] = QVector4D(paramNode[2][0].as<int>(), paramNode[2][1].as<int>(),
+													  paramNode[2][2].as<int>(), paramNode[2][3].as<int>());
+			}
+		} else {
+			qCritical() << "Unknown shot action!!!";
+			continue;
+		}
+
+		// load
+		sh.actions.pb( newAction );
+	}
+	return true;
+}
+bool YmlSceneManager::loadShotsInfo() {
+	QSet<QString> nextKeys, cueKeys;
+	nextKeys = { "NEXT", "SCRIPT", "RANDOM", "EXIT", "OUTPUT", "BLACKSCREEN", "CAMERA_BLEND" };
+	cueKeys = { "CUE", "HINT", "REFERENCE" };
+
+	for (auto sectionName : sectionNames) {
+		if (!root["dialogscript"][sectionName])	{
+			qDebug() << "Exception0: no dialogscript found for section [" << sectionName << "]";
+			continue;
+		}
+
+		YAML::Node sNode = root["dialogscript"][sectionName];
+
+		dialogLink newDgLink;
+		QSet<QString> usedShotNames;
+		QString prevShotName = QString();
+		qInfo() << "--- Loading dialog for section [" << sectionName << "]";
+
+		for (auto it = sNode.begin(); it != sNode.end(); ++it) {			
+			if ( !it->IsMap() ) {
+				qWarning() << "Warning: non-map type (exit?).";
+				break;
+			}
+			if ( it->size() > 1 ) {
+				qCritical() << "Exception2: Map has > 1 elements?";
+				break;
+			}
+			if ( !it->begin()->XX.IsScalar() ) {
+				qCritical() << "Exception3/1: non-scalar!";
+				break;
+			}
+			QString key = it->begin()->XX.as<QString>();
+
+			if ( nextKeys.contains(key.toUpper()) ) {
+				//qDebug() << "NEXT key, continue";
+				prevShotName = QString();
+				continue;
+			}
+			if ( cueKeys.contains(key.toUpper()) ) {
+				//qDebug() << "CUE key";
+				prevShotName = it->begin()->YY.as<QString>();
+				continue;
+
+			} else if ( key.toUpper() == "PAUSE" || key.toUpper() == "CHOICE" ) {
+				//qDebug() << "CHOICE/PAUSE key";
+				newDgLink.lines.pb( key.toUpper() );
+				newDgLink.speakers.pb( key.toUpper() );
+				double dur;
+				if (key.toUpper() == "PAUSE") {
+					dur = it->begin()->YY.as<double>();
+				} else {
+					dur = sectionGraph[sectionName]->timeLimit;
+					if (dur < 0.0)
+						dur = 10.0;
+				}
+				newDgLink.durations.pb( dur );
+
+				shot newShot;
+				if ( prevShotName.isEmpty() ) {
+					prevShotName = key.toUpper() + "_";
+					int idx = 1;
+					while ( usedShotNames.contains( prevShotName + qn(idx) ) ) {
+						++idx;
+					}
+					prevShotName += qn(idx);
+				}
+				newShot.shotName = prevShotName;
+				usedShotNames.insert(prevShotName);
+				newDgLink.shots.pb( newShot );
+
+				prevShotName = QString();
+
+			} else if ( dgActors.contains(key) ) {
+				if ( !it->begin()->YY.IsScalar() ) {
+					qCritical() << "Exception3/2: non-scalar YY (actor)";
+					break;
+				}
+				//qDebug() << "ACTOR key";
+				QString line = it->begin()->YY.as<QString>();
+				newDgLink.lines.pb( line );
+				newDgLink.speakers.pb( key );
+				newDgLink.durations.pb( getTextDuration(line) ); // TODO: try extract duration
+
+				shot newShot;
+				if ( prevShotName.isEmpty() ) {
+					prevShotName = key;
+					int idx = 1;
+					while ( usedShotNames.contains( prevShotName + qn(idx) ) ) {
+						++idx;
+					}
+					prevShotName += qn(idx);
+				}
+				newShot.shotName = prevShotName;
+				usedShotNames.insert(prevShotName);
+				newDgLink.shots.pb( newShot );
+
+				prevShotName = QString();
+
+			} else {
+				qCritical() << "UNKNOWN KEY?? " << key;
+				prevShotName = QString();
+				continue;
+			}
+		}
+		/*upn(i, 0, newDgLink.lines.size() - 1) {
+			qDebug() << "Speaker: [" << newDgLink.speakers[i] << "], line: [" << newDgLink.lines[i] << "], shot alias: ["
+					 << newDgLink.shots[i].shotName << "], duration: [" << newDgLink.durations[i] << "]";
+		}*/
+		newDgLink.calculateTotalDuration();
+		dgLinkBySectionName[sectionName]= newDgLink;
+	}
+
+	if (root["storyboard"]) {
+		for (auto it = root["storyboard"].begin(); it != root["storyboard"].end(); ++it) {
+			QString sectionName = it->XX.as<QString>();
+			qInfo() << "Loading storyboard for section: [" << sectionName << "]";
+
+			if ( !it->YY.IsMap() ) {
+				qCritical() << "Exception4: sbui section not a map!";
+				continue;
+			}
+			if ( !sectionNames.contains(sectionName) ) {
+				qInfo() << "Skipping: not a real section (defaults?)";
+				continue;
+			}
+
+			for (auto jt = it->YY.begin(); jt != it->YY.end(); ++jt) {
+				QString shotName = jt->XX.as<QString>();
+				qInfo() << "Loading shot: [" << shotName << "]";
+
+				if ( !jt->YY.IsSequence() ) {
+					qCritical() << "Exception5: shot actions are not a list!";
+					continue;
+				}
+				int shotIdx = dgLinkBySectionName[sectionName].getIdx(shotName);
+				if (shotIdx == -1) {
+					qCritical() << "Exception6: shot was not found in dialogscript!";
+					continue;
+				}
+
+				if ( !loadShotActions(jt->YY, dgLinkBySectionName[sectionName].shots[shotIdx]) ) {
+					return false;
+				}
+			}
+		}
+
+	} else {
+		qWarning() << "No sbui shots found!";
+		return false;
+	}
+	return true;
 }
 
 bool YmlSceneManager::drawSectionsGraph() {
@@ -388,6 +846,8 @@ bool YmlSceneManager::drawSectionsGraph() {
         it->updateState();
     }
 	pScene->views().first()->fitInView(0, y_min, x, y_max, Qt::KeepAspectRatio);
+
+	hasChanges = false;
     return true;
 
 }
@@ -633,4 +1093,88 @@ GraphicsSectionItem* YmlSceneManager::getSectionItem(QString sectionName) {
 
 QStringList YmlSceneManager::getSectionNames() {
     return sectionNames;
+}
+
+QString YmlSceneManager::getCleanLine(QString text) {
+	int text_pos = qMax( text.lastIndexOf(']'), text.lastIndexOf('|') );
+	if (text_pos > 0)
+		++text_pos;
+	return text.mid(text_pos);
+}
+double YmlSceneManager::getTextDuration(QString line) {
+	QString duration;
+	int cnt = 0;
+	bool ok_dur = true;
+	for (auto c : line) {
+		if (c == ']')
+			++cnt;
+		if (cnt == 1) {
+			duration.pb(c);
+			if (!c.isDigit() && c != '.')
+				ok_dur = false;
+		}
+		if (c == '[')
+			++cnt;
+	}
+	if (ok_dur && duration.toDouble() > 0.0)
+		return duration.toDouble();
+
+	QString id;
+	cnt = 0;
+	bool ok_id = false;
+	upn(i, 0, line.length() - 1) {
+		QChar c = line[i];
+		if (c.isDigit()) {
+			id.pb(c);
+			++cnt;
+			if (cnt == 10 && i+1 < line.length() && line[i + 1] == '|') {
+				ok_id = true;
+				break;
+			}
+		} else {
+			cnt = 0;
+			id.clear();
+		}
+	}
+	if (ok_id && lineById.contains(id) && lineById[id].duration > 0.0) {
+		return lineById[id].duration;
+	}
+
+	int text_pos = qMax( line.lastIndexOf(']'), line.lastIndexOf('|') );
+	if (text_pos > 0)
+		++text_pos;
+
+	int length = line.length() - text_pos;
+	double factor;
+
+	/* @rmemr */
+	if (length < 20) {
+		factor = 0.11;
+	} else if (length < 50) {
+		factor = 0.08;
+	} else if (length < 75) {
+		factor = 0.075;
+	} else {
+		factor = 0.073;
+	}
+
+	return qMax(1.0, factor * length);
+		// heuristic "approved duration": letters * lengthDependentFactor sec
+		// based on some voiceline duration statistics:
+		//     <20: 0.1084             0.11
+		//     <50: 0.0799             0.08
+		//     <75: 0.07404            0.075
+		//     <100: 0.0733            0.073
+		//     <150: 0.0720            0.073
+		//     <200: 0.0725            0.073
+}
+
+void YmlSceneManager::setShotScenes(QGraphicsScene* gDgScene, QGraphicsScene* gLabelScene, QGraphicsScene* gShotScene) {
+	pDgScene = gDgScene;
+	pLabelScene = gLabelScene;
+	pShotScene = gShotScene;
+}
+
+void YmlSceneManager::loadShotEditor(QString sectionName) {
+	emit loadShots(sectionName);
 }

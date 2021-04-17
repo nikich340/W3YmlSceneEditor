@@ -80,6 +80,17 @@ bool SocketItem::removeEdge(EdgeItem *edge) {
 	}
 }
 
+bool SocketItem::makeTop(EdgeItem* edge) {
+	int idx = edges.indexOf(edge);
+	if (idx != -1) {
+		if (idx < edges.size() - 1)
+			std::rotate(edges.begin(), edges.begin() + (idx + 1), edges.end());
+		return true;
+	} else {
+		return false;
+	}
+}
+
 void SocketItem::mousePressEvent(QGraphicsSceneMouseEvent *event) {
     if (event->button() == Qt::LeftButton) {
         if (!edges.isEmpty() && isInputSocket) {
