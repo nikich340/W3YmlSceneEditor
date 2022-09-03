@@ -40,7 +40,6 @@ public:
     enum { Type = QGraphicsRectItem::UserType + 1 };
     int type() const override { return Type; }
 
-public slots:
     void removeMe();
     void changeMe();
 
