@@ -45,11 +45,11 @@ int main(int argc, char *argv[])
 	}
 
     QApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
-    QApplication a(argc, argv);
-    MainWindow w;
-    w.showMaximized();
+    QApplication app(argc, argv);
+    MainWindow window;
+    window.showMaximized();
 
-	int ret = a.exec();
+    int ret = app.exec();
 	logFile.close();
 	return ret;
 }
