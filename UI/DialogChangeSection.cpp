@@ -8,6 +8,7 @@ DialogChangeSection::DialogChangeSection(QWidget *parent) :
     ui(new Ui::DialogChangeSection)
 {
     ui->setupUi(this);
+	qd << "Geometry: " << geometry();
     connect(ui->choice_1->ui->conditionCheck, SIGNAL(clicked(bool)), this, SLOT(onClicked_Cond(bool)));
 }
 

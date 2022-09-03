@@ -15,6 +15,16 @@ static QColor colorDgViewActor[10] = {
 	QColor(0,0,0), QColor(0,0,0), QColor(0,0,0), QColor(0,0,0), QColor(0,0,0)
 };
 
+const QString SCAMERAS = "cameras";
+const QString SPROPS = "actors"; // not a bug! for unification
+const QString SACTORS = "actors";
+const QString SANIMS = "animations";
+const QString SMIMICANIMS = "animations.mimic";
+const QString SANIMPOSES = "actor.poses";
+const QString SMIMICPOSES = "mimics";
+const QString SSOUNDBANKS = "soundbanks";
+const QString NOT_SET = "---NOT SET---";
+
 const qreal DIAMETER = 6.0;
 const qreal HEIGHT = 60.0;
 const qreal WIDTH = 125.0;
@@ -23,9 +33,13 @@ const qreal SCENE_WIDTH = 5000.0;
 
 const qreal SHOT_SCENE_HEIGHT = 2000.0;
 const qreal SHOT_SCENE_WIDTH = 3000.0;
-const qreal SHOT_SECOND = 50;
+const qreal SHOT_SECOND = 100;
 const qreal SHOT_ROW = 25;
 const qreal SHOT_DG_HEIGHT = 70.0;
 const qreal SHOT_LABEL_WIDTH = 150.0;
+
+const QStringList MIMICS_LIST = { "Afraid", "Very afraid", "Aggressive", "Bursting_anger", "Confident", "Contempt", "Cry",
+								  "Determined", "Disgusted", "Drunk", "Focused", "Happy", "Very happy", "Nervous", "Neutral",
+								  "Proud", "Sad", "Sceptic", "Seducing", "Sleeping", "Surprised", "Surprised Shocked", "NO ANIM" };
 
 #endif // CONSTANTS_H

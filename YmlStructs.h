@@ -2,19 +2,233 @@
 #define YMLSTRUCTS_H
 
 #include <QVector>
+#include <QDebug>
 #include <QString>
 #include <QMap>
 #include <QSet>
 #include <QString>
 #include <QVariant>
+#include <QVector3D>
 
+#define XKey first
+#define YValue second
 #define upn(x, init, n) for (int x = init; x <= n; ++x)
 #define ups(x, init, n) for (size_t x = init; x <= n; ++x)
 #define upiter(x, container) for (auto x = container.begin(); x != container.end(); ++x)
 #define dn(x, init, n) for(int x = init; x >= n; --x)
 #define diter(x, container) for (auto x = container.rbegin(); x != container.rend(); ++x)
 #define pb push_back
+#define to_qstr(x) QString::fromStdString(x)
 #define qn(x) QString::number(x)
+#define qd qDebug()
+#define qi qInfo()
+#define qw qWarning()
+#define qc qCritical()
+
+struct transform {
+	QVector3D pos;
+	QVector3D rot;
+	transform() {}
+	transform(QVector3D _pos, QVector3D _rot) {
+		pos = _pos;
+		rot = _rot;
+	}
+};
+
+struct asset_base {
+	bool fromRepo = false;
+	int nameID = -1;			// = map name from yml
+};
+
+struct asset : asset_base {
+	QString templatePath;
+	QString mainAppearance;
+	bool by_voicetag = false;
+	QSet<QString> appearances;
+	QSet<QString> tags;
+	/*void debug() {
+		qd << "name: " << name << ", tpath: " << templatePath << ", mainApp: " << mainAppearance << ", apps: " << appearances << ", by_voicetag: " << by_voicetag << ", tags: " << tags;
+	}*/
+	asset() {}
+	asset(int _nameID, QString _templatePath) {
+		nameID = _nameID;
+		templatePath = _templatePath.replace("\\", "/");
+	}
+	QString getAppearances() {
+		QString ret = "";
+		for (auto it : appearances) {
+			ret += it + "\n";
+		}
+		return ret;
+	}
+	QString getTags() {
+		QString ret = "";
+		for (auto it : tags) {
+			ret += it + "\n";
+		}
+		return ret;
+	}
+};
+
+struct camera : asset_base {
+	float fov = 30.0, dofIntensity = 0.25, zoom = -1.0;
+	transform placement;
+	QPair<float, float> dofBlur, dofFocus, dofAperture;
+	QString plane = "medium";
+	QSet<QString> tags = { "ext" };
+
+	camera() {}
+	camera(int _nameID, float _fov, transform _placement) {
+		nameID = _nameID;
+		fov = _fov;
+		placement = _placement;
+	}
+};
+
+struct animation : asset_base {
+	int actorID = -1; // special case (PRODUCTION)
+	QString animName; // = "animation" param
+	int frames = -1; // duration = frames / 30.0
+
+	// extra
+	float blendin = 0.0, blendout = 0.0; // [0.0, duration]
+	float clipfront = -1, clipend = -1; // [0.0, duration] ?
+	float weight = 1.0, stretch = 1.0; // (0.0, 1.0]
+	animation() {}
+	animation(int _nameID, QString _animName, int _frames) {
+		nameID = _nameID;
+		animName = _animName;
+		frames = _frames;
+	}
+};
+
+struct anim_pose : asset_base {
+	int actorID = -1; // special case (PRODUCTION)
+	QString nameParam; // = "name" param
+	// RMEMR - either (existing) posename + emostate + status or an idle animation (trumps previous settings)
+	QString idle_anim;
+	QString emotional_state, status;
+	anim_pose () {}
+	anim_pose(int _nameID, QString _idle_anim) {
+		nameID = _nameID;
+		idle_anim = _idle_anim;
+	}
+};
+
+/* Contempt, Disgusted, Aggressive, Bursting_anger, Drunk, Nervous, Afraid, Very afraid, Surprised, Surprised Shocked,
+ * Neutral, Happy, Very happy, Determined, Focused, Confident, Proud, Sad, Cry, Sceptic, Seducing, Sleeping
+*/
+struct mimic_pose : asset_base {
+	int actorID = -1; // special case (PRODUCTION)
+	QString anim, emotional_state, eyes, pose;
+	float weight = 1.0, duration = 0.0;
+	mimic_pose() {}
+	mimic_pose(int _nameID, QString _pose) {
+		nameID = _nameID;
+		pose = _pose;
+	}
+};
+
+/* REPOSITORY + PRODUCTION (main storage for YmlManager) */
+struct sceneInfo {
+public:
+	// key = map name always (QHash for fast lookup)
+	QHash<int, asset> actors;            // repository + production
+	QHash<int, asset> props;             // repository + production
+	QHash<int, camera> cameras;          // repository + production
+	QHash<int, animation> anims, mimics; // repository + production
+	QHash<int, anim_pose> poses;         // repository + production
+	QHash<int, mimic_pose> mimic_poses;  // repository + production
+	QHash<int, QSet<QString>> soundbanks;  // repository, soundbanks[banknameID] = set of events
+	//QSet<QString> availableSoundEvents; // production (from banks)
+	// but load DEFAULT MIMIC from actors repository firstly, and production secondly..
+
+	/* names storage - store unique int IDs instead of real names (easy renaming, less RAM usage) */
+	QHash< QString, QHash<QString, int> > usedIDs; // usedNamesFor["type"].contains("name")
+												 // usedNamesFor["type"].insert("name")
+	QHash< int, QPair<QString, QString> > usedNames;
+	int newID = 0;
+	bool hasName(QString _type, QString _name) {
+		return usedIDs.contains(_type) && usedIDs[_type].contains(_name);
+	}
+	bool hasID(int _ID) {
+		return usedNames.contains(_ID);
+	}
+	int getID(QString _type, QString _name) {
+		if ( !usedIDs.contains(_type) ) {
+			usedIDs[_type] = QHash<QString, int>();
+		}
+		if ( !usedIDs[_type].contains(_name) ) {
+			++newID;
+			usedIDs[_type][_name] = newID;
+			usedNames[newID] = {_type, _name};
+		}
+		return usedIDs[_type][_name];
+	}
+	QPair<QString, QString> getTypeName(int _ID) {
+		if ( !usedNames.contains(_ID) ) {
+			return QPair<QString, QString>();
+		}
+		return usedNames[_ID];
+	}
+	QString getName(int _ID) {
+        return getTypeName(_ID).YValue;
+	}
+	void removeName(QString _type, QString _name) {
+		if ( usedIDs.contains(_type) &&  usedIDs[_type].contains(_name) ) {
+			usedNames.remove( usedIDs[_type][_name] );
+			usedIDs[_type].remove(_name);
+		}
+	}
+	void removeID(int _ID) {
+		if ( usedNames.contains(_ID) ) {
+            usedIDs[usedNames[_ID].XKey].remove( usedNames[_ID].YValue );
+			usedNames.remove(_ID);
+		}
+	}
+	void rename(int _ID, QString _newName) {
+        if ( usedNames.contains(_ID) && usedNames[_ID].YValue != _newName ) {
+            usedIDs[usedNames[_ID].XKey].remove( usedNames[_ID].YValue );
+            usedIDs[usedNames[_ID].XKey][_newName] = _ID;
+            usedNames[_ID].YValue = _newName;
+		}
+	}
+	void getNameUnused(QString _type, QString _name, QString& outName, int& outID) {
+		int i = 0;
+		while ( hasName(_type, _name + qn(i)) ) {
+			++i;
+		}
+		outName = _name + qn(i);
+		outID = getID(_type, outName);
+	}
+	void rename(QString _type, QString _name, QString _newName) {
+		if ( usedIDs.contains(_type) &&  usedIDs[_type].contains(_name) && _name != _newName ) {
+			int ID = usedIDs[_type][_name];
+            usedNames[ID].YValue = _newName;
+			usedIDs[_type].remove(_name);
+			usedIDs[_type][_newName] = ID;
+		}
+	}
+	void removeType(QString _type) {
+		if ( usedIDs.contains(_type) ) {
+			for (auto it : usedIDs[_type]) {
+				usedNames.remove(it);
+			}
+			usedIDs[_type].clear();
+		}
+	}
+
+	/* SETTINGS */
+	QString placementTag = "NO TAG";
+	QString idspace = "9999";	// must be always 4-digit
+	int sceneid = 1, idstart = 0;
+	bool gameplay = false, cinematic_subtitles = false;
+
+	QHash<int, int> defaultPose; // [actorID] = poseID
+	QHash<int, mimic_pose> defaultMimic; // [actorID] = mimic object
+	QHash<int, transform> defaultPlacement; // [actorID] = placement object
+	// [actor] = value
+};
 
 struct dialogLine {
 	QString text;
@@ -42,7 +256,7 @@ struct shot {
 
 struct dialogLink {
 	QVector< shot > shots;
-	QVector< QString > speakers;
+	QVector< int > speakers;
 	QVector< QString > lines;
 	QVector< double > durations;
 
@@ -90,14 +304,15 @@ struct ymlCond { // [moddlg_facts_dan_storytime, "<", 1]
 		return !(lhs == rhs);
 	}
 };
+
 struct choiceAction {
     QString action;
     int amount;
     bool grantExp; // - [ "pay 100, add experience?", section_pay, pay, 100, true ]
-	choiceAction(QString actionn = QString(), int amountt = -1, bool grantExpp = false) {
-		action = actionn;
-        amount = amountt;
-        grantExp = grantExpp;
+	choiceAction(QString _action = QString(), int _amount = -1, bool _grantExp = false) {
+		action = _action;
+		amount = _amount;
+		grantExp = _grantExp;
     }
 	friend bool operator==(const choiceAction& lhs, const choiceAction& rhs) {
 		bool ret = true;

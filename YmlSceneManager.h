@@ -27,6 +27,9 @@ private:
     QSet<QString> wasDrawn;                      // for init drawing
 
 public:
+	/* scene general */
+	sceneInfo SG; // = "Scene Globals"
+
 	/* shotEditor */
 	QMap<QString, dialogLine> lineById;
 	QMap<QString, dialogLink> dgLinkBySectionName;
@@ -34,13 +37,21 @@ public:
 
 	bool hasChanges = false;
 	bool hasShotChanges = false;
+	bool readingYmlRepo = false;
     YmlSceneManager(QObject *parent = nullptr, QGraphicsScene* gScene = nullptr);
-    bool loadYmlFile(QString path);
+	bool loadYmlRepo(QString path);
+	bool loadYmlFile(QString path);
     bool saveYmlFile();
+	void clearData(bool clearRepo = false);
+	void showError(QString text, QString title = "Error!", QMessageBox::Icon icon = QMessageBox::Critical);
 
 	/* section editor */
 	bool loadSectionsInfo();
 	bool loadShotActions(const YAML::Node actsNode, shot& sh);
+	bool loadSceneRepository();
+	bool loadSceneProduction();
+	bool loadSceneDefaults();
+	void cleanupTempRepository();
 	bool loadShotsInfo();
     bool drawSectionsGraph();
     bool dfsPrepareGraph(QString sectionName, int depth);
@@ -54,20 +65,25 @@ public:
     GraphicsSectionItem* getSectionItem(QString sectionName);
     QStringList getSectionNames();
 
+	/* asset editor */
+	void removeActorAsset(int actorID);
+
 	/* shot editor */
 	QString getCleanLine(QString text);
 	double getTextDuration(QString text);
 	void setShotScenes(QGraphicsScene* gDgScene, QGraphicsScene* gLabelScene, QGraphicsScene* gShotScene);
 	void loadShotEditor(QString sectionName);
 
-    void error(QString s);
+	void error(QString s);
+	void warning(QString s);
     void info(QString s);
 
 public slots:
     void deleteSection(QString sectionName);
 
 signals:
-    void print_info(QString msg);
+	void print_info(QString msg);
+	void print_warning(QString msg);
     void print_error(QString msg);
 	void loadShots(QString sectionName);
 };

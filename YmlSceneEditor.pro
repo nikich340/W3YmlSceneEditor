@@ -35,6 +35,10 @@ HEADERS += \
     ShotEditor/ShotManager.h \
     ShotEditor/ShotViewer.h \
     UI/DialogChangeSection.h \
+    UI/InputMimicPose.h \
+    UI/InputPlacement.h \
+    UI/InputPose.h \
+    UI/RepoActorsDialog.h \
     UI/SocketSettingsForm.h \
     YmlSceneManager.h \
     YmlStructs.h \
@@ -101,6 +105,10 @@ HEADERS += \
 
 FORMS += \
     UI/DialogChangeSection.ui \
+    UI/InputMimicPose.ui \
+    UI/InputPlacement.ui \
+    UI/InputPose.ui \
+    UI/RepoActorsDialog.ui \
     UI/SocketSettingsForm.ui \
     mainwindow.ui
 
@@ -118,6 +126,10 @@ SOURCES += \
     ShotEditor/ShotManager.cpp \
     ShotEditor/ShotViewer.cpp \
     UI/DialogChangeSection.cpp \
+    UI/InputMimicPose.cpp \
+    UI/InputPlacement.cpp \
+    UI/InputPose.cpp \
+    UI/RepoActorsDialog.cpp \
     UI/SocketSettingsForm.cpp \
     YmlSceneManager.cpp \
     main.cpp \

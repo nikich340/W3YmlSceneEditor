@@ -6,9 +6,6 @@
 #include <fstream>
 #include <QFile>
 #include <QTextStream>
-#define XX first
-#define YY second
-#define to_qstr(x) QString::fromStdString(x)
 
 namespace YAML {
     template<>
@@ -83,6 +80,10 @@ YmlSceneManager::YmlSceneManager(QObject *parent, QGraphicsScene* gScene) : QObj
 	pScene = gScene;
     qDebug() << "YmlSceneManager()";
 
+	/* Init some specials */
+	//SG.getID(SACTORS, "PAUSE");
+	//SG.getID(SACTORS, "CHOICE");
+
 	/* read vanilla lines info */
 	QFile inputFile(":/lines.en.csv");
 	if (inputFile.open(QIODevice::ReadOnly | QIODevice::Text))
@@ -114,6 +115,13 @@ YmlSceneManager::YmlSceneManager(QObject *parent, QGraphicsScene* gScene) : QObj
 	}
 }
 
+void YmlSceneManager::showError(QString text, QString title, QMessageBox::Icon icon) {
+	qc << title << ": " << text;
+	emit error(text);
+	QMessageBox box(icon, title, text, QMessageBox::Ok);
+	box.setModal(true);
+	box.exec();
+}
 void debugNode(YAML::Node n) {
     switch (n.Type()) {
       case YAML::NodeType::Null:      qDebug() << "Null"; break;
@@ -126,42 +134,153 @@ void debugNode(YAML::Node n) {
 void YmlSceneManager::error(QString s) {
     emit print_error(s);
 }
+void YmlSceneManager::warning(QString s) {
+	qw << "Warning: " << s;
+	emit print_warning(s);
+}
 void YmlSceneManager::info(QString s) {
-    emit print_info(s);
+	qi << "Info: " << s;
+	emit print_info(s);
 }
 
-bool YmlSceneManager::loadYmlFile(QString path) {
-    filePath = path;
-    qDebug() << "Parsing " + path + "...";
-
-    // load yml
-    try {
-        root.reset();
-        root = YAML::LoadFile(path.toStdString());
-        error("Yml loaded: OK! " + path);
-    } catch (const YAML::BadFile& e) {
-        error(to_qstr("Error: ") + e.what());
-        return false;
-    } catch (const YAML::ParserException& e) {
-        error(to_qstr("Error: ") + e.what());
-        return false;
-    }
-
-    // clear old
-    sectionGraph.clear();
-    startSections.clear();
-    wasDrawn.clear();
+void YmlSceneManager::clearData(bool clearRepo) {
+	// clear old (sections graph)
+	sectionGraph.clear();
+	startSections.clear();
+	wasDrawn.clear();
 	itemBySectionName.clear();
-    sectionsByDepth.clear();
+	sectionsByDepth.clear();
 	for (auto item : unusedItems) {
 		delete item;
 	}
 	unusedItems.clear();
 
+	// clear old (dialogscript + storyboard shots)
+	dgLinkBySectionName.clear();
+	dgActors.clear();
+	dgProps.clear();
+
+	// clear old (repository + production, except stuff from repo.scenes if clearRepo = false)
+	SG.placementTag = "NO TAG";
+	SG.sceneid = 1;
+	SG.idspace = "9999";
+	SG.idstart = 0;
+	SG.gameplay = SG.cinematic_subtitles = false;
+	for (auto it : SG.actors) {
+		if (!clearRepo && it.fromRepo)
+			continue;
+		SG.removeID(it.nameID);
+		SG.actors.remove(it.nameID);
+	}
+	for (auto it : SG.props) {
+		if (!clearRepo && it.fromRepo)
+			continue;
+		SG.removeID(it.nameID);
+		SG.props.remove(it.nameID);
+	}
+	for (auto it : SG.cameras) {
+		if (!clearRepo && it.fromRepo)
+			continue;
+		SG.removeID(it.nameID);
+		SG.cameras.remove(it.nameID);
+	}
+	for (auto it : SG.anims) {
+		if (!clearRepo && it.fromRepo)
+			continue;
+		SG.removeID(it.nameID);
+		SG.anims.remove(it.nameID);
+	}
+	for (auto it : SG.mimics) {
+		if (!clearRepo && it.fromRepo)
+			continue;
+		SG.removeID(it.nameID);
+		SG.mimics.remove(it.nameID);
+	}
+	for (auto it : SG.poses) {
+		if (!clearRepo && it.fromRepo)
+			continue;
+		SG.removeID(it.nameID);
+		SG.poses.remove(it.nameID);
+	}
+	for (auto it : SG.mimic_poses) {
+		if (!clearRepo && it.fromRepo)
+			continue;
+		SG.removeID(it.nameID);
+		SG.mimic_poses.remove(it.nameID);
+	}
+
+	SG.defaultPose.clear();
+	SG.defaultMimic.clear();
+	SG.defaultPlacement.clear();
+	if (clearRepo) {
+		SG.removeType(SSOUNDBANKS);
+		SG.removeType("availableSoundEvents");
+	}
+}
+bool YmlSceneManager::loadYmlRepo(QString path) {
+	readingYmlRepo = true;
+	// load yml
+	try {
+		root.reset();
+		root = YAML::LoadFile(path.toStdString());
+		info("Yml loaded: OK! " + path);
+	} catch (const YAML::BadFile& e) {
+		showError(to_qstr("Error: (BadFile) ") + e.what());
+		return false;
+	} catch (const YAML::ParserException& e) {
+		showError(to_qstr("Error: (ParserException) ") + e.what());
+		return false;
+	}
+
+	if (!loadSceneRepository()) {
+		readingYmlRepo = false;
+		return false;
+	}
+
+	if (!loadSceneProduction()) {
+		readingYmlRepo = false;
+		return false;
+	}
+
+	readingYmlRepo = false;
+	return true;
+}
+bool YmlSceneManager::loadYmlFile(QString path) {
+    filePath = path;
+	qi << "Parsing " + path + "...";
+
+    // load yml
+    try {
+        root.reset();
+        root = YAML::LoadFile(path.toStdString());
+		info("Yml loaded: OK! " + path);
+    } catch (const YAML::BadFile& e) {
+		showError(to_qstr("Error: (BadFile) ") + e.what());
+        return false;
+    } catch (const YAML::ParserException& e) {
+		showError(to_qstr("Error: (ParserException)") + e.what());
+        return false;
+    }
+
+	clearData(false);
+
     // load extra info
     if (!loadSectionsInfo()) {
         return false;
     }
+	
+	if (!loadSceneRepository()) {
+		return false;
+	}
+
+	if (!loadSceneProduction()) {
+		return false;
+	}
+	cleanupTempRepository();
+
+	if (!loadSceneDefaults()) {
+		return false;
+	}
 
 	if (!loadShotsInfo()) {
 		return false;
@@ -229,20 +348,20 @@ bool YmlSceneManager::requestSave() {
 bool YmlSceneManager::loadSectionsInfo() {
     if (root["dialogscript"]) {
         for(YAML::const_iterator it = root["dialogscript"].begin(); it != root["dialogscript"].end(); ++it) {
-			QString sectionName = it->XX.as<QString>().toLower(); // make all names toLower!
+            QString sectionName = it->XKey.as<QString>().toLower(); // make all names toLower!
 			qDebug() << "sectionName: " << sectionName;
 
                // section
             if ( sectionName.startsWith("section_") || sectionName.startsWith("script_") ) {
                 if (sectionGraph.contains(sectionName)) {
-                    error("Error: duplicated section name: " + sectionName);
+					showError("Error: duplicated section name: " + sectionName);
                     return false;
                 }
 
                 // analyze for linked sections
-                YAML::Node sectionNode(it->YY);
+                YAML::Node sectionNode(it->YValue);
                 if (!sectionNode.IsSequence()) {
-                    error("Error: section [" + sectionName + "] not a sequence");
+					showError("Error: section [" + sectionName + "] not a sequence");
                     return false;
                 }
 
@@ -253,33 +372,33 @@ bool YmlSceneManager::loadSectionsInfo() {
 
                    // NEXT, (RANDOM, CHOICE)
                 if (lastSectionNode.IsMap()) {
-                    QString lastSectionCue = lastSectionNode.begin()->XX.as<QString>();
+                    QString lastSectionCue = lastSectionNode.begin()->XKey.as<QString>();
 					if (lastSectionCue.toUpper() == "NEXT") {
                             // simple NEXT
-                        if (lastSectionNode.begin()->YY.IsScalar()) {
-                            tmpLink->addChoice( lastSectionNode.begin()->YY.as<QString>() );
+                        if (lastSectionNode.begin()->YValue.IsScalar()) {
+                            tmpLink->addChoice( lastSectionNode.begin()->YValue.as<QString>() );
 							tmpLink->type = nextS;
                             // advanced NEXT with condition
-                        } else if (lastSectionNode.begin()->YY.IsMap()
-                                   && lastSectionNode.begin()->YY["condition"]
-                                   && lastSectionNode.begin()->YY["condition"].IsSequence()
-                                   && lastSectionNode.begin()->YY["condition"].size() == 3
-                                   && lastSectionNode.begin()->YY["on_true"]
-                                   && lastSectionNode.begin()->YY["on_false"]) {
+                        } else if (lastSectionNode.begin()->YValue.IsMap()
+                                   && lastSectionNode.begin()->YValue["condition"]
+                                   && lastSectionNode.begin()->YValue["condition"].IsSequence()
+                                   && lastSectionNode.begin()->YValue["condition"].size() == 3
+                                   && lastSectionNode.begin()->YValue["on_true"]
+                                   && lastSectionNode.begin()->YValue["on_false"]) {
 							tmpLink->type = conditionS;
-                            tmpLink->addChoice( lastSectionNode.begin()->YY["on_true"].as<QString>(), QString(), choiceAction(), lastSectionNode.begin()->YY["condition"].as<ymlCond>() );
-                            tmpLink->addChoice( lastSectionNode.begin()->YY["on_false"].as<QString>() );
+                            tmpLink->addChoice( lastSectionNode.begin()->YValue["on_true"].as<QString>(), QString(), choiceAction(), lastSectionNode.begin()->YValue["condition"].as<ymlCond>() );
+                            tmpLink->addChoice( lastSectionNode.begin()->YValue["on_false"].as<QString>() );
                         } else {
-                            error("Error: [" + sectionName + "]: incorrect last element");
+							showError("Error: [" + sectionName + "]: incorrect last element");
                             return false;
                         }
 					} else if (lastSectionCue.toUpper() == "CHOICE"
-                               && lastSectionNode.begin()->YY.IsSequence()) {
+                               && lastSectionNode.begin()->YValue.IsSequence()) {
 						tmpLink->type = choiceS;
 						qDebug() << "CHoice!";
 
                         // iterate through all choices
-                        for (auto jt = lastSectionNode.begin()->YY.begin(); jt != lastSectionNode.begin()->YY.end(); ++jt) {
+                        for (auto jt = lastSectionNode.begin()->YValue.begin(); jt != lastSectionNode.begin()->YValue.end(); ++jt) {
                             YAML::Node tmpNode = *jt;
                             if (tmpNode.IsSequence()) {
                                 choiceAction act = choiceAction();
@@ -324,7 +443,7 @@ bool YmlSceneManager::loadSectionsInfo() {
 									tmpLink->timeLimit = tmpNode["TIME_LIMIT"].as<double>();
                                 }
                             } else {
-                                error("Error: [" + sectionName + "]: incorrect choices syntax");
+								showError("Error: [" + sectionName + "]: incorrect choices syntax");
                             }
                             /*if (!jt->YY["choice"] || jt->YY["choice"].size() < 2) {
                                 emit debugInfo("Error: [" + sectionName + "]: incorrect choice element");
@@ -333,16 +452,16 @@ bool YmlSceneManager::loadSectionsInfo() {
                             //tmpLink.choiceLines.push_back(jt["choice"][0].as<QString>());
                         }
 					} else if (lastSectionCue.toUpper() == "RANDOM"
-                               && lastSectionNode.begin()->YY.IsSequence()) {
+                               && lastSectionNode.begin()->YValue.IsSequence()) {
 						tmpLink->type = randomS;
 
                         // iterate through all randoms
-                        for (auto jt = lastSectionNode.begin()->YY.begin(); jt != lastSectionNode.begin()->YY.end(); ++jt) {
+                        for (auto jt = lastSectionNode.begin()->YValue.begin(); jt != lastSectionNode.begin()->YValue.end(); ++jt) {
                             YAML::Node tmpNode = *jt;
                             if (tmpNode.IsScalar()) {
                                 tmpLink->addChoice( tmpNode.as<QString>() );
                             } else {
-                                error("Error: [" + sectionName + "]: incorrect RANDOM syntax");
+								showError("Error: [" + sectionName + "]: incorrect RANDOM syntax");
                                 return false;
                             }
                         }
@@ -365,10 +484,13 @@ bool YmlSceneManager::loadSectionsInfo() {
                             tmpLink->addChoice( tmpNode.as<QString>() );
 							qDebug() << "Add random: " << tmpNode.as<QString>();
                         } else {
-                            error("Error: [" + sectionName + "]: incorrect randomizer syntax");
+							showError("Error: [" + sectionName + "]: incorrect randomizer syntax");
                             return false;
                         }
                     }
+                } else {
+                    showError("Error: [" + sectionName + "]: incorrect section syntax.");
+                    return false;
                 }
 
                 if ( sectionName.startsWith("script_") ) {
@@ -382,20 +504,20 @@ bool YmlSceneManager::loadSectionsInfo() {
                 // all is fine, add to graph
                 sectionNames.append(sectionName);
                 sectionGraph.insert(sectionName, tmpLink);
-				qInfo() << "ADD: " << sectionName;
+				qd << "ADD: " << sectionName;
 			} else if ( sectionName == "actors" ) {
-				YAML::Node actorsNode(it->YY);
+                YAML::Node actorsNode(it->YValue);
 				if (!actorsNode.IsSequence()) {
-					error("Error: actors list [" + sectionName + "] not a sequence");
+					showError("Error: actors list [" + sectionName + "] not a sequence");
 					return false;
 				}
 				for (size_t j = 0; j < actorsNode.size(); ++j) {
 					dgActors.insert( actorsNode[j].as<QString>() );
 				}
 			} else if ( sectionName == "props" ) {
-				YAML::Node propsNode(it->YY);
+                YAML::Node propsNode(it->YValue);
 				if (!propsNode.IsSequence()) {
-					error("Error: actors list [" + sectionName + "] not a sequence");
+					showError("Error: actors list [" + sectionName + "] not a sequence");
 					return false;
 				}
 				for (size_t j = 0; j < propsNode.size(); ++j) {
@@ -404,11 +526,11 @@ bool YmlSceneManager::loadSectionsInfo() {
 			}
         }
     } else {
-        error("Error: no dialogscript sections found!");
+		showError("Error: no dialogscript sections found!");
         return false;
     }
 
-    qDebug() << "Loaded " << sectionGraph.size() << " sections";
+	info("Loaded " + qn(sectionGraph.size()) + " sections");
     return true;
 }
 
@@ -416,21 +538,31 @@ bool YmlSceneManager::loadShotActions(const YAML::Node actsNode, shot& sh) {
 	upn(k, 0, (int) actsNode.size() - 1) {
 		YAML::Node actionNode = actsNode[k];
 		shotAction newAction;
-		newAction.actionName = actionNode.begin()->XX.as<QString>().toLower();
+        newAction.actionName = actionNode.begin()->XKey.as<QString>().toLower();
 
 		QStringList keys = newAction.actionName.split(".");
-		YAML::Node paramNode = actionNode.begin()->YY;
+        YAML::Node paramNode = actionNode.begin()->YValue;
 		bool isExtended = paramNode.IsMap();
 		qDebug() << "** " << keys;
 
 		if ( keys.isEmpty() ) {
-			qCritical() << "Empty shot action keys! Skipped";
+			error("loadShotActions: Empty shot " + sh.shotName + " action keys! Skipped");
 			continue;
 		}
+		if (keys[0] == "anim") {
+			keys.insert(0, "actor"); // anim(.mimic) -> actor.anim(.mimic)
+		}
 
+		QString name; // cam: cam_name | actor.anim/actor.anim.mimic: actor |
 		if ( keys[0] == "cam" ) {
 			newAction.start = paramNode[0].as<double>();
-			newAction.values["cam_name"] = paramNode[1].as<QString>();
+
+			name = paramNode[1].as<QString>();
+			if ( !SG.hasName(SCAMERAS, name) ) {
+				error("loadShotActions: shot " + sh.shotName + ", camera " + name + " not found in repo!");
+				continue;
+			}
+			newAction.values["cam_name"] = SG.getID(SCAMERAS, name);
 
 			// rapid, smooth
 			if ( keys.size() > 2 && (keys[2] == "start" || keys[2] == "end") && paramNode.size() > 2 ) {
@@ -441,9 +573,21 @@ bool YmlSceneManager::loadShotActions(const YAML::Node actsNode, shot& sh) {
 			{
 				if (isExtended) {
 					newAction.start = paramNode[".@pos"][0].as<double>();
-					newAction.values["animation"] = paramNode[".@pos"][1].as<QString>();
-					if (paramNode["actor"])
-						newAction.values["actor"] = paramNode["actor"].as<QString>();
+					name = paramNode[".@pos"][1].as<QString>();
+					if (!SG.hasName(SANIMS, name)) {
+						error("loadShotActions: shot " + sh.shotName + ", animation " + name + " not found in repo!");
+						continue;
+					}
+					newAction.values["animation"] = SG.getID(SANIMS, name);
+
+					if (paramNode["actor"]) {
+						name = paramNode["actor"].as<QString>();
+						if ( !SG.hasName(SACTORS, name) ) {
+							error("loadShotActions: shot " + sh.shotName + ", actor " + name + " not found in repo!");
+							continue;
+						}
+						newAction.values["actor"] = SG.getID(SACTORS, name);
+					}
 
 					if (paramNode["blendin"])
 						newAction.values["blendin"] = paramNode["blendin"].as<double>();
@@ -464,16 +608,33 @@ bool YmlSceneManager::loadShotActions(const YAML::Node actsNode, shot& sh) {
 						newAction.values["stretch"] = paramNode["stretch"].as<double>();
 				} else {
 					newAction.start = paramNode[0].as<double>();
-					newAction.values["animation"] = paramNode[1].as<QString>();
+					name = paramNode[1].as<QString>();
+					if (!SG.hasName(SANIMS, name)) {
+						error("loadShotActions: shot " + sh.shotName + ", animation " + name + " not found in repo!");
+						continue;
+					}
+					newAction.values["animation"] = SG.getID(SANIMS, name);
 				}
 			}
 			else if ( keys[1] == "mimic" )
 			{
 				if (isExtended) {
 					newAction.start = paramNode[".@pos"][0].as<double>();
-					newAction.values["mimic"] = paramNode[".@pos"][1].as<QString>();
-					if (paramNode["actor"])
-						newAction.values["actor"] = paramNode["actor"].as<QString>();
+					name = paramNode[".@pos"][1].as<QString>();
+					if (!SG.hasName(SMIMICPOSES, name)) {
+						error("loadShotActions: shot " + sh.shotName + ", mimic " + name + " not found in repo!");
+						continue;
+					}
+					newAction.values["mimic"] = SG.getID(SMIMICPOSES, name);
+
+					if (paramNode["actor"]) {
+						name = paramNode["actor"].as<QString>();
+						if (!SG.hasName(SACTORS, name)) {
+							error("loadShotActions: shot " + sh.shotName + ", actor " + name + " not found in repo!");
+							continue;
+						}
+						newAction.values["actor"] = SG.getID(SACTORS, name);
+					}
 
 					if (paramNode["emotional_state"])
 						newAction.values["emotional_state"] = paramNode["emotional_state"].as<QString>();
@@ -494,27 +655,48 @@ bool YmlSceneManager::loadShotActions(const YAML::Node actsNode, shot& sh) {
 						newAction.values["duration"] = paramNode["duration"].as<double>();
 				} else {
 					newAction.start = paramNode[0].as<double>();
-					newAction.values["mimic"] = paramNode[1].as<QString>();
+					name = paramNode[1].as<QString>();
+					if (!SG.hasName(SMIMICPOSES, name)) {
+						error("loadShotActions: shot " + sh.shotName + ", mimic " + name + " not found in repo!");
+						continue;
+					}
+					newAction.values["mimic"] = SG.getID(SMIMICPOSES, name);
 				}
 			}
 			else if ( keys[1] == "gamestate" )
 			{
 				if (isExtended) {
 					newAction.start = paramNode[".@pos"][0].as<double>();
-					newAction.values["actor"] = paramNode[".@pos"][1].as<QString>();
+					name = paramNode[".@pos"][1].as<QString>();
+					if (!SG.hasName(SACTORS, name)) {
+						error("loadShotActions: shot " + sh.shotName + ", actor " + name + " not found in repo!");
+						continue;
+					}
+					newAction.values["actor"] = SG.getID(SACTORS, name);
+
 					if (paramNode["action"])
 						newAction.values["action"] = paramNode["action"].as<QString>();
 					if (paramNode["behavior"])
 						newAction.values["behavior"] = paramNode["behavior"].as<QString>();
 				} else {
 					newAction.start = paramNode[0].as<double>();
-					newAction.values["actor"] = paramNode[1].as<QString>();
+					name = paramNode[1].as<QString>();
+					if (!SG.hasName(SACTORS, name)) {
+						error("loadShotActions: shot " + sh.shotName + ", actor " + name + " not found in repo!");
+						continue;
+					}
+					newAction.values["actor"] = SG.getID(SACTORS, name);
 				}
 			}
 			else if ( keys[1] == "placement" )
 			{
 				newAction.start = paramNode[0].as<double>();
-				newAction.values["actor"] = paramNode[1].as<QString>();
+				name = paramNode[1].as<QString>();
+				if (!SG.hasName(SACTORS, name)) {
+					error("loadShotActions: shot " + sh.shotName + ", actor " + name + " not found in repo!");
+					continue;
+				}
+				newAction.values["actor"] = SG.getID(SACTORS, name);
 				newAction.values["pos"] = paramNode[2].as<QVector3D>();
 				newAction.values["rot"] = paramNode[3].as<QVector3D>();
 
@@ -525,7 +707,12 @@ bool YmlSceneManager::loadShotActions(const YAML::Node actsNode, shot& sh) {
 			else if ( keys[1] == "pose" )
 			{
 				newAction.start = paramNode[0].as<double>();
-				newAction.values["pose"] = paramNode[1].as<QString>();
+				name = paramNode[1].as<QString>();
+				if (!SG.hasName(SANIMPOSES, name)) {
+					error("loadShotActions: shot " + sh.shotName + ", actor.pose " + name + " not found in repo!");
+					continue;
+				}
+				newAction.values["pose"] = SG.getID(SANIMPOSES, name);
 			}
 			else if ( keys[1] == "lookat" )
 			{
@@ -545,41 +732,76 @@ bool YmlSceneManager::loadShotActions(const YAML::Node actsNode, shot& sh) {
 						newAction.values["speed"] = paramNode["speed"].as<double>();
 				} else {
 					newAction.start = paramNode[0].as<double>();
-					newAction.values["actor"] = paramNode[1].as<QString>();
+					name = paramNode[1].as<QString>();
+					if (!SG.hasName(SACTORS, name)) {
+						error("loadShotActions: shot " + sh.shotName + ", actor " + name + " not found in repo!");
+						continue;
+					}
+					newAction.values["actor"] = SG.getID(SACTORS, name);
 					if (paramNode[2].IsSequence()) {
 						newAction.values["lookat_pos"] = paramNode[2].as<QVector3D>();
 					} else {
-						newAction.values["lookat_actor"] = paramNode[2].as<QString>();
+						name = paramNode[2].as<QString>();
+						if (!SG.hasName(SACTORS, name)) {
+							error("loadShotActions: shot " + sh.shotName + ", actor " + name + " not found in repo!");
+							continue;
+						}
+						newAction.values["lookat_actor"] = SG.getID(SACTORS, name);
 					}
 				}
 			}
 			else if ( keys[1] == "show" || keys[1] == "hide" || keys[1] == "scabbard" )
 			{
 				newAction.start = paramNode[0].as<double>();
-				newAction.values["actor"] = paramNode[1].as<QString>();
+				name = paramNode[1].as<QString>();
+				if (!SG.hasName(SACTORS, name)) {
+					error("loadShotActions: shot " + sh.shotName + ", actor " + name + " not found in repo!");
+					continue;
+				}
+				newAction.values["actor"] = SG.getID(SACTORS, name);
 			}
 			else if ( keys[1] == "effect" )
 			{
 				newAction.start = paramNode[0].as<double>();
-				newAction.values["actor"] = paramNode[1].as<QString>();
+				name = paramNode[1].as<QString>();
+				if (!SG.hasName(SACTORS, name)) {
+					error("loadShotActions: shot " + sh.shotName + ", actor " + name + " not found in repo!");
+					continue;
+				}
+				newAction.values["actor"] = SG.getID(SACTORS, name);
 				newAction.values["effect"] = paramNode[2].as<QString>();
 			}
 			else if ( keys[1] == "sound" )
 			{
 				newAction.start = paramNode[0].as<double>();
-				newAction.values["actor"] = paramNode[1].as<QString>();
+				name = paramNode[1].as<QString>();
+				if (!SG.hasName(SACTORS, name)) {
+					error("loadShotActions: shot " + sh.shotName + ", actor " + name + " not found in repo!");
+					continue;
+				}
+				newAction.values["actor"] = SG.getID(SACTORS, name);
 				newAction.values["soundEvent"] = paramNode[2].as<QString>();
 			}
 			else if ( keys[1] == "appearance" )
 			{
 				newAction.start = paramNode[0].as<double>();
-				newAction.values["actor"] = paramNode[1].as<QString>();
+				name = paramNode[1].as<QString>();
+				if (!SG.hasName(SACTORS, name)) {
+					error("loadShotActions: shot " + sh.shotName + ", actor " + name + " not found in repo!");
+					continue;
+				}
+				newAction.values["actor"] = SG.getID(SACTORS, name);
 				newAction.values["appearance"] = paramNode[2].as<QString>();
 			}
 			else if ( keys[1] == "equip" )
 			{
 				newAction.start = paramNode[0].as<double>();
-				newAction.values["actor"] = paramNode[1].as<QString>();
+				name = paramNode[1].as<QString>();
+				if (!SG.hasName(SACTORS, name)) {
+					error("loadShotActions: shot " + sh.shotName + ", actor " + name + " not found in repo!");
+					continue;
+				}
+				newAction.values["actor"] = SG.getID(SACTORS, name);
 				newAction.values["item"] = paramNode[2].as<QString>();
 			}
 		} else if ( keys[0] == "world" ) {
@@ -637,7 +859,7 @@ bool YmlSceneManager::loadShotActions(const YAML::Node actsNode, shot& sh) {
 													  paramNode[2][2].as<int>(), paramNode[2][3].as<int>());
 			}
 		} else {
-			qCritical() << "Unknown shot action!!!";
+			error("Unknown shot action!!! " + keys[0]);
 			continue;
 		}
 
@@ -646,6 +868,806 @@ bool YmlSceneManager::loadShotActions(const YAML::Node actsNode, shot& sh) {
 	}
 	return true;
 }
+
+bool YmlSceneManager::loadSceneRepository() {
+	if (!root["repository"])	{
+		warning("loadSceneRepository()>: No repository found!");
+		return true;
+	}
+
+	/* LOAD ACTORS FROM REPO */
+	if (root["repository"]["actors"]) {
+		qd << "loadSceneRepository()>: Loading " << root["repository"]["actors"].size() << " actors..";
+		int cnt_new = 0;
+
+		for (auto it = root["repository"]["actors"].begin(); it != root["repository"]["actors"].end(); ++it) {
+            QString mapName = it->XKey.as<QString>() + "_repo_temp";
+			if ( SG.hasName(SACTORS, mapName) )
+			{
+				qw << ("loadSceneRepository()>: actor " + mapName + " already exist! Overwriting.");
+				//continue;
+			}
+			int nameID = SG.getID(SACTORS, mapName);
+
+            if ( !it->YValue["template"] )
+			{
+				warning("loadSceneRepository():Repository: actor " + mapName + " doesn't have template definition!");
+				continue;
+			}
+            asset actor(nameID, it->YValue["template"].as<QString>());
+
+            if ( it->YValue["appearance"] ) {
+                actor.mainAppearance = it->YValue["appearance"][0].as<QString>();
+                upn(j, 0, it->YValue["appearance"].size() - 1) {
+                    actor.appearances.insert( it->YValue["appearance"][j].as<QString>() );
+				}
+			}
+
+			if (readingYmlRepo)
+				actor.fromRepo = true;
+			SG.actors[nameID] = actor;
+			++cnt_new;
+		}
+
+		info("loadSceneRepository()>: Loaded " + qn(cnt_new) + " actors.");
+	} else {
+		//warning("loadSceneRepository()>: No actors found!");
+		qw << "loadSceneRepository()>: No actors found!";
+	}
+
+	/* LOAD PROPS FROM REPO */
+	if (root["repository"]["props"]) {
+		qd << "loadSceneRepository()>: Loading " << root["repository"]["props"].size() << " props..";
+		int cnt_new = 0;
+
+		for (auto it = root["repository"]["props"].begin(); it != root["repository"]["props"].end(); ++it) {
+            QString mapName = it->XKey.as<QString>() + "_repo_temp";
+			if ( SG.hasName(SPROPS, mapName) )
+			{
+				qw << ("loadSceneRepository()>: prop " + mapName + " already exist! Overwriting.");
+				//continue;
+			}
+			int nameID = SG.getID(SPROPS, mapName);
+
+            if ( !it->YValue["template"] )
+			{
+				warning("loadSceneRepository():Repository: prop " + mapName + " doesn't have template definition!");
+				continue;
+			}
+            asset prop(nameID, it->YValue["template"].as<QString>());
+
+			if (readingYmlRepo)
+				prop.fromRepo = true;
+			SG.props[nameID] = prop;
+			++cnt_new;
+		}
+		info("loadSceneRepository()>: Loaded " + qn(cnt_new) + " props.");
+	} else {
+		//warning("loadSceneRepository()>: No props found!");
+		qw << "loadSceneRepository()>: No props found!";
+	}
+
+	/* LOAD CAMERAS FROM REPO */
+	if (root["repository"]["cameras"]) {
+		qd << "loadSceneRepository()>: Loading " << root["repository"]["cameras"].size() << " cameras..";
+		int cnt_new = 0;
+
+		for (auto it = root["repository"]["cameras"].begin(); it != root["repository"]["cameras"].end(); ++it) {
+            QString mapName = it->XKey.as<QString>();
+			if ( SG.hasName(SCAMERAS, mapName) )
+			{
+				qw << ("loadSceneRepository()>: camera " + mapName + " already exist! Overwriting.");
+				//continue;
+			}
+			int nameID = SG.getID(SCAMERAS, mapName);
+
+            if ( !it->YValue["fov"] || !it->YValue["transform"]["pos"] || !it->YValue["transform"]["rot"] ) {
+				warning("loadSceneRepository()>: Can't find fov/transform for cameras: " + mapName);
+				continue;
+			}
+            camera cam(nameID, it->YValue["fov"].as<float>(), transform(it->YValue["transform"]["pos"].as<QVector3D>(), it->YValue["transform"]["rot"].as<QVector3D>()));
+
+            if ( it->YValue["zoom"] )
+                cam.zoom = it->YValue["zoom"].as<float>();
+            if ( it->YValue["dof"] ) {
+                YAML::Node dofNode = it->YValue["dof"];
+				if ( dofNode["aperture"] )
+					cam.dofAperture = { dofNode["aperture"][0].as<float>(),
+										dofNode["aperture"][1].as<float>() };
+				if ( dofNode["blur"] )
+					cam.dofBlur = { dofNode["blur"][0].as<float>(),
+										dofNode["blur"][1].as<float>() };
+				if ( dofNode["focus"] )
+					cam.dofFocus = { dofNode["focus"][0].as<float>(),
+										dofNode["focus"][1].as<float>() };
+				if ( dofNode["intensity"] )
+					cam.dofIntensity = dofNode["intensity"].as<float>();
+			}
+            if ( it->YValue["event_generator"]["plane"] )
+                cam.plane = it->YValue["event_generator"]["plane"].as<QString>();
+            if ( it->YValue["event_generator"]["tags"] ) {
+                upn(j, 0, it->YValue["event_generator"]["tags"].size() - 1) {
+                    cam.tags.insert( it->YValue["event_generator"]["tags"][j].as<QString>() );
+				}
+			}
+
+			if (readingYmlRepo)
+				cam.fromRepo = true;
+			SG.cameras[nameID] = cam;
+			++cnt_new;
+		}
+
+		info("loadSceneRepository()>: Loaded " + qn(cnt_new) + " cameras.");
+	} else {
+		//warning("loadSceneRepository()>: No cameras found!");
+		qw << "loadSceneRepository()>: No cameras found!";
+	}
+
+	/* LOAD ANIMS FROM REPO */
+	if (root["repository"]["animations"]) {
+		qd << "loadSceneRepository()>: Loading " << root["repository"]["animations"].size() << " animations..";
+		int cnt_new = 0;
+
+		for (auto it = root["repository"]["animations"].begin(); it != root["repository"]["animations"].end(); ++it) {
+            QString mapName = it->XKey.as<QString>();
+			if ( SG.hasName(SANIMS, mapName) )
+			{
+				qw << ("loadSceneRepository()>: anim " + mapName + " already exist! Overwriting.");
+				//continue;
+			}
+			int nameID = SG.getID(SANIMS, mapName);
+
+            if ( !it->YValue["animation"] || !it->YValue["frames"] ) {
+				warning("loadSceneRepository()>: Can't find animation/frames for anim " + mapName);
+				continue;
+			}
+            animation anim(nameID, it->YValue["animation"].as<QString>(), it->YValue["frames"].as<int>());
+
+            if ( it->YValue["blendin"] )
+                anim.blendin = it->YValue["blendin"].as<float>();
+            if ( it->YValue["blendout"] )
+                anim.blendin = it->YValue["blendout"].as<float>();
+            if ( it->YValue["weight"] )
+                anim.blendin = it->YValue["weight"].as<float>();
+            if ( it->YValue["stretch"] )
+                anim.blendin = it->YValue["stretch"].as<float>();
+            if ( it->YValue["clipfront"] )
+                anim.blendin = it->YValue["clipfront"].as<float>();
+            if ( it->YValue["clipend"] )
+                anim.blendin = it->YValue["clipend"].as<float>();
+
+			if (readingYmlRepo)
+				anim.fromRepo = true;
+			SG.anims[nameID] = anim;
+			++cnt_new;
+		}
+
+		info("loadSceneRepository()>: Loaded " + qn(cnt_new) + " anims.");
+	} else {
+		//warning("loadSceneRepository()>: No animations found!");
+		qw << "loadSceneRepository()>: No animations found!";
+	}
+
+	/* LOAD MIMIC ANIMS FROM REPO */
+	if (root["repository"]["animations.mimic"]) {
+		qd << "loadSceneRepository()>: Loading " << root["repository"]["animations.mimic"].size() << " mimic anims..";
+		int cnt_new = 0;
+
+		for (auto it = root["repository"]["animations.mimic"].begin(); it != root["repository"]["animations.mimic"].end(); ++it) {
+            QString mapName = it->XKey.as<QString>();
+			if ( SG.hasName(SMIMICANIMS, mapName) )
+			{
+				qw << ("loadSceneRepository()>: camera " + mapName + " already exist! Overwriting.");
+				//continue;
+			}
+			int nameID = SG.getID(SMIMICANIMS, mapName);
+
+            if ( !it->YValue["animation"] || !it->YValue["frames"] ) {
+				warning("loadSceneRepository()>: Can't find animation/frames for mimic anim: " + mapName);
+				continue;
+			}
+            animation mimicAnim(nameID, it->YValue["animation"].as<QString>(), it->YValue["frames"].as<int>());
+
+            if ( it->YValue["blendin"] )
+                mimicAnim.blendin = it->YValue["blendin"].as<float>();
+            if ( it->YValue["blendout"] )
+                mimicAnim.blendin = it->YValue["blendout"].as<float>();
+            if ( it->YValue["weight"] )
+                mimicAnim.blendin = it->YValue["weight"].as<float>();
+            if ( it->YValue["stretch"] )
+                mimicAnim.blendin = it->YValue["stretch"].as<float>();
+            if ( it->YValue["clipfront"] )
+                mimicAnim.blendin = it->YValue["clipfront"].as<float>();
+            if ( it->YValue["clipend"] )
+                mimicAnim.blendin = it->YValue["clipend"].as<float>();
+
+			if (readingYmlRepo)
+				mimicAnim.fromRepo = true;
+			SG.mimics[nameID] = mimicAnim;
+			++cnt_new;
+		}
+
+		info("loadSceneRepository()>: Loaded " + qn(cnt_new) + " mimic poses.");
+	} else {
+		//warning("loadSceneRepository()>: No mimic anims found!");
+		qw << "loadSceneRepository()>: No mimic anims found!";
+	}
+
+	/* LOAD POSES FROM REPO */
+	if (root["repository"]["actor.poses"]) {
+		qd << "loadSceneRepository()>: Loading " << root["repository"]["actor.poses"].size() << " poses..";
+		int cnt_new = 0;
+
+		for (auto it = root["repository"]["actor.poses"].begin(); it != root["repository"]["actor.poses"].end(); ++it) {
+            QString mapName = it->XKey.as<QString>();
+			if ( SG.hasName(SANIMPOSES, mapName) )
+			{
+				qw << ("loadSceneRepository()>: pose " + mapName + " already exist! Overwriting.");
+				//continue;
+			}
+			int nameID = SG.getID(SANIMPOSES, mapName);
+
+            if ( !it->YValue["idle_anim"] ) {
+				warning("loadSceneRepository()>: Can't find idle_anim for actor.pose: " + mapName);
+				continue;
+			}
+            anim_pose actorPose(nameID, it->YValue["idle_anim"].as<QString>());
+
+            if ( it->YValue["name"] )
+                actorPose.nameParam = it->YValue["name"].as<QString>();
+            if ( it->YValue["emotional_state"] )
+                actorPose.emotional_state = it->YValue["emotional_state"].as<QString>();
+            if ( it->YValue["status"] )
+                actorPose.status = it->YValue["status"].as<QString>();
+
+			if (readingYmlRepo)
+				actorPose.fromRepo = true;
+			SG.poses[nameID] = actorPose;
+			++cnt_new;
+		}
+
+		info("loadSceneRepository()>: Loaded " + qn(cnt_new) + " actor.poses.");
+	} else {
+		//warning("loadSceneRepository()>: No actor.poses found!");
+		qw << "loadSceneRepository()>: No actor.poses found!";
+	}
+
+	/* LOAD MIMICS (MIMIC POSES) FROM REPO */
+	if (root["repository"]["mimics"]) {
+		qd << "loadSceneRepository()>: Loading " << root["repository"]["mimics"].size() << " mimics..";
+		int cnt_new = 0;
+
+		for (auto it = root["repository"]["mimics"].begin(); it != root["repository"]["mimics"].end(); ++it) {
+            QString mapName = it->XKey.as<QString>();
+			if ( SG.hasName(SMIMICPOSES, mapName) )
+			{
+				qw << ("loadSceneRepository(): camera " + mapName + " already exist! Overwriting.");
+				//continue;
+			}
+			int nameID = SG.getID(SMIMICPOSES, mapName);
+
+            if ( !it->YValue["pose"] ) {
+				warning("loadSceneRepository()>: Can't find anim for mimic pose: " + mapName);
+				continue;
+			}
+            mimic_pose mimic(nameID, it->YValue["pose"].as<QString>());
+
+            if ( it->YValue["emotional_state"] )
+                mimic.emotional_state = it->YValue["emotional_state"].as<QString>();
+            if ( it->YValue["eyes"] )
+                mimic.emotional_state = it->YValue["eyes"].as<QString>();
+            if ( it->YValue["anim"] )
+                mimic.emotional_state = it->YValue["anim"].as<QString>();
+            if ( it->YValue["weight"] )
+                mimic.weight = it->YValue["weight"].as<float>();
+            if ( it->YValue["duration"] )
+                mimic.duration = it->YValue["duration"].as<float>();
+
+			if (readingYmlRepo)
+				mimic.fromRepo = true;
+			SG.mimic_poses[nameID] = mimic;
+			++cnt_new;
+		}
+
+		info("loadSceneRepository()>: Loaded " + qn(cnt_new) + " mimic poses.");
+	} else {
+		//warning("loadSceneRepository()>: No mimic_poses found!");
+		qw << "loadSceneRepository()>: No mimic_poses found!";
+	}
+
+	/* LOAD SOUNDBANKS EVENTS FROM REPO */
+	if (root["repository"]["soundbanks"]) {
+		qd << "loadSceneRepository()>: Loading " << root["repository"]["soundbanks"].size() << " soundbanks..";
+		int cnt_new = 0;
+
+		for (auto it = root["repository"]["soundbanks"].begin(); it != root["repository"]["soundbanks"].end(); ++it) {
+            QString mapName = it->XKey.as<QString>();
+			if ( SG.hasName(SSOUNDBANKS, mapName) )
+			{
+				qw << ("loadSceneRepository(): soundbank " + mapName + " already exists!");
+				//continue;
+			}
+			int nameID = SG.getID(SSOUNDBANKS, mapName);
+
+            if ( !it->YValue.IsSequence() ) {
+				warning("loadSceneRepository()>: soundbank " + mapName + ": expected sound events sequence!");
+				continue;
+			}
+			QSet<QString> soundbankSet;
+            upn(j, 0, it->YValue.size() - 1) {
+                soundbankSet.insert( it->YValue[j].as<QString>() );
+			}
+			qd << "SOUNBANK ADD: " << mapName << " [" << qn(soundbankSet.size()) << "]";
+
+			SG.soundbanks[nameID] = soundbankSet;
+			++cnt_new;
+		}
+
+		info("loadSceneRepository()>: Loaded " + qn(cnt_new) + " soundbanks.");
+	} else {
+		//warning("loadSceneRepository()>: No soundbanks found!");
+		qw << "loadSceneRepository()>: No soundbanks found!";
+	}
+
+	return true;
+}
+
+void YmlSceneManager::cleanupTempRepository() {
+	for (auto it : SG.actors) {
+		QString name = SG.getName(it.nameID);
+		qd << "cleanupTempRepository(): " << name;
+		if ( name.endsWith("_repo_temp") ) {
+			qd << "cleanupTempRepository(): CLEANED";
+			SG.actors.remove(it.nameID);
+			SG.removeName(SACTORS, name);
+		}
+	}
+
+	for (auto it : SG.props) {
+		QString name = SG.getName(it.nameID);
+		if ( name.endsWith("_repo_temp") ) {
+			SG.props.remove(it.nameID);
+			SG.removeName(SPROPS, name);
+		}
+	}
+}
+
+bool YmlSceneManager::loadSceneProduction() {
+	if (!root["production"]["assets"])	{
+		warning("loadSceneProduction()>: No production assets!");
+		return true;
+	}
+
+	/* LOAD ACTORS FROM PRODUCTION */
+	if (root["production"]["assets"]["actors"]) {
+		qd << "loadSceneProduction()>: Loading " << root["production"]["assets"]["actors"].size() << " actors..";
+		//QSet<QString> dontRemoveKeys; // for renamed (mapName -> repoName)
+
+		for (auto it = root["production"]["assets"]["actors"].begin(); it != root["production"]["assets"]["actors"].end(); ++it) {
+            QString mapName = it->XKey.as<QString>();
+
+            if ( !it->YValue["repo"] ) {
+				error("loadSceneProduction()>: No repo value found for actor " + mapName);
+				continue;
+			}
+            QString repoName = it->YValue["repo"].as<QString>();
+			if ( !SG.hasName(SACTORS, repoName + "_repo_temp") ) {
+				error("loadSceneProduction()>: Actor " + repoName + " not found in repository!");
+				continue;
+			}
+			int repoID = SG.getID(SACTORS, repoName + "_repo_temp");
+			int prodID = SG.getID(SACTORS, mapName);
+
+			asset prodActor = SG.actors[repoID];
+			prodActor.nameID = prodID;
+
+            if ( it->YValue["appearance"] ) {
+                prodActor.mainAppearance = it->YValue["appearance"].as<QString>();
+				if ( !prodActor.appearances.contains(prodActor.mainAppearance) ) {
+					warning("loadSceneProduction()>: Appearance " + prodActor.mainAppearance + " was not defined in repository");
+					prodActor.appearances.insert( prodActor.mainAppearance );
+				}
+			}
+            if ( it->YValue["by_voicetag"] )
+                prodActor.by_voicetag = it->YValue["by_voicetag"].as<bool>();
+            if ( it->YValue["tags"]) {
+                upn(i, 0, it->YValue["tags"].size() - 1) {
+                    prodActor.tags.insert( it->YValue["tags"][i].as<QString>() );
+				}
+			}
+
+			if (readingYmlRepo)
+				prodActor.fromRepo = true;
+			SG.actors[prodID] = prodActor;
+			//dontRemoveKeys.insert(mapName);
+		}
+		/*for (auto it : SG.actors) {
+			if ( !dontRemoveKeys.contains(it.name) ) {
+				SG.actors.remove(it.name);
+			}
+		}*/
+		/*for (auto it : SG.actors) {
+			qd << "actor name: " << it.name;
+		}*/
+	}
+
+	/* LOAD PROPS FROM PRODUCTION */
+	if (root["production"]["assets"]["props"]) {
+		qd << "loadSceneProduction()>: Loading " << root["production"]["assets"]["props"].size() << " props..";
+
+		for (auto it = root["production"]["assets"]["props"].begin(); it != root["production"]["assets"]["props"].end(); ++it) {
+            QString mapName = it->XKey.as<QString>();
+
+            if ( !it->YValue["repo"] ) {
+				error("loadSceneProduction()>: No repo value found for prop " + mapName);
+				continue;
+			}
+            QString repoName = it->YValue["repo"].as<QString>();
+			if ( !SG.hasName(SPROPS, repoName + "_repo_temp") ) {
+				error("loadSceneProduction()>: Prop " + repoName + " not found in repository!");
+				continue;
+			}
+
+			int repoID = SG.getID(SPROPS, repoName + "_repo_temp");
+			int prodID = SG.getID(SPROPS, mapName);
+
+			asset prodProp = SG.props[repoID];
+			prodProp.nameID = prodID;
+
+			if (readingYmlRepo)
+				prodProp.fromRepo = true;
+			SG.props[prodID] = prodProp;
+		}
+	}
+
+	/* LOAD CAMERAS FROM PRODUCTION */
+	if (root["production"]["assets"]["cameras"]) {
+		qd << "loadSceneProduction()>: Loading " << root["production"]["assets"]["cameras"].size() << " cameras..";
+		//QSet<QString> dontRemoveKeys; // for renamed (mapName -> repoName)
+
+		for (auto it = root["production"]["assets"]["cameras"].begin(); it != root["production"]["assets"]["cameras"].end(); ++it) {
+            QString mapName = it->XKey.as<QString>();
+
+            if ( !it->YValue["repo"] ) {
+				error("loadSceneProduction()>: No repo value found for camera " + mapName);
+				continue;
+			}
+            QString repoName = it->YValue["repo"].as<QString>();
+			if ( !SG.hasName(SCAMERAS, repoName) ) {
+				error("loadSceneProduction()>: Camera " + repoName + " not found in repository!");
+				continue;
+			}
+
+			int repoID = SG.getID(SCAMERAS, repoName);
+			int prodID = SG.getID(SCAMERAS, mapName);
+
+			camera prodCamera = SG.cameras[repoID];
+			prodCamera.nameID = prodID;
+
+			if (readingYmlRepo)
+				prodCamera.fromRepo = true;
+			SG.cameras[prodID] = prodCamera;
+			//dontRemoveKeys.insert(mapName);
+		}
+		/*for (auto it : SG.cameras) {
+			if ( !dontRemoveKeys.contains(it.name) ) {
+				SG.cameras.remove(it.name);
+			}
+		}*/
+	}
+
+	/* LOAD ANIMS FROM PRODUCTION */
+	if (root["production"]["assets"]["animations"]) {
+		qd << "loadSceneProduction()>: Loading " << root["production"]["assets"]["animations"].size() << " animations..";
+
+		for (auto it = root["production"]["assets"]["animations"].begin(); it != root["production"]["assets"]["animations"].end(); ++it) {
+            QString mapName = it->XKey.as<QString>();
+
+            if ( !it->YValue["repo"] ) {
+				error("loadSceneProduction()>: No repo value found for animation " + mapName);
+				continue;
+			}
+            QString repoName = it->YValue["repo"].as<QString>();
+			if ( !SG.hasName(SANIMS, repoName) ) {
+				error("loadSceneProduction()>: Animation " + repoName + " not found in repository!");
+				continue;
+			}
+
+			int repoID = SG.getID(SANIMS, repoName);
+			int prodID = SG.getID(SANIMS, mapName);
+
+			animation prodAnim = SG.anims[repoID];
+			prodAnim.nameID = prodID;
+
+            if ( it->YValue["actor"] ) {
+                QString actorName = it->YValue["actor"].as<QString>();
+				if (!SG.hasName(SACTORS, actorName)) {
+					error("loadSceneProduction()>: Animation actor " + actorName + " not found in repository!");
+				} else {
+					int actorID = SG.getID(SACTORS, actorName);
+					prodAnim.actorID = actorID;
+				}
+			}
+            if ( it->YValue["blendin"] )
+                prodAnim.blendin = it->YValue["blendin"].as<float>();
+            if ( it->YValue["blendout"] )
+                prodAnim.blendin = it->YValue["blendout"].as<float>();
+            if ( it->YValue["weight"] )
+                prodAnim.blendin = it->YValue["weight"].as<float>();
+            if ( it->YValue["stretch"] )
+                prodAnim.blendin = it->YValue["stretch"].as<float>();
+            if ( it->YValue["clipfront"] )
+                prodAnim.blendin = it->YValue["clipfront"].as<float>();
+            if ( it->YValue["clipend"] )
+                prodAnim.blendin = it->YValue["clipend"].as<float>();
+
+			if (readingYmlRepo)
+				prodAnim.fromRepo = true;
+			SG.anims[prodID] = prodAnim;
+		}
+	}
+
+	/* LOAD MIMIC ANIMS FROM PRODUCTION */
+	if (root["production"]["assets"]["animations.mimic"]) {
+		qd << "loadSceneProduction()>: Loading " << root["production"]["assets"]["animations.mimic"].size() << " mimic anims..";
+
+		for (auto it = root["production"]["assets"]["animations.mimic"].begin(); it != root["production"]["assets"]["animations.mimic"].end(); ++it) {
+            QString mapName = it->XKey.as<QString>();
+
+            if ( !it->YValue["repo"] ) {
+				error("loadSceneProduction()>: No repo value found for mimic animation " + mapName);
+				continue;
+			}
+            QString repoName = it->YValue["repo"].as<QString>();
+			if ( !SG.hasName(SMIMICANIMS, repoName) ) {
+				error("loadSceneProduction()>: Mimic animation " + repoName + " not found in repository!");
+				continue;
+			}
+
+			int repoID = SG.getID(SMIMICANIMS, repoName);
+			int prodID = SG.getID(SMIMICANIMS, mapName);
+
+			animation prodMimicAnim = SG.mimics[repoID];
+			prodMimicAnim.nameID = prodID;
+
+            if ( it->YValue["actor"] ) {
+                QString actorName = it->YValue["actor"].as<QString>();
+				if (!SG.hasName(SACTORS, actorName)) {
+					error("loadSceneProduction()>: Animation Mimic actor " + actorName + " not found in repository!");
+				} else {
+					int actorID = SG.getID(SACTORS, actorName);
+					prodMimicAnim.actorID = actorID;
+				}
+			}
+            if ( it->YValue["blendin"] )
+                prodMimicAnim.blendin = it->YValue["blendin"].as<float>();
+            if ( it->YValue["blendout"] )
+                prodMimicAnim.blendin = it->YValue["blendout"].as<float>();
+            if ( it->YValue["weight"] )
+                prodMimicAnim.blendin = it->YValue["weight"].as<float>();
+            if ( it->YValue["stretch"] )
+                prodMimicAnim.blendin = it->YValue["stretch"].as<float>();
+            if ( it->YValue["clipfront"] )
+                prodMimicAnim.blendin = it->YValue["clipfront"].as<float>();
+            if ( it->YValue["clipend"] )
+                prodMimicAnim.blendin = it->YValue["clipend"].as<float>();
+
+			if (readingYmlRepo)
+				prodMimicAnim.fromRepo = true;
+			SG.mimics[prodID] = prodMimicAnim;
+		}
+	}
+
+	/* LOAD POSES FROM PRODUCTION */
+	if (root["production"]["assets"]["actor.poses"]) {
+		qd << "loadSceneProduction()>: Loading " << root["production"]["assets"]["actor.poses"].size() << " mimic anims..";
+
+		for (auto it = root["production"]["assets"]["actor.poses"].begin(); it != root["production"]["assets"]["actor.poses"].end(); ++it) {
+            QString mapName = it->XKey.as<QString>();
+
+            if ( !it->YValue["repo"] ) {
+				error("loadSceneProduction()>: No repo value found for actor.pose " + mapName);
+				continue;
+			}
+            QString repoName = it->YValue["repo"].as<QString>();
+			if ( !SG.hasName(SANIMPOSES, repoName) ) {
+				error("loadSceneProduction()>: Actor.pose " + repoName + " not found in repository!");
+				continue;
+			}
+
+			int repoID = SG.getID(SANIMPOSES, repoName);
+			int prodID = SG.getID(SANIMPOSES, mapName);
+
+			anim_pose prodPose = SG.poses[repoID];
+			prodPose.nameID = prodID;
+
+            if ( it->YValue["actor"] ) {
+                QString actorName = it->YValue["actor"].as<QString>();
+				if (!SG.hasName(SACTORS, actorName)) {
+					error("loadSceneProduction()>: Pose actor " + actorName + " not found in repository!");
+				} else {
+					int actorID = SG.getID(SACTORS, actorName);
+					prodPose.actorID = actorID;
+				}
+			}
+
+			if (readingYmlRepo)
+				prodPose.fromRepo = true;
+			SG.poses[prodID] = prodPose;
+		}
+	}
+
+	/* LOAD MIMICS (MIMIC POSES) FROM PRODUCTION */
+	if (root["production"]["assets"]["mimics"]) {
+		qd << "loadSceneProduction()>: Loading " << root["production"]["assets"]["mimics"].size() << " mimics (mimic poses)..";
+
+		for (auto it = root["production"]["assets"]["mimics"].begin(); it != root["production"]["assets"]["mimics"].end(); ++it) {
+            QString mapName = it->XKey.as<QString>();
+
+            if ( !it->YValue["repo"] ) {
+				error("loadSceneProduction()>: No repo value found for mimics " + mapName);
+				continue;
+			}
+            QString repoName = it->YValue["repo"].as<QString>();
+			if ( !SG.hasName(SMIMICPOSES, repoName) ) {
+				error("loadSceneProduction()>: Mimics (mimic pose) " + repoName + " not found in repository!");
+				continue;
+			}
+
+			int repoID = SG.getID(SMIMICPOSES, repoName);
+			int prodID = SG.getID(SMIMICPOSES, mapName);
+
+			mimic_pose prodMimicPose = SG.mimic_poses[repoID];
+			prodMimicPose.nameID = prodID;
+
+            if ( it->YValue["actor"] ) {
+                QString actorName = it->YValue["actor"].as<QString>();
+				if (!SG.hasName(SACTORS, actorName)) {
+					error("loadSceneProduction()>: Mimic Pose actor " + actorName + " not found in repository!");
+				} else {
+					int actorID = SG.getID(SACTORS, actorName);
+					prodMimicPose.actorID = actorID;
+				}
+			}
+            if ( it->YValue["emotional_state"] )
+                prodMimicPose.emotional_state = it->YValue["emotional_state"].as<QString>();
+            if ( it->YValue["eyes"] )
+                prodMimicPose.emotional_state = it->YValue["eyes"].as<QString>();
+            if ( it->YValue["anim"] )
+                prodMimicPose.emotional_state = it->YValue["anim"].as<QString>();
+            if ( it->YValue["weight"] )
+                prodMimicPose.weight = it->YValue["weight"].as<float>();
+            if ( it->YValue["duration"] )
+                prodMimicPose.duration = it->YValue["duration"].as<float>();
+
+			if (readingYmlRepo)
+				prodMimicPose.fromRepo = true;
+			SG.mimic_poses[prodID] = prodMimicPose;
+		}
+	}
+
+	/* LOAD SOUNDBANKS FROM PRODUCTION */
+	if (root["production"]["assets"]["soundbanks"]) {
+		qd << "loadSceneProduction()>: Loading " << root["production"]["assets"]["soundbanks"].size() << " soundbanks..";
+
+		upn(j, 0, root["production"]["assets"]["soundbanks"].size() - 1) {
+			QString bankName = root["production"]["assets"]["soundbanks"][j].as<QString>();
+			if ( !SG.hasName(SSOUNDBANKS, bankName) ) {
+				error("loadSceneProduction()>: Soundbank " + bankName + " not found in repository!");
+				continue;
+			}
+			int bankID = SG.getID(SSOUNDBANKS, bankName);
+
+			/*for (auto jt : SG.soundbanks[bankID]) {
+				SG.addNameFor("availableSoundEvents", jt);
+			}*/
+		}
+	}
+	return true;
+}
+
+bool YmlSceneManager::loadSceneDefaults() {
+	/* general settings */
+	if (root["production"]["settings"]) {
+		YAML::Node settingsNode = root["production"]["settings"];
+		if (settingsNode["sceneid"])
+			SG.sceneid = settingsNode["sceneid"].as<int>();
+		if (settingsNode["strings-idstart"])
+			SG.idstart = settingsNode["strings-idstart"].as<int>();
+		if (settingsNode["strings-idspace"])
+			SG.idspace = settingsNode["strings-idspace"].as<QString>();
+	}
+	if (root["production"]["placement"])
+		SG.placementTag = root["production"]["placement"].as<QString>();
+	if (root["production"]["gameplay"])
+		SG.gameplay = root["production"]["gameplay"].as<bool>();
+	if (root["production"]["cinematic_subtitles"])
+		SG.cinematic_subtitles = root["production"]["cinematic_subtitles"].as<bool>();
+
+	/* actors defaults */
+	YAML::Node placeNode = root["storyboard"]["defaults"]["placement"];
+	YAML::Node poseNode = root["storyboard"]["defaults"]["actor.pose"];
+	for (auto actorID : SG.actors.keys()) {
+		QString actorName = SG.getName(actorID);
+		// placement
+		if (placeNode[actorName] && placeNode[actorName].IsSequence() && placeNode[actorName].size() == 2) {
+			SG.defaultPlacement[actorID] = transform(placeNode[actorName][0].as<QVector3D>(), placeNode[actorName][1].as<QVector3D>());
+			qd << "loadSceneDefaults(): Set def placement for " << actorName << ": " << SG.defaultPlacement[actorID].pos;
+		}
+		// poses
+		if (poseNode[actorName] && poseNode[actorName].IsScalar()) {
+			QString poseName = poseNode[actorName].as<QString>();
+			if ( !SG.hasName(SANIMPOSES, poseName) ) {
+				error("loadSceneDefaults(): Default pose " + poseName + " was not defined in repo/production (actor: " + actorName + ")");
+			} else {
+				int poseID = SG.getID(SANIMPOSES, poseName);
+				SG.defaultPose[actorID] = poseID;
+				qd << "loadSceneDefaults(): Set def pose for " << actorName << ": " << poseName;
+			}
+		}
+		// mimic (special case - defined in actor map in: (1) repo, (2) production)
+		mimic_pose defMimic;
+		// from repository (barely)
+		YAML::Node mimicRNode = root["repository"]["actors"][actorName]["mimic"];
+		if (mimicRNode && mimicRNode.IsMap()) {
+			defMimic.nameID = SG.getID(SMIMICPOSES, actorName + "_default_mimic"); // not really needed
+			if ( mimicRNode["emotional_state"] )
+				defMimic.emotional_state = mimicRNode["emotional_state"].as<QString>();
+			if ( mimicRNode["eyes"] )
+				defMimic.emotional_state = mimicRNode["eyes"].as<QString>();
+			if ( mimicRNode["anim"] )
+				defMimic.emotional_state = mimicRNode["anim"].as<QString>();
+			if ( mimicRNode["weight"] )
+				defMimic.weight = mimicRNode["weight"].as<float>();
+			if ( mimicRNode["duration"] )
+				defMimic.duration = mimicRNode["duration"].as<float>();
+		}
+		// from production (probably)
+		YAML::Node mimicPNode = root["production"]["assets"]["actors"][actorName]["mimic"];
+		if (mimicPNode && mimicPNode.IsMap()) {
+			defMimic.nameID = SG.getID(SMIMICPOSES, actorName + "_default_mimic"); // not really needed
+
+			if ( mimicPNode["repo"] ) {
+				QString mimicPNodeRepo = mimicPNode["repo"].as<QString>();
+				if ( !SG.hasName(SMIMICPOSES, mimicPNodeRepo) ) {
+					warning("loadSceneDefaults()>: Mimics (mimic pose) " + mimicPNodeRepo + " for actor " + actorName + " not found in repository!");
+				} else {
+					// load repo params first
+					defMimic = SG.mimic_poses[ SG.getID(SMIMICPOSES, mimicPNodeRepo) ];
+				}
+			}
+			if ( mimicPNode["emotional_state"] )
+				defMimic.emotional_state = mimicPNode["emotional_state"].as<QString>();
+			if ( mimicPNode["eyes"] )
+				defMimic.emotional_state = mimicPNode["eyes"].as<QString>();
+			if ( mimicPNode["anim"] )
+				defMimic.emotional_state = mimicPNode["anim"].as<QString>();
+			if ( mimicPNode["weight"] )
+				defMimic.weight = mimicPNode["weight"].as<float>();
+			if ( mimicPNode["duration"] )
+				defMimic.duration = mimicPNode["duration"].as<float>();
+		}
+
+		// finally check if something was found
+		if ( defMimic.nameID != -1 ) {
+			defMimic.actorID = actorID;
+			SG.defaultMimic[actorID] = defMimic;
+			qd << "loadSceneDefaults(): Set def mimic for: " << actorName;
+		}
+	}
+
+	/* props defaults */
+	for (auto propID : SG.props.keys()) {
+		// placement
+		QString propName = SG.getName(propID);
+		if (placeNode[propID] && placeNode[propName].IsSequence() && placeNode[propName].size() == 2) {
+			SG.defaultPlacement[propID] = transform(placeNode[propName][0].as<QVector3D>(), placeNode[propName][1].as<QVector3D>());
+			qd << "Set def placement for " << propName << ": " << SG.defaultPlacement[propID].pos;
+		}
+	}
+	return true;
+}
+
 bool YmlSceneManager::loadShotsInfo() {
 	QSet<QString> nextKeys, cueKeys;
 	nextKeys = { "NEXT", "SCRIPT", "RANDOM", "EXIT", "OUTPUT", "BLACKSCREEN", "CAMERA_BLEND" };
@@ -670,14 +1692,14 @@ bool YmlSceneManager::loadShotsInfo() {
 				break;
 			}
 			if ( it->size() > 1 ) {
-				qCritical() << "Exception2: Map has > 1 elements?";
+                error("loadShotsInfo(): Map " + it->begin()->XKey.as<QString>() + " has > 1 elements?");
 				break;
 			}
-			if ( !it->begin()->XX.IsScalar() ) {
+            if ( !it->begin()->XKey.IsScalar() ) {
 				qCritical() << "Exception3/1: non-scalar!";
 				break;
 			}
-			QString key = it->begin()->XX.as<QString>();
+            QString key = it->begin()->XKey.as<QString>();
 
 			if ( nextKeys.contains(key.toUpper()) ) {
 				//qDebug() << "NEXT key, continue";
@@ -686,21 +1708,23 @@ bool YmlSceneManager::loadShotsInfo() {
 			}
 			if ( cueKeys.contains(key.toUpper()) ) {
 				//qDebug() << "CUE key";
-				prevShotName = it->begin()->YY.as<QString>();
+                prevShotName = it->begin()->YValue.as<QString>();
 				continue;
 
 			} else if ( key.toUpper() == "PAUSE" || key.toUpper() == "CHOICE" ) {
 				//qDebug() << "CHOICE/PAUSE key";
 				newDgLink.lines.pb( key.toUpper() );
-				newDgLink.speakers.pb( key.toUpper() );
-				double dur;
+				int actorID = SG.getID(SACTORS, key.toUpper());
+				newDgLink.speakers.pb( actorID );
+				double dur = -1.0;
 				if (key.toUpper() == "PAUSE") {
-					dur = it->begin()->YY.as<double>();
+                    dur = it->begin()->YValue.as<double>();
 				} else {
 					dur = sectionGraph[sectionName]->timeLimit;
-					if (dur < 0.0)
-						dur = 10.0;
 				}
+				if (dur < 0.0)
+					dur = 10.0;
+
 				newDgLink.durations.pb( dur );
 
 				shot newShot;
@@ -719,14 +1743,19 @@ bool YmlSceneManager::loadShotsInfo() {
 				prevShotName = QString();
 
 			} else if ( dgActors.contains(key) ) {
-				if ( !it->begin()->YY.IsScalar() ) {
+                if ( !it->begin()->YValue.IsScalar() ) {
 					qCritical() << "Exception3/2: non-scalar YY (actor)";
 					break;
 				}
 				//qDebug() << "ACTOR key";
-				QString line = it->begin()->YY.as<QString>();
+                QString line = it->begin()->YValue.as<QString>();
 				newDgLink.lines.pb( line );
-				newDgLink.speakers.pb( key );
+				if ( !SG.hasName(SACTORS, key) ) {
+					error(QString(Q_FUNC_INFO) + ": section " + sectionName + ": actor " + key + " not found in repository!");
+				}
+				int actorID = SG.getID(SACTORS, key);
+				warning("TEST actor: " + SG.getName(actorID));
+				newDgLink.speakers.pb( actorID );
 				newDgLink.durations.pb( getTextDuration(line) ); // TODO: try extract duration
 
 				shot newShot;
@@ -745,7 +1774,7 @@ bool YmlSceneManager::loadShotsInfo() {
 				prevShotName = QString();
 
 			} else {
-				qCritical() << "UNKNOWN KEY?? " << key;
+				error("loadShotsInfo():> dialogscript: UNKNOWN KEY! " + key);
 				prevShotName = QString();
 				continue;
 			}
@@ -760,40 +1789,41 @@ bool YmlSceneManager::loadShotsInfo() {
 
 	if (root["storyboard"]) {
 		for (auto it = root["storyboard"].begin(); it != root["storyboard"].end(); ++it) {
-			QString sectionName = it->XX.as<QString>();
-			qInfo() << "Loading storyboard for section: [" << sectionName << "]";
+            QString sectionName = it->XKey.as<QString>();
+			qInfo() << "loadShotsInfo()>: Loading storyboard for section: [" << sectionName << "]";
 
-			if ( !it->YY.IsMap() ) {
-				qCritical() << "Exception4: sbui section not a map!";
+            if ( !it->YValue.IsMap() ) {
+				qCritical() << "loadShotsInfo()>: Exception4: sbui section not a map!";
 				continue;
 			}
 			if ( !sectionNames.contains(sectionName) ) {
-				qInfo() << "Skipping: not a real section (defaults?)";
+				qInfo() << "loadShotsInfo()>: Skipping " + sectionName + ": not a real section (defaults?)";
 				continue;
 			}
 
-			for (auto jt = it->YY.begin(); jt != it->YY.end(); ++jt) {
-				QString shotName = jt->XX.as<QString>();
-				qInfo() << "Loading shot: [" << shotName << "]";
+            for (auto jt = it->YValue.begin(); jt != it->YValue.end(); ++jt) {
+                QString shotName = jt->XKey.as<QString>();
+				qInfo() << "loadShotsInfo()>: Loading shot: [" << shotName << "]";
 
-				if ( !jt->YY.IsSequence() ) {
-					qCritical() << "Exception5: shot actions are not a list!";
+                if ( !jt->YValue.IsSequence() ) {
+					qCritical() << "loadShotsInfo()>: Exception5: shot actions are not a list!";
 					continue;
 				}
 				int shotIdx = dgLinkBySectionName[sectionName].getIdx(shotName);
 				if (shotIdx == -1) {
-					qCritical() << "Exception6: shot was not found in dialogscript!";
+					qCritical() << "loadShotsInfo()>: Exception6: shot was not found in dialogscript!";
 					continue;
 				}
 
-				if ( !loadShotActions(jt->YY, dgLinkBySectionName[sectionName].shots[shotIdx]) ) {
+                if ( !loadShotActions(jt->YValue, dgLinkBySectionName[sectionName].shots[shotIdx]) ) {
+					error("loadShotsInfo()>: error loading shot: " + shotName + " (section " + sectionName + ")");
 					return false;
 				}
 			}
 		}
 
 	} else {
-		qWarning() << "No sbui shots found!";
+		qw << "loadShotsInfo()>: No sbui shots found!";
 		return false;
 	}
 	return true;
@@ -909,7 +1939,7 @@ bool YmlSceneManager::dfsDrawGraph(QString sectionName) {
         }
         //qDebug() << "Dfs draw graph: [" << sectionName << "]->[" << next << "]";
 		if ( !pSect->addOutputEdge(itemBySectionName[next]) ) {
-            qDebug() << "FAILED to add new socket, incorrect yml!";
+			qc << "FAILED to add new socket, incorrect yml!";
             return false;
         }
     }
@@ -1078,12 +2108,14 @@ void YmlSceneManager::deleteSection(QString sectionName) {
 		root["storyboard"].remove( sectionName );
 	}
 }
+
 sectionLink* YmlSceneManager::getSectionLink(QString sectionName) {
 	if ( sectionGraph.contains(sectionName) )
 		return sectionGraph[sectionName];
 	else
 		return nullptr;
 }
+
 GraphicsSectionItem* YmlSceneManager::getSectionItem(QString sectionName) {
 	if ( itemBySectionName.contains(sectionName) )
 		return itemBySectionName[sectionName];
@@ -1177,4 +2209,12 @@ void YmlSceneManager::setShotScenes(QGraphicsScene* gDgScene, QGraphicsScene* gL
 
 void YmlSceneManager::loadShotEditor(QString sectionName) {
 	emit loadShots(sectionName);
+}
+
+/* ASSET EDITOR */
+void YmlSceneManager::removeActorAsset(int actorID) {
+	QString actorName = SG.getName(actorID);
+	SG.actors.remove(actorID);
+	SG.removeID(actorID);
+	// TODO!
 }

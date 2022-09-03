@@ -3,14 +3,18 @@
 #include <QApplication>
 #include <fstream>
 #include <QTextStream>
+#include <QDateTime>
 
 static std::ofstream logFile;
-static bool logDebug = true; // TODO: set false in release build!
+//static QFile logFile;
+//static QTextStream logStream;
+static bool debug_build = true; // TODO: set false in release build!
+
 void logMessageOutput(QtMsgType type, const QMessageLogContext &context, const QString &msg)
 {
 	switch (type) {
 		case QtDebugMsg:
-			if (logDebug)
+			if (debug_build)
 				logFile  << "[Debug] " << msg.toStdString() << "\n";
 			break;
 		case QtInfoMsg:
@@ -20,24 +24,25 @@ void logMessageOutput(QtMsgType type, const QMessageLogContext &context, const Q
 			logFile  << "[Warning] " << msg.toStdString() << "\n";
 			break;
 		case QtCriticalMsg:
-			logFile  << "[Critical] " << msg.toStdString() << "\n";
+			logFile << "[Critical] " << msg.toStdString() << "\n";
 			break;
 		case QtFatalMsg:
 			logFile  << "[Fatal] " << msg.toStdString() << "\n";
 			abort();
 	}
-	if (logDebug)
-		logFile.flush();
+	logFile.flush();
 }
 
 int main(int argc, char *argv[])
 {
-	logFile.open("log_ymlSceneEditor.txt", std::ofstream::out | std::ofstream::trunc);
-	logFile.sync_with_stdio(0); logFile.tie(nullptr);
 	if (argc > 1 && !strncmp(argv[1], "--debug", 7) ) {
-		logDebug = true;
+		debug_build = true;
 	}
-	//qInstallMessageHandler(logMessageOutput);
+	if ( !debug_build ) {
+		logFile.open("log_ymlSceneEditor.txt", std::ofstream::out | std::ofstream::trunc);
+		logFile << "--- RUN: " << QDateTime::currentDateTime().toString().toStdString() << " ---\n";
+		qInstallMessageHandler(logMessageOutput);
+	}
 
     QApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
     QApplication a(argc, argv);

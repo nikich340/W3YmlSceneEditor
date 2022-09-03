@@ -4,9 +4,10 @@
 
 #include <QMainWindow>
 #include <QGraphicsScene>
-#include <YmlSceneManager.h>
+#include "YmlSceneManager.h"
 #include "GraphicsSectionItem.h"
 #include "ShotManager.h"
+#include "RepoActorsDialog.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -28,13 +29,22 @@ private:
 	QGraphicsScene *gDgScene;
 	QGraphicsScene *gShotScene;
 	QGraphicsScene *gLabelScene;
+	void readSceneRepos();
     void resizeEvent(QResizeEvent* event);
+	void writeSetting(QString name, QVariant value);
+	QVariant readSetting(QString name, QVariant defaultValue = QVariant());
 
 public slots:
-    void print_info(QString s);
+	void print_info(QString s);
+	void print_warning(QString s);
     void print_error(QString s);
     void onClicked_Quit();
     void onClicked_Load();
-    void onClicked_Save();
+	void onClicked_Save();
+	void onClicked_ShowhideLog();
+	void onClicked_SetRepoPath();
+
+	// repo things
+	void onClicked_RepoActors();
 };
 #endif // MAINWINDOW_H

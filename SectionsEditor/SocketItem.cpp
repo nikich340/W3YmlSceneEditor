@@ -68,7 +68,7 @@ void SocketItem::addEdge(EdgeItem *newEdge) {
     edges.push_back(newEdge);
 }
 bool SocketItem::removeEdge(EdgeItem *edge) {
-	qDebug() << "call remove edge! my edges:" << edges;
+	//qDebug() << "call remove edge! my edges:" << edges;
 	if (edges.isEmpty())
 		return false;
 	int idx = edges.indexOf(edge);
@@ -94,11 +94,11 @@ bool SocketItem::makeTop(EdgeItem* edge) {
 void SocketItem::mousePressEvent(QGraphicsSceneMouseEvent *event) {
     if (event->button() == Qt::LeftButton) {
         if (!edges.isEmpty() && isInputSocket) {
-            qDebug() << "Pressed in-socket with edge, start moving it.";
+			//qDebug() << "Pressed in-socket with edge, start moving it.";
             inMove = true;
             edges.back()->setState(EdgeItem::change);
         } else if (edges.isEmpty() && !isInputSocket) {
-            qDebug() << "Pressed out-socket without edge, create new and start moving it.";
+			//qDebug() << "Pressed out-socket without edge, create new and start moving it.";
             inCreate = true;
             EdgeItem* newEdge = new EdgeItem;
             newEdge->setState(EdgeItem::change);
@@ -138,7 +138,7 @@ void SocketItem::mouseReleaseEvent(QGraphicsSceneMouseEvent *event) {
 				return;
 
             QString key = dropItem->data(0).toString();
-			qDebug() << "Existing edge was dropped on some item with key {" << key << "}";
+			//qDebug() << "Existing edge was dropped on some item with key {" << key << "}";
 			if (key == "inputSocket" || key == "section") {
                 GraphicsSectionItem* oldSection = qgraphicsitem_cast<GraphicsSectionItem*>( edge->socketEnd->parentItem() );
                 GraphicsSectionItem* startSection = qgraphicsitem_cast<GraphicsSectionItem*>( socketStart->parentItem() );
@@ -150,19 +150,19 @@ void SocketItem::mouseReleaseEvent(QGraphicsSceneMouseEvent *event) {
 
 				if ( (key == "inputSocket" && (dropItem != this) && (oldSection != nextSection)) ||
 					 (key == "section" && (oldSection != nextSection)) ) {
-					qInfo() << "Move edge out-section [" << oldSection->sName() << "] -> [" << nextSection->sName() << "]";
+					//qInfo() << "Move edge out-section [" << oldSection->sName() << "] -> [" << nextSection->sName() << "]";
                     edges.pop_back();
                     oldSection->removeInputEdge(edge);
                     startSection->addOutputEdge(nextSection, false, edge);
                 } else {
-					qDebug() << "Don't change edge, redraw it.";
+					//qDebug() << "Don't change edge, redraw it.";
                     edges.last()->setState(EdgeItem::normal);
                     edges.last()->draw();
                 }
             } else {
                 GraphicsSectionItem* startSection = qgraphicsitem_cast<GraphicsSectionItem*>( socketStart->parentItem() );
                 if ( !startSection->removeOutputEdge(edges.last()) ) {
-                    qCritical() << "Error while removing edge from [" << startSection->sName() << "]";
+					qc << "Error while removing edge from [" << startSection->sName() << "]";
                 }
             }
         } else if (inCreate) {
@@ -172,7 +172,7 @@ void SocketItem::mouseReleaseEvent(QGraphicsSceneMouseEvent *event) {
 				return;
 
             QString key = dropItem->data(0).toString();
-			qDebug() << "Existing edge was dropped on some item with key {" << key << "}";
+			//qDebug() << "Existing edge was dropped on some item with key {" << key << "}";
 			if (key == "inputSocket" || key == "section") {
                 GraphicsSectionItem* startSection = qgraphicsitem_cast<GraphicsSectionItem*>( parentItem() );
                 GraphicsSectionItem* nextSection = nullptr;

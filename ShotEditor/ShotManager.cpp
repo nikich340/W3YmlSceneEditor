@@ -70,7 +70,7 @@ void ShotManager::updateDgLabel(QString shotname, double factor) {
 			L = M;
 		}
 	}*/
-	dgLabelByShotname[shotname]->setHtml(labelText + "<br><font color=\"#000066\">" + cleanLine + "</font><br><font color=\"#440066\">" + dur + "</font>");
+	dgLabelByShotname[shotname]->setHtml(labelText + "<br><font color=\"#000066\">" + cleanLine + "</font><br><br><font color=\"Purple\">" + dur + "</font>");
 
 	//qDebug() << "|text: " << cleanLine << ", rect label: " << dgLabelByShotname[shotname]->boundingRect();
 }
@@ -138,14 +138,15 @@ void ShotManager::onLoadShots(QString sectionName) {
 		newElement->setRect(0, 0, dur * SHOT_SECOND, SHOT_DG_HEIGHT * 0.6);
 		newElement->setPos(cur_x, 0);
 		newElement->setPen( pen2 );
-		if (currentDgLink->speakers[i] == "PAUSE") {
+		if (currentDgLink->speakers[i] == ymlManager->SG.getID(SACTORS, "PAUSE")) {
 			newElement->setBrush( QBrush(colorDgViewPause) );
-		} else if (currentDgLink->speakers[i] == "CHOICE") {
+		} else if (currentDgLink->speakers[i] == ymlManager->SG.getID(SACTORS, "CHOICE")) {
 			newElement->setBrush( QBrush(colorDgViewChoice) );
 		} else {
-			int idx = assignedSpeakers.indexOf(currentDgLink->speakers[i]);
+			QString speakerName = ymlManager->SG.getName(currentDgLink->speakers[i]);
+			int idx = assignedSpeakers.indexOf( speakerName );
 			if (idx == -1) {
-				assignedSpeakers.pb(currentDgLink->speakers[i]);
+				assignedSpeakers.pb( speakerName );
 				idx = assignedSpeakers.size() - 1;
 			}
 			idx = idx % 10; // limit to [0; 9]
