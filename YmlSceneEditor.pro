@@ -4,7 +4,7 @@ greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
 CONFIG += c++17
 QMAKE_CXXFLAGS += -std=c++17
-QMAKE_CXXFLAGS_WARN_OFF -= -Wunused-parameter -Wunused-variable
+QMAKE_CXXFLAGS_WARN_OFF += -Wunused-parameter -Wunused-variable
 
 # External files
 RESOURCES = w3.data/ymlSceneEditor.qrc
@@ -32,8 +32,10 @@ HEADERS += \
     MainWindow.h \
     SectionsEditor/SectionsGraphicsView.h \
     SectionsEditor/SocketItem.h \
+    ShotEditor/ShotActionTypes.h \
     ShotEditor/ShotManager.h \
     ShotEditor/ShotViewer.h \
+    UI/CustomRectItem.h \
     UI/DialogChangeSection.h \
     UI/InputMimicPose.h \
     UI/InputPlacement.h \
@@ -125,6 +127,7 @@ SOURCES += \
     SectionsEditor/SocketItem.cpp \
     ShotEditor/ShotManager.cpp \
     ShotEditor/ShotViewer.cpp \
+    UI/CustomRectItem.cpp \
     UI/DialogChangeSection.cpp \
     UI/InputMimicPose.cpp \
     UI/InputPlacement.cpp \

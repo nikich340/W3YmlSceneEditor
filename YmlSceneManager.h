@@ -12,6 +12,8 @@ class YmlSceneManager : public QObject
 {
     Q_OBJECT
 private:
+    sceneInfo SG; // = "Scene Globals"
+
 	QVector<GraphicsSectionItem*> unusedItems;
 	QGraphicsScene* pScene = nullptr;
 	QGraphicsScene* pDgScene = nullptr;
@@ -28,12 +30,7 @@ private:
 
 public:
 	/* scene general */
-	sceneInfo SG; // = "Scene Globals"
 
-	/* shotEditor */
-	QMap<QString, dialogLine> lineById;
-	QMap<QString, dialogLink> dgLinkBySectionName;
-	QSet<QString> dgActors, dgProps;
 
 	bool hasChanges = false;
 	bool hasShotChanges = false;
@@ -67,13 +64,21 @@ public:
 
 	/* asset editor */
 	void removeActorAsset(int actorID);
+    sceneInfo* sceneGlobals() {
+        return &SG;
+    }
 
 	/* shot editor */
+    QMap<QString, dialogLine> lineById;
+    QMap<QString, dialogLink> dgLinkBySectionName;
+    QSet<QString> dgActors, dgProps;
+
 	QString getCleanLine(QString text);
 	double getTextDuration(QString text);
 	void setShotScenes(QGraphicsScene* gDgScene, QGraphicsScene* gLabelScene, QGraphicsScene* gShotScene);
 	void loadShotEditor(QString sectionName);
 
+    /* global logs */
 	void error(QString s);
 	void warning(QString s);
     void info(QString s);

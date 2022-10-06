@@ -81,8 +81,8 @@ YmlSceneManager::YmlSceneManager(QObject *parent, QGraphicsScene* gScene) : QObj
     qDebug() << "YmlSceneManager()";
 
 	/* Init some specials */
-	//SG.getID(SACTORS, "PAUSE");
-	//SG.getID(SACTORS, "CHOICE");
+    //SG.getID(SACTORS, "PAUSE");
+    //SG.getID(SACTORS, "CHOICE");
 
 	/* read vanilla lines info */
 	QFile inputFile(":/lines.en.csv");
@@ -165,7 +165,8 @@ void YmlSceneManager::clearData(bool clearRepo) {
 	SG.sceneid = 1;
 	SG.idspace = "9999";
 	SG.idstart = 0;
-	SG.gameplay = SG.cinematic_subtitles = false;
+	SG.gameplay = false;
+	SG.cinematic_subtitles = false;
 	for (auto it : SG.actors) {
 		if (!clearRepo && it.fromRepo)
 			continue;
@@ -538,9 +539,10 @@ bool YmlSceneManager::loadShotActions(const YAML::Node actsNode, shot& sh) {
 	upn(k, 0, (int) actsNode.size() - 1) {
 		YAML::Node actionNode = actsNode[k];
 		shotAction newAction;
-        newAction.actionName = actionNode.begin()->XKey.as<QString>().toLower();
+        QString actionName = actionNode.begin()->XKey.as<QString>().toLower();
+        newAction.actionType = StringToEShotAction.value(actionName, EShotUnknown);
 
-		QStringList keys = newAction.actionName.split(".");
+        QStringList keys = actionName.split(".");
         YAML::Node paramNode = actionNode.begin()->YValue;
 		bool isExtended = paramNode.IsMap();
 		qDebug() << "** " << keys;
@@ -553,7 +555,7 @@ bool YmlSceneManager::loadShotActions(const YAML::Node actsNode, shot& sh) {
 			keys.insert(0, "actor"); // anim(.mimic) -> actor.anim(.mimic)
 		}
 
-		QString name; // cam: cam_name | actor.anim/actor.anim.mimic: actor |
+        QString name; // cam: cam_name | actor.anim/actor.anim.mimic: actor_name |
 		if ( keys[0] == "cam" ) {
 			newAction.start = paramNode[0].as<double>();
 
@@ -750,7 +752,7 @@ bool YmlSceneManager::loadShotActions(const YAML::Node actsNode, shot& sh) {
 					}
 				}
 			}
-			else if ( keys[1] == "show" || keys[1] == "hide" || keys[1] == "scabbard" )
+            else if ( keys[1] == "show" || keys[1] == "hide" || keys[1] == "scabbard" || keys[1] == "unequip" )
 			{
 				newAction.start = paramNode[0].as<double>();
 				name = paramNode[1].as<QString>();
@@ -830,33 +832,35 @@ bool YmlSceneManager::loadShotActions(const YAML::Node actsNode, shot& sh) {
 				newAction.values["tag"] = paramNode[1].as<QString>();
 				newAction.values["effect"] = paramNode[2].as<QString>();
 			}
-		} else if ( keys[0] == "env" ) {
-			if (isExtended) {
-				newAction.start = paramNode[".@pos"][0].as<double>();
-				newAction.values["envPath"] = paramNode[".@pos"][1].as<QString>();
+        } else if ( keys[0] == "env" ) {
+            /* handles both blendin/blendout ! */
+            if (isExtended) {
+                newAction.start = paramNode[".@pos"][0].as<double>();
+                newAction.values["envPath"] = paramNode[".@pos"][1].as<QString>();
 
-				if (paramNode[".@pos"].size() > 2)
-					newAction.values["blendTime"] = paramNode[".@pos"][2].as<double>();
+                if (paramNode[".@pos"].size() > 2)
+                    newAction.values["blendTime"] = paramNode[".@pos"][2].as<double>();
 
-				if (paramNode["priority"])
-					newAction.values["priority"] = paramNode["priority"].as<int>();
+                if (paramNode["priority"])
+                    newAction.values["priority"] = paramNode["priority"].as<int>();
 
-				if (paramNode["blendFactor"])
-					newAction.values["blendFactor"] = paramNode["blendFactor"].as<double>();
-			} else {
-				newAction.start = paramNode[0].as<double>();
-				newAction.values["envPath"] = paramNode[1].as<QString>();
+                if (paramNode["blendFactor"])
+                    newAction.values["blendFactor"] = paramNode["blendFactor"].as<double>();
+            } else {
+                newAction.start = paramNode[0].as<double>();
+                newAction.values["envPath"] = paramNode[1].as<QString>();
 
-				if (paramNode.size() > 2)
-					newAction.values["blendTime"] = paramNode[2].as<double>();
-			}
+                if (paramNode.size() > 2)
+                    newAction.values["blendTime"] = paramNode[2].as<double>();
+            }
 		} else if ( keys[0] == "fade" ) {
+            /* handles both blendin/blendout ! */
 			newAction.start = paramNode[0].as<double>();
 			newAction.values["duration"] = paramNode[1].as<double>();
 
 			if (paramNode.size() > 2) {
-				newAction.values["color"] = QVector4D(paramNode[2][0].as<int>(), paramNode[2][1].as<int>(),
-													  paramNode[2][2].as<int>(), paramNode[2][3].as<int>());
+                newAction.values["color"] = QColor(paramNode[2][0].as<int>(), paramNode[2][1].as<int>(),
+                                                      paramNode[2][2].as<int>(), paramNode[2][3].as<int>());
 			}
 		} else {
 			error("Unknown shot action!!! " + keys[0]);
@@ -1057,7 +1061,7 @@ bool YmlSceneManager::loadSceneRepository() {
             QString mapName = it->XKey.as<QString>();
 			if ( SG.hasName(SMIMICANIMS, mapName) )
 			{
-				qw << ("loadSceneRepository()>: camera " + mapName + " already exist! Overwriting.");
+                qw << ("loadSceneRepository()>: mimic anim " + mapName + " already exist! Overwriting.");
 				//continue;
 			}
 			int nameID = SG.getID(SMIMICANIMS, mapName);
@@ -1141,7 +1145,7 @@ bool YmlSceneManager::loadSceneRepository() {
             QString mapName = it->XKey.as<QString>();
 			if ( SG.hasName(SMIMICPOSES, mapName) )
 			{
-				qw << ("loadSceneRepository(): camera " + mapName + " already exist! Overwriting.");
+                qw << ("loadSceneRepository(): mimic pose " + mapName + " already exist! Overwriting.");
 				//continue;
 			}
 			int nameID = SG.getID(SMIMICPOSES, mapName);
@@ -1391,15 +1395,15 @@ bool YmlSceneManager::loadSceneProduction() {
             if ( it->YValue["blendin"] )
                 prodAnim.blendin = it->YValue["blendin"].as<float>();
             if ( it->YValue["blendout"] )
-                prodAnim.blendin = it->YValue["blendout"].as<float>();
+                prodAnim.blendout = it->YValue["blendout"].as<float>();
             if ( it->YValue["weight"] )
-                prodAnim.blendin = it->YValue["weight"].as<float>();
+                prodAnim.weight = it->YValue["weight"].as<float>();
             if ( it->YValue["stretch"] )
-                prodAnim.blendin = it->YValue["stretch"].as<float>();
+                prodAnim.stretch = it->YValue["stretch"].as<float>();
             if ( it->YValue["clipfront"] )
-                prodAnim.blendin = it->YValue["clipfront"].as<float>();
+                prodAnim.clipfront = it->YValue["clipfront"].as<float>();
             if ( it->YValue["clipend"] )
-                prodAnim.blendin = it->YValue["clipend"].as<float>();
+                prodAnim.clipend = it->YValue["clipend"].as<float>();
 
 			if (readingYmlRepo)
 				prodAnim.fromRepo = true;
@@ -1442,15 +1446,15 @@ bool YmlSceneManager::loadSceneProduction() {
             if ( it->YValue["blendin"] )
                 prodMimicAnim.blendin = it->YValue["blendin"].as<float>();
             if ( it->YValue["blendout"] )
-                prodMimicAnim.blendin = it->YValue["blendout"].as<float>();
+                prodMimicAnim.blendout = it->YValue["blendout"].as<float>();
             if ( it->YValue["weight"] )
-                prodMimicAnim.blendin = it->YValue["weight"].as<float>();
+                prodMimicAnim.weight = it->YValue["weight"].as<float>();
             if ( it->YValue["stretch"] )
-                prodMimicAnim.blendin = it->YValue["stretch"].as<float>();
+                prodMimicAnim.stretch = it->YValue["stretch"].as<float>();
             if ( it->YValue["clipfront"] )
-                prodMimicAnim.blendin = it->YValue["clipfront"].as<float>();
+                prodMimicAnim.clipfront = it->YValue["clipfront"].as<float>();
             if ( it->YValue["clipend"] )
-                prodMimicAnim.blendin = it->YValue["clipend"].as<float>();
+                prodMimicAnim.clipend = it->YValue["clipend"].as<float>();
 
 			if (readingYmlRepo)
 				prodMimicAnim.fromRepo = true;

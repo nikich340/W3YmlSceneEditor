@@ -38,7 +38,7 @@ private:
 	bool updateActor = false;
 	//QHash<int, QString> nameByID;
 	//QHash<int, asset> actorsTemp;
-	YmlSceneManager *ymlMan = nullptr;
+    YmlSceneManager *m_ymlManager = nullptr;
 	Ui::RepoActorsDialog *ui;
 };
 

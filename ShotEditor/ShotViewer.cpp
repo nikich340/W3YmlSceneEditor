@@ -21,7 +21,6 @@ void ShotViewer::setChildViews(QGraphicsView* newLabelView, QGraphicsView* newDg
 	}
 }
 
-
 #if QT_CONFIG(wheelevent)
 void ShotViewer::wheelEvent(QWheelEvent *event)
 {
@@ -35,9 +34,15 @@ void ShotViewer::wheelEvent(QWheelEvent *event)
 		if (scaleFactor < 1.0 || scaleFactor > 10.0)
 			return;
 
-		scale(scaleOffset, scaleOffset);
+        /* full scale
+        scale(scaleOffset, scaleOffset);
 		dgView->scale(scaleOffset, 1.0);
-		labelView->scale(1.0, scaleOffset);
+        labelView->scale(1.0, scaleOffset);
+        */
+        /* x-only scale */
+        scale(scaleOffset, 1.0);
+        dgView->scale(scaleOffset, 1.0);
+        labelView->scale(1.0, 1.0);
 
 		emit wasScaled(scaleFactor);
 
@@ -86,11 +91,11 @@ void ShotViewer::mouseMoveEvent(QMouseEvent* event)
 	{
 		int diff_x = event->x() - m_originX;
 		int diff_y = event->y() - m_originY;
-		//qDebug() << "diff: " << diff_x << ", " << diff_y;
-		translate(diff_x, diff_y);
+        //qDebug() << "diff: " << diff_x << ", " << diff_y;
+        translate(diff_x, diff_y);
 
-		dgView->translate(diff_x, 0);
-		labelView->translate(0, diff_y);
+        dgView->translate(diff_x, 0);
+        labelView->translate(0, diff_y);
 		m_originX = event->x();
 		m_originY = event->y();
 	}

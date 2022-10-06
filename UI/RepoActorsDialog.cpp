@@ -1,21 +1,21 @@
 #include "RepoActorsDialog.h"
 #include "ui_RepoActorsDialog.h"
 
-#define pSG ymlMan->SG
+#define pSG m_ymlManager->sceneGlobals()
 
 RepoActorsDialog::RepoActorsDialog(YmlSceneManager *manager, QWidget *parent) :
 	QDialog(parent),
-	ymlMan(manager),
+    m_ymlManager(manager),
 	ui(new Ui::RepoActorsDialog)
 {
 	ui->setupUi(this);
 
 	setWindowFlags(Qt::Window);
 
-	//actorsTemp = pSG.actors;
+    //actorsTemp = pSG->actors;
 
-	for (auto actorID : pSG.actors.keys()) {
-		QString actorName = pSG.getName(actorID);
+    for (auto actorID : pSG->actors.keys()) {
+        QString actorName = pSG->getName(actorID);
 		ui->boxActors->addItem(actorName, actorID);
 
 		//nameByID[actorID] = actorName;
@@ -36,56 +36,56 @@ RepoActorsDialog::RepoActorsDialog(YmlSceneManager *manager, QWidget *parent) :
 }
 
 void RepoActorsDialog::onChangedActor(int index) {
-	if (prevID != -1 && !pSG.actors[prevID].fromRepo) {
-		//onRenameActor does it //pSG.rename(prevID, ui->lineName->text());
-		pSG.actors[prevID].templatePath = ui->linePath->text();
+    if (prevID != -1 && !pSG->actors[prevID].fromRepo) {
+        //onRenameActor does it //pSG->rename(prevID, ui->lineName->text());
+        pSG->actors[prevID].templatePath = ui->linePath->text();
 
-		pSG.actors[prevID].appearances = ui->textApps->toPlainText().split(QRegExp("[\n]"), QString::SkipEmptyParts).toSet();
-		pSG.actors[prevID].tags = ui->textTags->toPlainText().split(QRegExp("[\n]"), QString::SkipEmptyParts).toSet();
-		pSG.actors[prevID].mainAppearance = ui->boxDefApp->currentText();
-		pSG.actors[prevID].by_voicetag = ui->checkVoicetag->isChecked();
+        pSG->actors[prevID].appearances = ui->textApps->toPlainText().split(QRegExp("[\n]"), QString::SkipEmptyParts).toSet();
+        pSG->actors[prevID].tags = ui->textTags->toPlainText().split(QRegExp("[\n]"), QString::SkipEmptyParts).toSet();
+        pSG->actors[prevID].mainAppearance = ui->boxDefApp->currentText();
+        pSG->actors[prevID].by_voicetag = ui->checkVoicetag->isChecked();
 		/* PLACEMENT */
 		if ( ui->checkPlacement->isChecked() ) {
-			pSG.defaultPlacement[prevID] = ui->widgetPlacement->getPlacement();
-		} else if ( pSG.defaultPlacement.contains(prevID) ) {
-			pSG.defaultPlacement.remove(prevID);
+            pSG->defaultPlacement[prevID] = ui->widgetPlacement->getPlacement();
+        } else if ( pSG->defaultPlacement.contains(prevID) ) {
+            pSG->defaultPlacement.remove(prevID);
 		}
 
 		/* MIMIC POSE */
 		if ( ui->checkMimicPose->isChecked() ) {
 			mimic_pose mimicPose = ui->widgetMimicPose->getPose();
 			mimicPose.actorID = prevID;
-			mimicPose.nameID = pSG.getID(SMIMICPOSES, ui->widgetMimicPose->getName());
+            mimicPose.nameID = pSG->getID(SMIMICPOSES, ui->widgetMimicPose->getName());
 
-			pSG.defaultMimic[prevID] = mimicPose;
-		} else if ( pSG.defaultMimic.contains(prevID) ) {
-			pSG.defaultMimic.remove(prevID);
+            pSG->defaultMimic[prevID] = mimicPose;
+        } else if ( pSG->defaultMimic.contains(prevID) ) {
+            pSG->defaultMimic.remove(prevID);
 		}
 
 		/* ANIM POSE */
 		if ( ui->checkPose->isChecked() ) {
 			anim_pose animPose = ui->widgetPose->getPose();
 			animPose.actorID = prevID;
-			animPose.nameID = pSG.getID(SANIMPOSES, ui->widgetPose->getName());
+            animPose.nameID = pSG->getID(SANIMPOSES, ui->widgetPose->getName());
 
-			pSG.poses[animPose.nameID] = animPose;
-			pSG.defaultPose[prevID] = animPose.nameID;
-		} else if ( pSG.defaultPose.contains(prevID) ) {
-			pSG.defaultPose.remove(prevID);
+            pSG->poses[animPose.nameID] = animPose;
+            pSG->defaultPose[prevID] = animPose.nameID;
+        } else if ( pSG->defaultPose.contains(prevID) ) {
+            pSG->defaultPose.remove(prevID);
 		}
 	}
 	if (index != -1) {
 		updateActor = true;
 		prevID = ui->boxActors->itemData(index).toInt();
 
-		ui->lineName->setText(pSG.getName(prevID));
-		ui->linePath->setText(pSG.actors[prevID].templatePath);
-		ui->textApps->setPlainText(pSG.actors[prevID].getAppearances());
-		ui->textTags->setPlainText(pSG.actors[prevID].getTags());
-		ui->checkVoicetag->setChecked(pSG.actors[prevID].by_voicetag);
+        ui->lineName->setText(pSG->getName(prevID));
+        ui->linePath->setText(pSG->actors[prevID].templatePath);
+        ui->textApps->setPlainText(pSG->actors[prevID].getAppearances());
+        ui->textTags->setPlainText(pSG->actors[prevID].getTags());
+        ui->checkVoicetag->setChecked(pSG->actors[prevID].by_voicetag);
 		/* PLACEMENT */
-		if ( pSG.defaultPlacement.contains(prevID) ) {
-			ui->widgetPlacement->setPlacement(pSG.defaultPlacement[prevID]);
+        if ( pSG->defaultPlacement.contains(prevID) ) {
+            ui->widgetPlacement->setPlacement(pSG->defaultPlacement[prevID]);
 			ui->checkPlacement->setChecked(true);
 		} else {
 			ui->widgetPlacement->setPlacement( transform() );
@@ -93,33 +93,33 @@ void RepoActorsDialog::onChangedActor(int index) {
 		}
 
 		/* MIMIC POSE */
-		if ( pSG.defaultMimic.contains(prevID) ) {
-			int poseID = pSG.defaultMimic[prevID].nameID;
-			ui->widgetMimicPose->setPose(pSG.defaultMimic[prevID], pSG.getName(poseID));
+        if ( pSG->defaultMimic.contains(prevID) ) {
+            int poseID = pSG->defaultMimic[prevID].nameID;
+            ui->widgetMimicPose->setPose(pSG->defaultMimic[prevID], pSG->getName(poseID));
 			ui->checkMimicPose->setChecked(true);
 		} else {
 			int nameID;
 			QString name;
-			pSG.getNameUnused(SMIMICPOSES, pSG.getName(prevID) + "_default_pose_", name, nameID);
+            pSG->getNameUnused(SMIMICPOSES, pSG->getName(prevID) + "_default_pose_", name, nameID);
 			ui->widgetMimicPose->setPose( mimic_pose(nameID, QString()), name );
 			ui->checkMimicPose->setChecked(false);
 		}
 
 		/* ANIM POSE */
-		if ( pSG.defaultPose.contains(prevID) ) {
-			int poseID = pSG.defaultPose[prevID];
-			ui->widgetPose->setPose(pSG.poses[poseID], pSG.getName(poseID));
+        if ( pSG->defaultPose.contains(prevID) ) {
+            int poseID = pSG->defaultPose[prevID];
+            ui->widgetPose->setPose(pSG->poses[poseID], pSG->getName(poseID));
 			ui->checkPose->setChecked(true);
 		} else {
 			int nameID;
 			QString name;
-			pSG.getNameUnused(SANIMPOSES, pSG.getName(prevID) + "_default_pose_", name, nameID);
+            pSG->getNameUnused(SANIMPOSES, pSG->getName(prevID) + "_default_pose_", name, nameID);
 			ui->widgetPose->setPose( anim_pose(nameID, QString()), name );
 			ui->checkPose->setChecked(false);
 		}
 	}
 
-	if (index == -1 || pSG.actors[prevID].fromRepo) {
+    if (index == -1 || pSG->actors[prevID].fromRepo) {
 		setEnabledEditions( false );
 	} else {
 		setEnabledEditions( true );
@@ -143,36 +143,36 @@ void RepoActorsDialog::onSwitch_DefMimicPose() {
 void RepoActorsDialog::onRenameActor() {
 	int actorID = ui->boxActors->currentData().toInt();
 	QString newName = ui->lineName->text();
-	QString oldName = pSG.getName(actorID);
+    QString oldName = pSG->getName(actorID);
 	//qd << "old: " << oldName << " new: " << newName;
 
 	if ( newName == oldName ) {  // not changed
 		ui->lineName->setStyleSheet("color: black");
 		userMistakes &= ~1;
-	} else if ( pSG.hasName(SACTORS, newName) ) { // changed and duplicating, not ok
+    } else if ( pSG->hasName(SACTORS, newName) ) { // changed and duplicating, not ok
 		ui->lineName->setStyleSheet("color: red");
 		userMistakes |= 1;
 	} else {  // changed and ok
 		ui->lineName->setStyleSheet("color: blue");
-		pSG.rename(actorID, newName);
+        pSG->rename(actorID, newName);
 		userMistakes &= ~1;
 	}
 	ui->boxActors->setEnabled( !userMistakes );
 }
 void RepoActorsDialog::onRenameAnimPose(QString newName) {
 	int nameID = ui->widgetPose->property("nameID").toInt();
-	QString oldName = pSG.getName(nameID);
+    QString oldName = pSG->getName(nameID);
 	//qd << "old: " << oldName << " new: " << newName;
 
 	if ( newName == oldName ) {  // not changed
 		ui->widgetPose->setNameStyleSheet("color: black");
 		userMistakes &= ~2;
-	} else if ( pSG.hasName(SACTORS, newName) ) { // changed and duplicating, not ok
+    } else if ( pSG->hasName(SACTORS, newName) ) { // changed and duplicating, not ok
 		ui->widgetPose->setNameStyleSheet("color: red");
 		userMistakes |= 2;
 	} else {  // changed and ok
 		ui->widgetPose->setNameStyleSheet("color: blue");
-		pSG.rename(nameID, newName);
+        pSG->rename(nameID, newName);
 		userMistakes &= ~2;
 	}
 	ui->boxActors->setEnabled( !userMistakes );
@@ -181,12 +181,12 @@ void RepoActorsDialog::onRenameAnimPose(QString newName) {
 void RepoActorsDialog::onClonedActor() {
 	int newID;
 	QString newName;
-	pSG.getNameUnused(SACTORS, ui->boxActors->currentText() + "_cloned_", newName, newID);
+    pSG->getNameUnused(SACTORS, ui->boxActors->currentText() + "_cloned_", newName, newID);
 	int oldID = ui->boxActors->currentData().toInt();
 
-	pSG.actors[newID] = pSG.actors[oldID];
-	pSG.actors[newID].nameID = newID;
-	pSG.actors[newID].fromRepo = false;
+    pSG->actors[newID] = pSG->actors[oldID];
+    pSG->actors[newID].nameID = newID;
+    pSG->actors[newID].fromRepo = false;
 	// TODO! Add to dialogscript
 
 	int newIndex = ui->boxActors->currentIndex() + 1;
@@ -197,10 +197,10 @@ void RepoActorsDialog::onClonedActor() {
 void RepoActorsDialog::onAddActor() {
 	int newID;
 	QString newName;
-	pSG.getNameUnused(SACTORS, "new_actor_", newName, newID);
+    pSG->getNameUnused(SACTORS, "new_actor_", newName, newID);
 
-	pSG.actors[newID] = asset(newID, newName);
-	pSG.actors[newID].nameID = newID;
+    pSG->actors[newID] = asset(newID, newName);
+    pSG->actors[newID].nameID = newID;
 	// TODO! Add to dialogscript
 
 	int newIndex = ui->boxActors->currentIndex() + 1;
@@ -218,12 +218,12 @@ void RepoActorsDialog::onRemoveActor() {
 
 		ui->boxActors->removeItem( ui->boxActors->currentIndex() );
 
-		ymlMan->removeActorAsset(actorID);
-		//pSG.actors.remove(actorID);
-		//pSG.removeID(actorID);
-		//pSG.defaultMimic.remove(actorID);
-		//pSG.defaultPlacement.remove(actorID);
-		// !check shots pSG.defaultPose.remove(actorID);
+        m_ymlManager->removeActorAsset(actorID);
+        //pSG->actors.remove(actorID);
+        //pSG->removeID(actorID);
+        //pSG->defaultMimic.remove(actorID);
+        //pSG->defaultPlacement.remove(actorID);
+        // !check shots pSG->defaultPose.remove(actorID);
 		// TODO! Remove all related assets
 		// TODO! Remove all id references from shots and dialogscript
 	}
@@ -257,8 +257,8 @@ void RepoActorsDialog::onChangedApps() {
 	ui->boxDefApp->addItems( newApps );
 
 	if ( updateActor ) {
-		int newIndex = newApps.indexOf( pSG.actors[prevID].mainAppearance );
-		if (newIndex == -1 && !pSG.actors[prevID].appearances.isEmpty())
+        int newIndex = newApps.indexOf( pSG->actors[prevID].mainAppearance );
+        if (newIndex == -1 && !pSG->actors[prevID].appearances.isEmpty())
 			newIndex = 0;
 		ui->boxDefApp->setCurrentIndex( newIndex );
 		updateActor = false;

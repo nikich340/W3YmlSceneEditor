@@ -1,3 +1,4 @@
+#pragma once
 #ifndef YMLSTRUCTS_H
 #define YMLSTRUCTS_H
 
@@ -9,6 +10,7 @@
 #include <QString>
 #include <QVariant>
 #include <QVector3D>
+#include "ShotEditor/ShotActionTypes.h"
 
 #define XKey first
 #define YValue second
@@ -24,6 +26,8 @@
 #define qi qInfo()
 #define qw qWarning()
 #define qc qCritical()
+
+const double FPS = 30.0;
 
 struct transform {
 	QVector3D pos;
@@ -85,15 +89,31 @@ struct camera : asset_base {
 	}
 };
 
+/* includding additives, mimic, usual */
 struct animation : asset_base {
 	int actorID = -1; // special case (PRODUCTION)
 	QString animName; // = "animation" param
-	int frames = -1; // duration = frames / 30.0
+    int frames = -1;
 
 	// extra
-	float blendin = 0.0, blendout = 0.0; // [0.0, duration]
-	float clipfront = -1, clipend = -1; // [0.0, duration] ?
-	float weight = 1.0, stretch = 1.0; // (0.0, 1.0]
+    float blendin = 0.0, blendout = 0.0; // [0.0, duration] in sec
+    float clipfront = -1, clipend = -1; // [0.0, duration] in sec
+    float weight = 1.0, stretch = 1.0; // (0.0, +inf)
+
+    double raw_duration() {
+        return frames / FPS;
+    }
+    double duration() {
+        double ret = raw_duration();
+        if (clipend > 0) {
+            ret = clipend;
+        }
+        if (clipfront > 0) {
+            ret -= clipfront;
+        }
+        ret *= stretch;
+        return ret;
+    }
 	animation() {}
 	animation(int _nameID, QString _animName, int _frames) {
 		nameID = _nameID;
@@ -238,13 +258,11 @@ struct dialogLine {
 };
 
 struct shotAction {
-	QString actionName;
-	double start;
-	QHash<QString, QVariant> values;  // super abstract, but perfomance ??
-	// variant.setData(QVariant::fromValue<QVector3D>(vec));
-	// vec = variant.value<QVector3D>();
-	shotAction(QString _actionName = QString(), double _start = -1.0) {
-		actionName = _actionName;
+    EShotActionType actionType;
+    double start, globalStart; // TODO!
+    QHash<QString, QVariant> values;
+    shotAction(EShotActionType _actionType = EShotUnknown, double _start = -1.0) {
+        actionType = _actionType;
 		start = _start;
 	}
 };
@@ -268,6 +286,13 @@ struct dialogLink {
 			totalDuration += d;
 		}
 	}
+    double getStartTimeForLine(int lineNum) {
+        double ret = 0.0;
+        upn(i, 0, lineNum - 1) {
+            ret += durations[i];
+        }
+        return ret;
+    }
 	int getIdx(QString shotName) {
 		upn(i, 0, shots.size() - 1) {
 			if (shots[i].shotName == shotName)
