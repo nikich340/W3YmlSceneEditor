@@ -21,51 +21,6 @@ private:
     // labels
     const int m_groupsCount = 7;
     QHash<QString, QGraphicsTextItem*> labelItemByText;
-    const QHash< EShotActionType, QColor > actionColors = {
-        { EShotCam,                 QColor("#FF5D5D")   },
-        { EShotCamBlendStart,       QColor("#FF5D5D")   },
-        { EShotCamBlendKey,         QColor("#FF5D5D")   },
-        { EShotCamBlendEnd,         QColor("#FF5D5D")   },
-        { EShotCamBlendTogame,      QColor("#CF4D4D")   },
-        { EShotActorAnim,           QColor("#5DBDFF")   },
-        { EShotActorAnimAdditive,   QColor("#5DFAFF")   },
-        { EShotActorAnimPose,       QColor("#5D5DFF")   },
-        { EShotActorMimicAnim,      QColor("#5DFFBF")   },
-        { EShotActorMimicPose,      QColor("#5DFF62")   },
-        { EShotActorPlacement,      QColor("#FF5DE2")   },
-        { EShotActorPlacementStart, QColor("#FF5DE2")   },
-        { EShotActorPlacementKey,   QColor("#FF5DE2")   },
-        { EShotActorPlacementEnd,   QColor("#FF5DE2")   },
-        { EShotActorGamestate,      QColor("#FF5D5D")   },
-        { EShotActorLookat,         QColor("#BF5DFF")   },
-        { EShotActorScabbardShow,   QColor("#FF5D5D")   },
-        { EShotActorScabbardHide,   QColor("#ADADAD")   },
-        { EShotActorShow,           QColor("#FF5D5D")   },
-        { EShotActorHide,           QColor("#ADADAD")   },
-        { EShotActorEffectStart,    QColor("#F8FF5D")   },
-        { EShotActorEffectStop,     QColor("#ADADAD")   },
-        { EShotActorSound,          QColor("#FFC25D")   },
-        { EShotActorEquipRight,     QColor("#FF5D5D")   },
-        { EShotActorEquipLeft,      QColor("#FF5D5D")   },
-        { EShotActorUnequipRight,   QColor("#FF5D5D")   },
-        { EShotActorUnequipLeft,    QColor("#FF5D5D")   },
-        { EShotPropShow,            QColor("#FF5D5D")   },
-        { EShotPropHide,            QColor("#ADADAD")   },
-        { EShotPropPlacement,       QColor("#FF5DE2")   },
-        { EShotPropPlacementStart,  QColor("#FF5DE2")   },
-        { EShotPropPlacementKey,    QColor("#FF5DE2")   },
-        { EShotPropPlacementEnd,    QColor("#FF5DE2")   },
-        { EShotPropEffectStart,     QColor("#F8FF5D")   },
-        { EShotPropEffectStop,      QColor("#ADADAD")   },
-        { EShotEnvBlendIn,          QColor("#5DD5FF")   },
-        { EShotEnvBlendOut,         QColor("#5DD5FF")   },
-        { EShotFadeIn,              QColor("#5DD5FF")   },
-        { EShotFadeOut,             QColor("#5DD5FF")   },
-        { EShotWorldAddfact,        QColor("#5DD5FF")   },
-        { EShotWorldWeather,        QColor("#5DD5FF")   },
-        { EShotWorldEffectStart,    QColor("#5DD5FF")   },
-        { EShotWorldEffectStop,     QColor("#5DD5FF")   }
-    };
     QGraphicsLineItem* m_navigateLine = nullptr;
     QMap<QString, CustomRectItem*> m_dgCueRectByShotname;  /* cue rect by shotname (edit on: load, clone, new, remove, move) */
 
@@ -75,6 +30,7 @@ private:
     QVector<bool> m_isActorCollapsed;
     QVector<QVector<CustomRectItem*>> m_actorLabels;
     //const QPen cosmeticPen();
+
 public:
     explicit ShotManager(YmlSceneManager* newYmlManager, QObject *parent = nullptr);
     void setShotScenes(QGraphicsScene* gDgScene, QGraphicsScene* gLabelScene, QGraphicsScene* gShotScene);
@@ -89,6 +45,7 @@ public:
     double getMinYForAction(shotAction* action);
     int getActorIdForAction(shotAction* action);
     void addLabel(QString text, EShotActionType type, double offsetX, double offsetY);
+    QColor getBlockColorForActionType(EShotActionType type);
 signals:
 
 public slots:

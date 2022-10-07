@@ -33,7 +33,7 @@ private:
 
     QColor m_backgroundColor = { QColorConstants::Svg::whitesmoke };
     QColor m_textColorLabel = { QColorConstants::Svg::black };
-    QColor m_textColorMain = { QColorConstants::Svg::navy };
+    QColor m_textColorMain = { QColorConstants::Svg::black };
     QColor m_textColorSecondary = { QColorConstants::Svg::maroon };
 	int labelFontHeight() const;
     void setDefaults();

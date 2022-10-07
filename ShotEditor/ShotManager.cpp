@@ -111,6 +111,85 @@ void ShotManager::addLabel(QString text, EShotActionType type, double offsetX, d
     labelItemByText[text] = textLabel;*/
 }
 
+QColor ShotManager::getBlockColorForActionType(EShotActionType type)
+{
+    switch (type) {
+        case EShotCam:
+            return QColorLight(0, 18);
+        case EShotCamBlendStart:
+        case EShotCamBlendKey:
+        case EShotCamBlendTogame:
+            return QColorLight(14, 15);
+        case EShotCamBlendEnd:
+            return QColorLightGray(14, 15);
+
+        case EShotEnvBlendIn:
+        case EShotFadeIn:
+        case EShotWorldAddfact:
+        case EShotWorldWeather:
+        case EShotWorldEffectStart:
+            return QColorLight(12, 15);
+        case EShotEnvBlendOut:
+        case EShotFadeOut:
+        case EShotWorldEffectStop:
+            return QColorLightGray(12, 15);
+
+        case EShotActorAppearance:
+        case EShotActorGamestate:
+            return QColorLight(1, 15);
+        case EShotActorScabbardShow:
+        case EShotActorShow:
+        case EShotPropShow:
+        case EShotActorEquipRight:
+        case EShotActorEquipLeft:
+            return QColorLight(2, 15);
+        case EShotActorScabbardHide:
+        case EShotActorUnequipRight:
+        case EShotActorUnequipLeft:
+        case EShotActorHide:
+        case EShotPropHide:
+            return QColorLightGray(2, 15);
+
+        case EShotActorAnim:
+            return QColorLight(3, 15);
+        case EShotActorAnimAdditive:
+            return QColorLight(4, 15);
+        case EShotActorAnimPose:
+            return QColorLight(5, 15);
+
+        case EShotActorMimicAnim:
+            return QColorLight(6, 15);
+        case EShotActorMimicPose:
+            return QColorLight(7, 15);
+
+        case EShotActorLookat:
+            return QColorLight(8, 15);
+
+        case EShotActorPlacement:
+        case EShotPropPlacement:
+            return QColorLight(9, 15);
+        case EShotActorPlacementStart:
+        case EShotActorPlacementKey:
+        case EShotPropPlacementStart:
+        case EShotPropPlacementKey:
+            return QColorLight(10, 15);
+        case EShotActorPlacementEnd:
+        case EShotPropPlacementEnd:
+            return QColorLightGray(10, 15);
+
+        case EShotActorSound:
+            return QColorLight(11, 15);
+        case EShotActorEffectStart:
+        case EShotPropEffectStart:
+            return QColorLight(13, 15);
+        case EShotPropEffectStop:
+        case EShotActorEffectStop:
+            return QColorLightGray(13, 15);
+        default:
+            return QColor(180, 180, 180);
+    }
+}
+
 int ShotManager::getGroupNumForType(EShotActionType type) {
     switch (type) {
         case EShotCam:
@@ -295,14 +374,16 @@ void ShotManager::onLoadShots(QString sectionName) {
     pLabelScene->views().at(0)->setMaximumHeight(sceneHeight);
 
     /* camera & env groups */
+    QVector<QString> groups = {"CAMERAS", "ENV/WORLD"};
+    QVector<EShotActionType> type_samples = {EShotCam, EShotEnvBlendIn};
     upn(i, 0, 1) {
         CustomRectItem* labelRect = new CustomRectItem;
         labelRect->setRect(0, 0, SHOT_LABEL_WIDTH - SHOT_LABEL_PEN_WIDTH * 2, SHOT_LABEL_HEIGHT - SHOT_LABEL_PEN_WIDTH);
         labelRect->setPos(0, SHOT_LABEL_HEIGHT * i);
-        labelRect->setBackgroundColor( i == 0 ? QSvg::crimson : QSvg::saddlebrown );
+        labelRect->setBackgroundColor( QColorDark(getBlockColorForActionType(type_samples[i]).hsvHue()) );
         labelRect->setPen( QPen(QSvg::honeydew, SHOT_LABEL_PEN_WIDTH, Qt::SolidLine, Qt::FlatCap, Qt::BevelJoin) );
         labelRect->setTextParamsSecondary(QColorConstants::Svg::gold, 10, "Sans Serif", Qt::AlignCenter | Qt::TextWordWrap);
-        labelRect->setTextSecondary( i == 0 ? "CAMERAS" : "ENV/WORLD" );
+        labelRect->setTextSecondary( groups[i] );
         pLabelScene->addItem( labelRect );
     }
     QPen bigPen(QSvg::darkslateblue, 2.0, Qt::SolidLine, Qt::FlatCap, Qt::BevelJoin);
@@ -423,7 +504,7 @@ void ShotManager::onLoadShotAction(int shotNum, int actionNum) {
     actionRect->setDuration(actionDuration);
     actionRect->setFlag(QGraphicsItem::ItemIsMovable);
     actionRect->setFlag(QGraphicsItem::ItemIsSelectable);
-    actionRect->setBackgroundColor( actionColors[sa->actionType] );
+    actionRect->setBackgroundColor( getBlockColorForActionType(sa->actionType) );
     actionRect->setTextMain( EShotActionToString[sa->actionType] );
     actionRect->setTextSecondary( secondaryInfo );
     actionRect->setZValue(2.0);
@@ -449,13 +530,14 @@ void ShotManager::onActorAdd(int actorID)
     QPen mediumPen(QSvg::darkolivegreen, 1.0, Qt::DashLine, Qt::FlatCap, Qt::BevelJoin);
     bigPen.setCosmetic(true);
     mediumPen.setCosmetic(true);
+
     QVector<QString> groups = {"STATE", "ANIMS", "POSE/ADDITIVES", "MIMICS", "LOOKATS", "PLACEMENT", "SFX/VFX"};
-    QVector<QColor> colors = {QSvg::dimgray, QSvg::darkslateblue, QSvg::navy, QSvg::darkgreen, QSvg::indigo, QSvg::deeppink, QSvg::maroon};
+    QVector<EShotActionType> type_samples = {EShotActorShow, EShotActorAnim, EShotActorAnimPose, EShotActorMimicAnim, EShotActorLookat, EShotActorPlacement, EShotActorEffectStart};
     upn(i, 0, groups.count() - 1) {
         CustomRectItem* labelRect = new CustomRectItem;
         labelRect->setRect(0, 0, SHOT_LABEL_WIDTH - SHOT_LABEL_PEN_WIDTH * 2, SHOT_LABEL_HEIGHT - SHOT_LABEL_PEN_WIDTH);
         labelRect->setPos(0, startY + SHOT_LABEL_HEIGHT * i);
-        labelRect->setBackgroundColor( colors[i] );
+        labelRect->setBackgroundColor( QColorDark(getBlockColorForActionType(type_samples[i]).hsvHue()) );
         labelRect->setPen( QPen(QSvg::honeydew, SHOT_LABEL_PEN_WIDTH, Qt::SolidLine, Qt::FlatCap, Qt::BevelJoin) );
         labelRect->setTextParamsMain(colorDgViewActors[actor_idx % colorDgViewActors.count()], 10, "Helvetica", Qt::AlignTop | Qt::AlignHCenter);
         labelRect->setTextParamsSecondary(QColorConstants::Svg::gold, 10, "Sans Serif", Qt::AlignVCenter | Qt::AlignHCenter | Qt::TextWordWrap);

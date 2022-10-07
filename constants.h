@@ -10,13 +10,31 @@ const static QColor colorSceneGradient00(235, 235, 224), colorSceneGradient11(19
 const static QColor colorSectionNormal(240, 255, 112), colorSectionIncomplete(255, 122, 122);
 const static QColor colorSocketNormal(0, 220, 220), colorSocketLabel(255, 51, 133);
 const static QColor colorEdgeNormal(0, 0, 100), colorEdgeChange(128, 0, 50), colorEdgeHighlight(0, 90, 20);
-const static QVector<QColor> colorDgViewActors = {
-    QSvg::aquamarine, QSvg::lightsalmon, QSvg::lightcyan, QSvg::lightpink, QSvg::lightblue,
-    QSvg::lightyellow, QSvg::lightskyblue, QSvg::lightcoral, QSvg::lavender, QSvg::lightsteelblue,
-    QSvg::mistyrose, QSvg::honeydew, QSvg::wheat, QSvg::thistle, QSvg::seashell
 
+const static QColor QColorLight(int i, int total) {
+    return QColor::fromHsv(i * 360 / total, 86, 255);
+}
+const static QColor QColorLightGray(int i, int total) {
+    return QColor::fromHsv(i * 360 / total, 60, 190);
+}
+const static QColor QColorDark(int i, int total) {
+    return QColor::fromHsv(i * 360 / total, 128, 90);
+}
+const static QColor QColorDark(int h) {
+    return QColor::fromHsv(h, 128, 90);
+}
+const static QColor QColorVeryDark(int i, int total) {
+    return QColor::fromHsv(i * 360 / total, 160, 50);
+}
+const static QVector<QColor> colorDgViewActors = {
+    // 0 - CHOICE
+    // 3 - PAUSE
+    QColorLight(1, 15), QColorLight(4, 15), QColorLight(6, 15), QColorLight(8, 15), QColorLight(10, 15),
+    QColorLight(12, 15), QColorLight(14, 15), QColorLight(2, 15), QColorLight(5, 15), QColorLight(7, 15),
+    QColorLight(9, 15), QColorLight(11, 15), QColorLight(13, 15),
 };
-const static QColor colorDgViewPause = QSvg::gold, colorDgViewChoice = QSvg::hotpink;
+
+const static QColor colorDgViewPause = QColorLight(3, 15), colorDgViewChoice = QColorLight(0, 15);
 
 const static QString SCAMERAS = "cameras";
 const static QString SPROPS = "actors"; // not a bug! for unification
