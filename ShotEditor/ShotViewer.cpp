@@ -99,5 +99,23 @@ void ShotViewer::mouseMoveEvent(QMouseEvent* event)
 		m_originX = event->x();
 		m_originY = event->y();
 	}
-	QGraphicsView::mouseMoveEvent(event);
+    QGraphicsView::mouseMoveEvent(event);
+}
+
+void ShotViewer::contextMenuEvent(QContextMenuEvent *event)
+{
+    QPointF scenePos = this->mapToScene(event->pos());
+    if (scene()->itemAt(scenePos, transform()) == nullptr) {
+        QMenu menu;
+        QAction *addAction = menu.addAction("Add action block");
+        QAction *selectedAction = menu.exec( event->globalPos() );
+        if (selectedAction == addAction) {
+            event->accept();
+            emit addActionIntent(scenePos);
+        } else {
+            event->ignore();
+        }
+    } else {
+        QGraphicsView::contextMenuEvent(event);
+    }
 }

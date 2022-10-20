@@ -51,7 +51,8 @@ MainWindow::MainWindow(QWidget *parent)
 	connect(ymlManager, SIGNAL(print_error(QString)), this, SLOT(print_error(QString)));
 	connect(ymlManager, SIGNAL(print_warning(QString)), this, SLOT(print_warning(QString)));
 	connect(ymlManager, SIGNAL(loadShots(QString)), shotManager, SLOT(onLoadShots(QString)));
-	connect(ui->gViewShotEditor, SIGNAL(wasScaled(double)), shotManager, SLOT(onScaledView(double)));
+    //connect(ui->gViewShotEditor, SIGNAL(wasScaled(double)), shotManager, SLOT(onScaledView(double)));
+    connect(ui->gViewShotEditor, SIGNAL(addActionIntent(QPointF p)), shotManager, SLOT(OnAddActionIntent(QPointF)));
 
 	connect(ui->repoActorsButton, SIGNAL(clicked()), this, SLOT(onClicked_RepoActors()));
 

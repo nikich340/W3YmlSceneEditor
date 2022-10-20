@@ -36,9 +36,9 @@ const static QVector<QColor> colorDgViewActors = {
 
 const static QColor colorDgViewPause = QColorLight(3, 15), colorDgViewChoice = QColorLight(0, 15);
 
+const static QString SREPO_TEMP = "_repo_temp_";
 const static QString SCAMERAS = "cameras";
-const static QString SPROPS = "actors"; // not a bug! for unification
-const static QString SACTORS = "actors";
+const static QString SASSETS = "assets"; // for unification: actors + props
 const static QString SANIMS = "animations";
 const static QString SMIMICANIMS = "animations.mimic";
 const static QString SANIMPOSES = "actor.poses";

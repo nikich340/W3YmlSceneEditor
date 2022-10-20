@@ -1,4 +1,5 @@
 #include <QDebug>
+#include <QGraphicsSceneMouseEvent>
 #include <QFontMetrics>
 #include "CustomRectItem.h"
 
@@ -110,6 +111,32 @@ void CustomRectItem::setBordersRect(const QRectF &newBordersRect)
     m_bordersRect = newBordersRect;
 }
 
+const QString &CustomRectItem::shotName() const
+{
+    return m_shotName;
+}
+
+void CustomRectItem::setShotName(const QString &newShotName)
+{
+    m_shotName = newShotName;
+}
+
+int CustomRectItem::actorID() const
+{
+    return m_assetID;
+}
+
+void CustomRectItem::setAssetID(int newAssetID)
+{
+    m_assetID = newAssetID;
+}
+
+void CustomRectItem::setButtonImages(const QImage &newButtonImageEnabled, const QImage &newButtonImageDisabled)
+{
+    m_buttonImageEnabled = newButtonImageEnabled;
+    m_buttonImageDisabled = newButtonImageDisabled;
+}
+
 int CustomRectItem::labelFontHeight() const {
     QFont fontLabel(m_textFontLabel, m_textSizeLabel);
     return QFontMetrics(fontLabel).height();
@@ -133,6 +160,11 @@ void CustomRectItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *op
     //qDebug() << "virtualRect:" << virtualRect;
     painter->setRenderHint(QPainter::SmoothPixmapTransform);
     painter->setRenderHint(QPainter::TextAntialiasing);
+
+    if (m_buttonState && !m_buttonImageEnabled.isNull())
+        painter->drawImage(3, 3, m_buttonImageEnabled);
+    else if (!m_buttonState && !m_buttonImageDisabled.isNull())
+        painter->drawImage(3, 3, m_buttonImageDisabled);
 
     if (m_duration > 0 && m_blendIn > 0) {
         double blendInBorderX = (m_blendIn / m_duration) * virtualRect.width();
@@ -190,5 +222,25 @@ QVariant CustomRectItem::itemChange(GraphicsItemChange change, const QVariant &v
         }
     }
     return super::itemChange(change, value);
+}
+
+void CustomRectItem::mouseDoubleClickEvent(QGraphicsSceneMouseEvent *event)
+{
+    m_buttonState = !m_buttonState;
+    this->update(this->boundingRect());
+    emit onButtonClick(m_buttonState);
+    event->accept();
+}
+
+void CustomRectItem::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
+{
+    if (m_buttonImageEnabled.rect().contains(event->pos().toPoint())) {
+        m_buttonState = !m_buttonState;
+        this->update(this->boundingRect());
+        emit onButtonClick(m_buttonState);
+        event->accept();
+        return;
+    }
+    super::mouseReleaseEvent(event);
 }
 

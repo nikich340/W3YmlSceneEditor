@@ -149,7 +149,7 @@ void RepoActorsDialog::onRenameActor() {
 	if ( newName == oldName ) {  // not changed
 		ui->lineName->setStyleSheet("color: black");
 		userMistakes &= ~1;
-    } else if ( pSG->hasName(SACTORS, newName) ) { // changed and duplicating, not ok
+    } else if ( pSG->hasName(SASSETS, newName) ) { // changed and duplicating, not ok
 		ui->lineName->setStyleSheet("color: red");
 		userMistakes |= 1;
 	} else {  // changed and ok
@@ -167,7 +167,7 @@ void RepoActorsDialog::onRenameAnimPose(QString newName) {
 	if ( newName == oldName ) {  // not changed
 		ui->widgetPose->setNameStyleSheet("color: black");
 		userMistakes &= ~2;
-    } else if ( pSG->hasName(SACTORS, newName) ) { // changed and duplicating, not ok
+    } else if ( pSG->hasName(SASSETS, newName) ) { // changed and duplicating, not ok
 		ui->widgetPose->setNameStyleSheet("color: red");
 		userMistakes |= 2;
 	} else {  // changed and ok
@@ -181,7 +181,7 @@ void RepoActorsDialog::onRenameAnimPose(QString newName) {
 void RepoActorsDialog::onClonedActor() {
 	int newID;
 	QString newName;
-    pSG->getNameUnused(SACTORS, ui->boxActors->currentText() + "_cloned_", newName, newID);
+    pSG->getNameUnused(SASSETS, ui->boxActors->currentText() + "_cloned_", newName, newID);
 	int oldID = ui->boxActors->currentData().toInt();
 
     pSG->actors[newID] = pSG->actors[oldID];
@@ -197,7 +197,7 @@ void RepoActorsDialog::onClonedActor() {
 void RepoActorsDialog::onAddActor() {
 	int newID;
 	QString newName;
-    pSG->getNameUnused(SACTORS, "new_actor_", newName, newID);
+    pSG->getNameUnused(SASSETS, "new_actor_", newName, newID);
 
     pSG->actors[newID] = asset(newID, newName);
     pSG->actors[newID].nameID = newID;

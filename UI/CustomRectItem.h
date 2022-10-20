@@ -29,6 +29,11 @@ private:
     double m_duration = -1.0;
     double m_blendIn = -1.0, m_blendOut = -1.0; // duration
     shotAction* m_shotAction = nullptr;
+    QString m_shotName;
+    int m_assetID = -1;
+    QImage m_buttonImageEnabled = QImage();
+    QImage m_buttonImageDisabled = QImage();
+    bool m_buttonState = false;
     QRectF m_bordersRect;
 
     QColor m_backgroundColor = { QColorConstants::Svg::whitesmoke };
@@ -42,6 +47,8 @@ private:
 protected:
 	void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget = nullptr) override;
     QVariant itemChange(QGraphicsItem::GraphicsItemChange change, const QVariant &value) override;
+    void mouseDoubleClickEvent(QGraphicsSceneMouseEvent *event) override;
+    void mouseReleaseEvent(QGraphicsSceneMouseEvent *event) override;
 
 public:
     CustomRectItem(qreal x, qreal y, qreal width, qreal height, QGraphicsItem *parent = nullptr);
@@ -99,13 +106,20 @@ public:
     double blendOut() {
         return m_blendOut;
     }
-    shotAction* action() {
+    shotAction* getShotAction() {
         return m_shotAction;
     }
     const QRectF &bordersRect() {
         return m_bordersRect;
     }
     void setBordersRect(const QRectF &newBordersRect);
+    const QString &shotName() const;
+    void setShotName(const QString &newShotName);
+    int actorID() const;
+    void setAssetID(int newActorID);
+    void setButtonImages(const QImage &newButtonImageEnabled, const QImage &newButtonImageDisabled);
+signals:
+    void onButtonClick(bool buttonState);
 };
 
 #endif // CUSTOMRECTITEM_H

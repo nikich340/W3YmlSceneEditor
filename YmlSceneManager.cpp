@@ -80,15 +80,16 @@ YmlSceneManager::YmlSceneManager(QObject *parent, QGraphicsScene* gScene) : QObj
 	pScene = gScene;
     qDebug() << "YmlSceneManager()";
 
-	/* Init some specials */
+    /* Init SceneGlobals */
+    SG.init();
     //SG.getID(SACTORS, "PAUSE");
     //SG.getID(SACTORS, "CHOICE");
 
 	/* read vanilla lines info */
-	QFile inputFile(":/lines.en.csv");
-	if (inputFile.open(QIODevice::ReadOnly | QIODevice::Text))
+    QFile w3LinesFile(":/lines.en.csv");
+    if (w3LinesFile.open(QIODevice::ReadOnly | QIODevice::Text))
 	{
-	   QTextStream in(&inputFile);
+       QTextStream in(&w3LinesFile);
 	   dialogLine newLine;
 	   QStringList lst;
 	   int cnt = 0;
@@ -108,7 +109,7 @@ YmlSceneManager::YmlSceneManager(QObject *parent, QGraphicsScene* gScene) : QObj
 
 		  lineById[newLine.id] = newLine;
 	   }
-	   inputFile.close();
+       w3LinesFile.close();
 	   qInfo() << "Loaded {" << lineById.size() << "} dg lines of total {" << cnt << "}.";
 	} else {
 		qCritical() << "Failed to read lines.en.csv!";
@@ -540,7 +541,7 @@ bool YmlSceneManager::loadShotActions(const YAML::Node actsNode, shot& sh) {
 		YAML::Node actionNode = actsNode[k];
 		shotAction newAction;
         QString actionName = actionNode.begin()->XKey.as<QString>().toLower();
-        newAction.actionType = StringToEShotAction.value(actionName, EShotUnknown);
+        newAction.actionType = stringToEShotAction.value(actionName, EShotUnknown);
 
         QStringList keys = actionName.split(".");
         YAML::Node paramNode = actionNode.begin()->YValue;
@@ -584,11 +585,11 @@ bool YmlSceneManager::loadShotActions(const YAML::Node actsNode, shot& sh) {
 
 					if (paramNode["actor"]) {
 						name = paramNode["actor"].as<QString>();
-						if ( !SG.hasName(SACTORS, name) ) {
+                        if ( !SG.hasName(SASSETS, name) ) {
 							error("loadShotActions: shot " + sh.shotName + ", actor " + name + " not found in repo!");
 							continue;
 						}
-						newAction.values["actor"] = SG.getID(SACTORS, name);
+                        newAction.values["actor"] = SG.getID(SASSETS, name);
 					}
 
 					if (paramNode["blendin"])
@@ -631,11 +632,11 @@ bool YmlSceneManager::loadShotActions(const YAML::Node actsNode, shot& sh) {
 
 					if (paramNode["actor"]) {
 						name = paramNode["actor"].as<QString>();
-						if (!SG.hasName(SACTORS, name)) {
+                        if (!SG.hasName(SASSETS, name)) {
 							error("loadShotActions: shot " + sh.shotName + ", actor " + name + " not found in repo!");
 							continue;
 						}
-						newAction.values["actor"] = SG.getID(SACTORS, name);
+                        newAction.values["actor"] = SG.getID(SASSETS, name);
 					}
 
 					if (paramNode["emotional_state"])
@@ -670,11 +671,11 @@ bool YmlSceneManager::loadShotActions(const YAML::Node actsNode, shot& sh) {
 				if (isExtended) {
 					newAction.start = paramNode[".@pos"][0].as<double>();
 					name = paramNode[".@pos"][1].as<QString>();
-					if (!SG.hasName(SACTORS, name)) {
+                    if (!SG.hasName(SASSETS, name)) {
 						error("loadShotActions: shot " + sh.shotName + ", actor " + name + " not found in repo!");
 						continue;
 					}
-					newAction.values["actor"] = SG.getID(SACTORS, name);
+                    newAction.values["actor"] = SG.getID(SASSETS, name);
 
 					if (paramNode["action"])
 						newAction.values["action"] = paramNode["action"].as<QString>();
@@ -683,22 +684,22 @@ bool YmlSceneManager::loadShotActions(const YAML::Node actsNode, shot& sh) {
 				} else {
 					newAction.start = paramNode[0].as<double>();
 					name = paramNode[1].as<QString>();
-					if (!SG.hasName(SACTORS, name)) {
+                    if (!SG.hasName(SASSETS, name)) {
 						error("loadShotActions: shot " + sh.shotName + ", actor " + name + " not found in repo!");
 						continue;
 					}
-					newAction.values["actor"] = SG.getID(SACTORS, name);
+                    newAction.values["actor"] = SG.getID(SASSETS, name);
 				}
 			}
 			else if ( keys[1] == "placement" )
 			{
 				newAction.start = paramNode[0].as<double>();
 				name = paramNode[1].as<QString>();
-				if (!SG.hasName(SACTORS, name)) {
+                if (!SG.hasName(SASSETS, name)) {
 					error("loadShotActions: shot " + sh.shotName + ", actor " + name + " not found in repo!");
 					continue;
 				}
-				newAction.values["actor"] = SG.getID(SACTORS, name);
+                newAction.values["actor"] = SG.getID(SASSETS, name);
 				newAction.values["pos"] = paramNode[2].as<QVector3D>();
 				newAction.values["rot"] = paramNode[3].as<QVector3D>();
 
@@ -735,20 +736,20 @@ bool YmlSceneManager::loadShotActions(const YAML::Node actsNode, shot& sh) {
 				} else {
 					newAction.start = paramNode[0].as<double>();
 					name = paramNode[1].as<QString>();
-					if (!SG.hasName(SACTORS, name)) {
+                    if (!SG.hasName(SASSETS, name)) {
 						error("loadShotActions: shot " + sh.shotName + ", actor " + name + " not found in repo!");
 						continue;
 					}
-					newAction.values["actor"] = SG.getID(SACTORS, name);
+                    newAction.values["actor"] = SG.getID(SASSETS, name);
 					if (paramNode[2].IsSequence()) {
 						newAction.values["lookat_pos"] = paramNode[2].as<QVector3D>();
 					} else {
 						name = paramNode[2].as<QString>();
-						if (!SG.hasName(SACTORS, name)) {
+                        if (!SG.hasName(SASSETS, name)) {
 							error("loadShotActions: shot " + sh.shotName + ", actor " + name + " not found in repo!");
 							continue;
 						}
-						newAction.values["lookat_actor"] = SG.getID(SACTORS, name);
+                        newAction.values["lookat_actor"] = SG.getID(SASSETS, name);
 					}
 				}
 			}
@@ -756,54 +757,54 @@ bool YmlSceneManager::loadShotActions(const YAML::Node actsNode, shot& sh) {
 			{
 				newAction.start = paramNode[0].as<double>();
 				name = paramNode[1].as<QString>();
-				if (!SG.hasName(SACTORS, name)) {
+                if (!SG.hasName(SASSETS, name)) {
 					error("loadShotActions: shot " + sh.shotName + ", actor " + name + " not found in repo!");
 					continue;
 				}
-				newAction.values["actor"] = SG.getID(SACTORS, name);
+                newAction.values["actor"] = SG.getID(SASSETS, name);
 			}
 			else if ( keys[1] == "effect" )
 			{
 				newAction.start = paramNode[0].as<double>();
 				name = paramNode[1].as<QString>();
-				if (!SG.hasName(SACTORS, name)) {
+                if (!SG.hasName(SASSETS, name)) {
 					error("loadShotActions: shot " + sh.shotName + ", actor " + name + " not found in repo!");
 					continue;
 				}
-				newAction.values["actor"] = SG.getID(SACTORS, name);
+                newAction.values["actor"] = SG.getID(SASSETS, name);
 				newAction.values["effect"] = paramNode[2].as<QString>();
 			}
 			else if ( keys[1] == "sound" )
 			{
 				newAction.start = paramNode[0].as<double>();
 				name = paramNode[1].as<QString>();
-				if (!SG.hasName(SACTORS, name)) {
+                if (!SG.hasName(SASSETS, name)) {
 					error("loadShotActions: shot " + sh.shotName + ", actor " + name + " not found in repo!");
 					continue;
 				}
-				newAction.values["actor"] = SG.getID(SACTORS, name);
+                newAction.values["actor"] = SG.getID(SASSETS, name);
 				newAction.values["soundEvent"] = paramNode[2].as<QString>();
 			}
 			else if ( keys[1] == "appearance" )
 			{
 				newAction.start = paramNode[0].as<double>();
 				name = paramNode[1].as<QString>();
-				if (!SG.hasName(SACTORS, name)) {
+                if (!SG.hasName(SASSETS, name)) {
 					error("loadShotActions: shot " + sh.shotName + ", actor " + name + " not found in repo!");
 					continue;
 				}
-				newAction.values["actor"] = SG.getID(SACTORS, name);
+                newAction.values["actor"] = SG.getID(SASSETS, name);
 				newAction.values["appearance"] = paramNode[2].as<QString>();
 			}
 			else if ( keys[1] == "equip" )
 			{
 				newAction.start = paramNode[0].as<double>();
 				name = paramNode[1].as<QString>();
-				if (!SG.hasName(SACTORS, name)) {
+                if (!SG.hasName(SASSETS, name)) {
 					error("loadShotActions: shot " + sh.shotName + ", actor " + name + " not found in repo!");
 					continue;
 				}
-				newAction.values["actor"] = SG.getID(SACTORS, name);
+                newAction.values["actor"] = SG.getID(SASSETS, name);
 				newAction.values["item"] = paramNode[2].as<QString>();
 			}
 		} else if ( keys[0] == "world" ) {
@@ -885,13 +886,13 @@ bool YmlSceneManager::loadSceneRepository() {
 		int cnt_new = 0;
 
 		for (auto it = root["repository"]["actors"].begin(); it != root["repository"]["actors"].end(); ++it) {
-            QString mapName = it->XKey.as<QString>() + "_repo_temp";
-			if ( SG.hasName(SACTORS, mapName) )
+            QString mapName = it->XKey.as<QString>() + SREPO_TEMP;
+            if ( SG.hasName(SASSETS, mapName) )
 			{
 				qw << ("loadSceneRepository()>: actor " + mapName + " already exist! Overwriting.");
 				//continue;
 			}
-			int nameID = SG.getID(SACTORS, mapName);
+            int nameID = SG.getID(SASSETS, mapName);
 
             if ( !it->YValue["template"] )
 			{
@@ -925,13 +926,13 @@ bool YmlSceneManager::loadSceneRepository() {
 		int cnt_new = 0;
 
 		for (auto it = root["repository"]["props"].begin(); it != root["repository"]["props"].end(); ++it) {
-            QString mapName = it->XKey.as<QString>() + "_repo_temp";
-			if ( SG.hasName(SPROPS, mapName) )
+            QString mapName = it->XKey.as<QString>() + SREPO_TEMP;
+            if ( SG.hasName(SASSETS, mapName) )
 			{
 				qw << ("loadSceneRepository()>: prop " + mapName + " already exist! Overwriting.");
 				//continue;
 			}
-			int nameID = SG.getID(SPROPS, mapName);
+            int nameID = SG.getID(SASSETS, mapName);
 
             if ( !it->YValue["template"] )
 			{
@@ -939,6 +940,7 @@ bool YmlSceneManager::loadSceneRepository() {
 				continue;
 			}
             asset prop(nameID, it->YValue["template"].as<QString>());
+            prop.is_prop = true;
 
 			if (readingYmlRepo)
 				prop.fromRepo = true;
@@ -1217,23 +1219,29 @@ bool YmlSceneManager::loadSceneRepository() {
 }
 
 void YmlSceneManager::cleanupTempRepository() {
-	for (auto it : SG.actors) {
-		QString name = SG.getName(it.nameID);
-		qd << "cleanupTempRepository(): " << name;
-		if ( name.endsWith("_repo_temp") ) {
-			qd << "cleanupTempRepository(): CLEANED";
-			SG.actors.remove(it.nameID);
-			SG.removeName(SACTORS, name);
-		}
-	}
+    QVector<int> actorIDs = SG.actors.keys().toVector();
+    dn(i, actorIDs.count() - 1, 0) {
+        int nameID = actorIDs[i];
+        QString name = SG.getName(nameID);
+        qd << "cleanupTempRepository(): " << name;
+        if ( name.endsWith(SREPO_TEMP) ) {
+            qd << "cleanupTempRepository(): CLEANED";
+            SG.actors.remove(nameID);
+            SG.removeName(SASSETS, name);
+        }
+    }
 
-	for (auto it : SG.props) {
-		QString name = SG.getName(it.nameID);
-		if ( name.endsWith("_repo_temp") ) {
-			SG.props.remove(it.nameID);
-			SG.removeName(SPROPS, name);
-		}
-	}
+    QVector<int> propIDs = SG.props.keys().toVector();
+    dn(i, propIDs.count() - 1, 0) {
+        int nameID = propIDs[i];
+        QString name = SG.getName(nameID);
+        qd << "cleanupTempRepository(): " << name;
+        if ( name.endsWith(SREPO_TEMP) ) {
+            qd << "cleanupTempRepository(): CLEANED";
+            SG.props.remove(nameID);
+            SG.removeName(SASSETS, name);
+        }
+    }
 }
 
 bool YmlSceneManager::loadSceneProduction() {
@@ -1255,12 +1263,12 @@ bool YmlSceneManager::loadSceneProduction() {
 				continue;
 			}
             QString repoName = it->YValue["repo"].as<QString>();
-			if ( !SG.hasName(SACTORS, repoName + "_repo_temp") ) {
+            if ( !SG.hasName(SASSETS, repoName + SREPO_TEMP) ) {
 				error("loadSceneProduction()>: Actor " + repoName + " not found in repository!");
 				continue;
 			}
-			int repoID = SG.getID(SACTORS, repoName + "_repo_temp");
-			int prodID = SG.getID(SACTORS, mapName);
+            int repoID = SG.getID(SASSETS, repoName + SREPO_TEMP);
+            int prodID = SG.getID(SASSETS, mapName);
 
 			asset prodActor = SG.actors[repoID];
 			prodActor.nameID = prodID;
@@ -1307,16 +1315,17 @@ bool YmlSceneManager::loadSceneProduction() {
 				continue;
 			}
             QString repoName = it->YValue["repo"].as<QString>();
-			if ( !SG.hasName(SPROPS, repoName + "_repo_temp") ) {
+            if ( !SG.hasName(SASSETS, repoName + SREPO_TEMP) ) {
 				error("loadSceneProduction()>: Prop " + repoName + " not found in repository!");
 				continue;
 			}
 
-			int repoID = SG.getID(SPROPS, repoName + "_repo_temp");
-			int prodID = SG.getID(SPROPS, mapName);
+            int repoID = SG.getID(SASSETS, repoName + SREPO_TEMP);
+            int prodID = SG.getID(SASSETS, mapName);
 
 			asset prodProp = SG.props[repoID];
-			prodProp.nameID = prodID;
+            prodProp.is_prop = true;
+            prodProp.nameID = prodID;
 
 			if (readingYmlRepo)
 				prodProp.fromRepo = true;
@@ -1385,10 +1394,10 @@ bool YmlSceneManager::loadSceneProduction() {
 
             if ( it->YValue["actor"] ) {
                 QString actorName = it->YValue["actor"].as<QString>();
-				if (!SG.hasName(SACTORS, actorName)) {
+                if (!SG.hasName(SASSETS, actorName)) {
 					error("loadSceneProduction()>: Animation actor " + actorName + " not found in repository!");
 				} else {
-					int actorID = SG.getID(SACTORS, actorName);
+                    int actorID = SG.getID(SASSETS, actorName);
 					prodAnim.actorID = actorID;
 				}
 			}
@@ -1436,10 +1445,10 @@ bool YmlSceneManager::loadSceneProduction() {
 
             if ( it->YValue["actor"] ) {
                 QString actorName = it->YValue["actor"].as<QString>();
-				if (!SG.hasName(SACTORS, actorName)) {
+                if (!SG.hasName(SASSETS, actorName)) {
 					error("loadSceneProduction()>: Animation Mimic actor " + actorName + " not found in repository!");
 				} else {
-					int actorID = SG.getID(SACTORS, actorName);
+                    int actorID = SG.getID(SASSETS, actorName);
 					prodMimicAnim.actorID = actorID;
 				}
 			}
@@ -1487,10 +1496,10 @@ bool YmlSceneManager::loadSceneProduction() {
 
             if ( it->YValue["actor"] ) {
                 QString actorName = it->YValue["actor"].as<QString>();
-				if (!SG.hasName(SACTORS, actorName)) {
+                if (!SG.hasName(SASSETS, actorName)) {
 					error("loadSceneProduction()>: Pose actor " + actorName + " not found in repository!");
 				} else {
-					int actorID = SG.getID(SACTORS, actorName);
+                    int actorID = SG.getID(SASSETS, actorName);
 					prodPose.actorID = actorID;
 				}
 			}
@@ -1526,10 +1535,10 @@ bool YmlSceneManager::loadSceneProduction() {
 
             if ( it->YValue["actor"] ) {
                 QString actorName = it->YValue["actor"].as<QString>();
-				if (!SG.hasName(SACTORS, actorName)) {
+                if (!SG.hasName(SASSETS, actorName)) {
 					error("loadSceneProduction()>: Mimic Pose actor " + actorName + " not found in repository!");
 				} else {
-					int actorID = SG.getID(SACTORS, actorName);
+                    int actorID = SG.getID(SASSETS, actorName);
 					prodMimicPose.actorID = actorID;
 				}
 			}
@@ -1718,7 +1727,7 @@ bool YmlSceneManager::loadShotsInfo() {
 			} else if ( key.toUpper() == "PAUSE" || key.toUpper() == "CHOICE" ) {
 				//qDebug() << "CHOICE/PAUSE key";
 				newDgLink.lines.pb( key.toUpper() );
-				int actorID = SG.getID(SACTORS, key.toUpper());
+                int actorID = SG.getID(SASSETS, key.toUpper());
 				newDgLink.speakers.pb( actorID );
 				double dur = -1.0;
 				if (key.toUpper() == "PAUSE") {
@@ -1754,10 +1763,10 @@ bool YmlSceneManager::loadShotsInfo() {
 				//qDebug() << "ACTOR key";
                 QString line = it->begin()->YValue.as<QString>();
 				newDgLink.lines.pb( line );
-				if ( !SG.hasName(SACTORS, key) ) {
+                if ( !SG.hasName(SASSETS, key) ) {
 					error(QString(Q_FUNC_INFO) + ": section " + sectionName + ": actor " + key + " not found in repository!");
 				}
-				int actorID = SG.getID(SACTORS, key);
+                int actorID = SG.getID(SASSETS, key);
 				warning("TEST actor: " + SG.getName(actorID));
 				newDgLink.speakers.pb( actorID );
 				newDgLink.durations.pb( getTextDuration(line) ); // TODO: try extract duration

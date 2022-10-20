@@ -48,13 +48,14 @@ struct asset : asset_base {
 	QString templatePath;
 	QString mainAppearance;
 	bool by_voicetag = false;
+    bool is_prop = false;
 	QSet<QString> appearances;
 	QSet<QString> tags;
 	/*void debug() {
 		qd << "name: " << name << ", tpath: " << templatePath << ", mainApp: " << mainAppearance << ", apps: " << appearances << ", by_voicetag: " << by_voicetag << ", tags: " << tags;
 	}*/
 	asset() {}
-	asset(int _nameID, QString _templatePath) {
+    asset(int _nameID, QString _templatePath) {
 		nameID = _nameID;
 		templatePath = _templatePath.replace("\\", "/");
 	}
@@ -153,20 +154,20 @@ struct mimic_pose : asset_base {
 struct sceneInfo {
 public:
 	// key = map name always (QHash for fast lookup)
-	QHash<int, asset> actors;            // repository + production
-	QHash<int, asset> props;             // repository + production
-	QHash<int, camera> cameras;          // repository + production
-	QHash<int, animation> anims, mimics; // repository + production
-	QHash<int, anim_pose> poses;         // repository + production
-	QHash<int, mimic_pose> mimic_poses;  // repository + production
-	QHash<int, QSet<QString>> soundbanks;  // repository, soundbanks[banknameID] = set of events
+    QHash<int, asset> actors;            // repository + production
+    QHash<int, asset> props;             // repository + production
+    QHash<int, camera> cameras;          // repository + production
+    QHash<int, animation> anims, mimics; // repository + production
+    QHash<int, anim_pose> poses;         // repository + production
+    QHash<int, mimic_pose> mimic_poses;  // repository + production
+    QHash<int, QSet<QString>> soundbanks;  // repository, soundbanks[banknameID] = set of events
 	//QSet<QString> availableSoundEvents; // production (from banks)
 	// but load DEFAULT MIMIC from actors repository firstly, and production secondly..
 
 	/* names storage - store unique int IDs instead of real names (easy renaming, less RAM usage) */
-	QHash< QString, QHash<QString, int> > usedIDs; // usedNamesFor["type"].contains("name")
+    QHash< QString, QHash<QString, int> > usedIDs; // usedNamesFor["type"].contains("name")
 												 // usedNamesFor["type"].insert("name")
-	QHash< int, QPair<QString, QString> > usedNames;
+    QHash< int, QPair<QString, QString> > usedNames;
 	int newID = 0;
 	bool hasName(QString _type, QString _name) {
 		return usedIDs.contains(_type) && usedIDs[_type].contains(_name);
@@ -244,9 +245,27 @@ public:
 	int sceneid = 1, idstart = 0;
 	bool gameplay = false, cinematic_subtitles = false;
 
-	QHash<int, int> defaultPose; // [actorID] = poseID
-	QHash<int, mimic_pose> defaultMimic; // [actorID] = mimic object
-	QHash<int, transform> defaultPlacement; // [actorID] = placement object
+    QHash<int, int> defaultPose; // [actorID] = poseID
+    QHash<int, mimic_pose> defaultMimic; // [actorID] = mimic object
+    QHash<int, transform> defaultPlacement; // [actorID] = placement object
+
+    /* called ONCE to init all */
+    void init() {
+        actors = QHash<int, asset>();
+        props = QHash<int, asset>();
+        cameras = QHash<int, camera>();
+        anims = QHash<int, animation>();
+        mimics = QHash<int, animation>();
+        poses = QHash<int, anim_pose>();
+        mimic_poses = QHash<int, mimic_pose>();
+        soundbanks = QHash<int, QSet<QString>>();
+
+        usedIDs = QHash< QString, QHash<QString, int> >();
+        usedNames = QHash< int, QPair<QString, QString> >();
+        defaultPose = QHash<int, int>();
+        defaultMimic = QHash<int, mimic_pose>();
+        defaultPlacement = QHash<int, transform>();
+    }
 	// [actor] = value
 };
 

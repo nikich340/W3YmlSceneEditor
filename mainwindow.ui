@@ -270,6 +270,9 @@
              <property name="sizeAdjustPolicy">
               <enum>QAbstractScrollArea::AdjustIgnored</enum>
              </property>
+             <property name="interactive">
+              <bool>false</bool>
+             </property>
              <property name="transformationAnchor">
               <enum>QGraphicsView::NoAnchor</enum>
              </property>
@@ -326,6 +329,12 @@
              </property>
              <property name="sizeAdjustPolicy">
               <enum>QAbstractScrollArea::AdjustIgnored</enum>
+             </property>
+             <property name="interactive">
+              <bool>false</bool>
+             </property>
+             <property name="transformationAnchor">
+              <enum>QGraphicsView::NoAnchor</enum>
              </property>
             </widget>
            </item>
