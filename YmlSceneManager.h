@@ -16,9 +16,7 @@ private:
 
 	QVector<GraphicsSectionItem*> unusedItems;
 	QGraphicsScene* pScene = nullptr;
-	QGraphicsScene* pDgScene = nullptr;
-	QGraphicsScene* pLabelScene = nullptr;
-	QGraphicsScene* pShotScene = nullptr;
+    QGraphicsScene* pDgScene = nullptr; // TODO remove?
     QString filePath;
     QStringList sectionNames;
     YAML::Node root;
@@ -75,7 +73,7 @@ public:
 
 	QString getCleanLine(QString text);
 	double getTextDuration(QString text);
-	void setShotScenes(QGraphicsScene* gDgScene, QGraphicsScene* gLabelScene, QGraphicsScene* gShotScene);
+    void setShotScenes(QGraphicsScene* gDgScene);
 	void loadShotEditor(QString sectionName);
 
     /* global logs */

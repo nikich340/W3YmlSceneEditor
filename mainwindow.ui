@@ -241,14 +241,52 @@
            <property name="spacing">
             <number>0</number>
            </property>
-           <item row="0" column="2">
-            <widget class="QGraphicsView" name="gViewDgEditor">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
+           <item row="3" column="1">
+            <widget class="ShotScrollArea" name="gScrollShot">
+             <property name="lineWidth">
+              <number>0</number>
              </property>
+             <property name="verticalScrollBarPolicy">
+              <enum>Qt::ScrollBarAlwaysOff</enum>
+             </property>
+             <property name="horizontalScrollBarPolicy">
+              <enum>Qt::ScrollBarAlwaysOn</enum>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+             </property>
+             <widget class="QWidget" name="gScrollShotWidget">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <layout class="QVBoxLayout" name="verticalLayout_7">
+               <property name="spacing">
+                <number>0</number>
+               </property>
+               <property name="sizeConstraint">
+                <enum>QLayout::SetFixedSize</enum>
+               </property>
+               <property name="leftMargin">
+                <number>0</number>
+               </property>
+               <property name="topMargin">
+                <number>0</number>
+               </property>
+               <property name="rightMargin">
+                <number>0</number>
+               </property>
+               <property name="bottomMargin">
+                <number>0</number>
+               </property>
+              </layout>
+             </widget>
+            </widget>
+           </item>
+           <item row="0" column="1">
+            <widget class="QGraphicsView" name="gViewShotDialogs">
              <property name="minimumSize">
               <size>
                <width>0</width>
@@ -270,106 +308,55 @@
              <property name="sizeAdjustPolicy">
               <enum>QAbstractScrollArea::AdjustIgnored</enum>
              </property>
-             <property name="interactive">
-              <bool>false</bool>
-             </property>
              <property name="transformationAnchor">
               <enum>QGraphicsView::NoAnchor</enum>
              </property>
             </widget>
            </item>
-           <item row="1" column="2">
-            <widget class="Line" name="line_2">
-             <property name="frameShadow">
-              <enum>QFrame::Raised</enum>
-             </property>
+           <item row="2" column="0" rowspan="2">
+            <widget class="QScrollArea" name="gScrollShotLabel">
              <property name="lineWidth">
               <number>0</number>
-             </property>
-             <property name="midLineWidth">
-              <number>3</number>
-             </property>
-             <property name="orientation">
-              <enum>Qt::Horizontal</enum>
-             </property>
-            </widget>
-           </item>
-           <item row="2" column="2">
-            <widget class="ShotViewer" name="gViewShotEditor">
-             <property name="transformationAnchor">
-              <enum>QGraphicsView::NoAnchor</enum>
-             </property>
-            </widget>
-           </item>
-           <item row="2" column="0">
-            <widget class="QGraphicsView" name="gViewLabel">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Fixed" vsizetype="Expanding">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="minimumSize">
-              <size>
-               <width>150</width>
-               <height>0</height>
-              </size>
-             </property>
-             <property name="maximumSize">
-              <size>
-               <width>150</width>
-               <height>16777215</height>
-              </size>
              </property>
              <property name="verticalScrollBarPolicy">
               <enum>Qt::ScrollBarAlwaysOff</enum>
              </property>
              <property name="horizontalScrollBarPolicy">
-              <enum>Qt::ScrollBarAlwaysOff</enum>
+              <enum>Qt::ScrollBarAlwaysOn</enum>
              </property>
-             <property name="sizeAdjustPolicy">
-              <enum>QAbstractScrollArea::AdjustIgnored</enum>
+             <property name="alignment">
+              <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
              </property>
-             <property name="interactive">
-              <bool>false</bool>
-             </property>
-             <property name="transformationAnchor">
-              <enum>QGraphicsView::NoAnchor</enum>
-             </property>
-            </widget>
-           </item>
-           <item row="2" column="1">
-            <widget class="Line" name="line">
-             <property name="frameShadow">
-              <enum>QFrame::Raised</enum>
-             </property>
-             <property name="lineWidth">
-              <number>0</number>
-             </property>
-             <property name="midLineWidth">
-              <number>3</number>
-             </property>
-             <property name="orientation">
-              <enum>Qt::Vertical</enum>
-             </property>
-            </widget>
-           </item>
-           <item row="3" column="2">
-            <widget class="QStackedWidget" name="stackedVar">
-             <property name="currentIndex">
-              <number>3</number>
-             </property>
-             <widget class="QWidget" name="pagePlacement"/>
-             <widget class="QWidget" name="pageCamera"/>
-             <widget class="QWidget" name="pagePose"/>
-             <widget class="QWidget" name="pageAnim"/>
-            </widget>
-           </item>
-           <item row="3" column="0">
-            <widget class="QLabel" name="labelShotVar">
-             <property name="text">
-              <string>Var:</string>
-             </property>
+             <widget class="QWidget" name="gScrollShotLabelWidget">
+              <property name="geometry">
+               <rect>
+                <x>0</x>
+                <y>0</y>
+                <width>250</width>
+                <height>0</height>
+               </rect>
+              </property>
+              <layout class="QVBoxLayout" name="verticalLayout_2">
+               <property name="spacing">
+                <number>0</number>
+               </property>
+               <property name="sizeConstraint">
+                <enum>QLayout::SetFixedSize</enum>
+               </property>
+               <property name="leftMargin">
+                <number>0</number>
+               </property>
+               <property name="topMargin">
+                <number>0</number>
+               </property>
+               <property name="rightMargin">
+                <number>0</number>
+               </property>
+               <property name="bottomMargin">
+                <number>0</number>
+               </property>
+              </layout>
+             </widget>
             </widget>
            </item>
           </layout>
@@ -493,9 +480,10 @@ p, li { white-space: pre-wrap; }
    <header>SectionsGraphicsView.h</header>
   </customwidget>
   <customwidget>
-   <class>ShotViewer</class>
-   <extends>QGraphicsView</extends>
-   <header>ShotViewer.h</header>
+   <class>ShotScrollArea</class>
+   <extends>QScrollArea</extends>
+   <header>ShotScrollArea.h</header>
+   <container>1</container>
   </customwidget>
  </customwidgets>
  <resources/>

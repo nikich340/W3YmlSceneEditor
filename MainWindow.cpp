@@ -14,46 +14,34 @@ MainWindow::MainWindow(QWidget *parent)
     gScene = new QGraphicsScene(this);
 	gScene->setSceneRect(0,0, SCENE_WIDTH, SCENE_HEIGHT);
 
-	gDgScene = new QGraphicsScene(this);
-	gDgScene->setSceneRect(0,0, SHOT_SCENE_WIDTH, SHOT_DG_HEIGHT);
-
-	gShotScene = new QGraphicsScene(this);
-	gShotScene->setSceneRect(0,0, SHOT_SCENE_WIDTH, SHOT_SCENE_HEIGHT);
-
-	gLabelScene = new QGraphicsScene(this);
-	gLabelScene->setSceneRect(0,0, SHOT_LABEL_WIDTH, SHOT_SCENE_HEIGHT);
+    gDialogsScene = new QGraphicsScene(this);
+    gDialogsScene->setSceneRect(0,0, SHOT_SCENE_WIDTH, SHOT_DG_HEIGHT);
 
 	ymlManager = new YmlSceneManager(this, gScene);
-	ymlManager->setShotScenes(gDgScene, gLabelScene, gShotScene);
+    ymlManager->setShotScenes(gDialogsScene);
 
 	ui->gView->setScene(gScene);
-	ui->gViewDgEditor->setScene(gDgScene);
-	ui->gViewDgEditor->setMaximumWidth(SHOT_SCENE_WIDTH);
-	ui->gViewShotEditor->setScene(gShotScene);
-	ui->gViewShotEditor->setMaximumWidth(SHOT_SCENE_WIDTH);
-	ui->gViewLabel->setScene(gLabelScene);
-	ui->gView->setYmlManager(ymlManager);
-	//ui->gViewShotEditor->setYmlManager(ymlManager);
-	ui->gViewShotEditor->setChildViews(ui->gViewLabel, ui->gViewDgEditor);
+    ui->gView->setYmlManager(ymlManager);
+
+    ui->gViewShotDialogs->setScene(gDialogsScene);
+    ui->gViewShotDialogs->setMaximumWidth(SHOT_SCENE_WIDTH);
+    ui->gScrollShot->setChildViews(ui->gScrollShotLabel, ui->gViewShotDialogs);
 
 	shotManager = new ShotManager(ymlManager, this);
-	shotManager->setShotScenes(gDgScene, gLabelScene, gShotScene);
+    shotManager->setWidgets(gDialogsScene, ui->gScrollShotLabel, ui->gScrollShot);
 
-	QLinearGradient gradient(0, 0, 987, SCENE_HEIGHT);
+    QLinearGradient gradient(0, 0, SCENE_WIDTH, SCENE_HEIGHT);
 	gradient.setColorAt(0, colorSceneGradient0);
 	gradient.setColorAt(1.0, colorSceneGradient1);
     gScene->setBackgroundBrush(gradient);
-	gDgScene->setBackgroundBrush(gradient);
-	gShotScene->setBackgroundBrush(gradient);
-	gLabelScene->setBackgroundBrush(gradient);
+    gDialogsScene->setBackgroundBrush(gradient);
 
     connect(ymlManager, SIGNAL(print_info(QString)), this, SLOT(print_info(QString)));
 	connect(ymlManager, SIGNAL(print_error(QString)), this, SLOT(print_error(QString)));
 	connect(ymlManager, SIGNAL(print_warning(QString)), this, SLOT(print_warning(QString)));
 	connect(ymlManager, SIGNAL(loadShots(QString)), shotManager, SLOT(onLoadShots(QString)));
     //connect(ui->gViewShotEditor, SIGNAL(wasScaled(double)), shotManager, SLOT(onScaledView(double)));
-    connect(ui->gViewShotEditor, SIGNAL(addActionIntent(QPointF p)), shotManager, SLOT(OnAddActionIntent(QPointF)));
-
+    //connect(ui->gViewShotEditor, SIGNAL(addActionIntent(QPointF p)), shotManager, SLOT(OnAddActionIntent(QPointF)));
 	connect(ui->repoActorsButton, SIGNAL(clicked()), this, SLOT(onClicked_RepoActors()));
 
 	connect(ui->actionQuit, SIGNAL(triggered()), this, SLOT(onClicked_Quit()));

@@ -34,7 +34,7 @@ HEADERS += \
     SectionsEditor/SocketItem.h \
     ShotEditor/ShotActionTypes.h \
     ShotEditor/ShotManager.h \
-    ShotEditor/ShotViewer.h \
+    ShotEditor/ShotScrollArea.h \
     UI/CustomRectItem.h \
     UI/DialogChangeSection.h \
     UI/InputMimicPose.h \
@@ -126,7 +126,7 @@ SOURCES += \
     SectionsEditor/SectionsGraphicsView.cpp \
     SectionsEditor/SocketItem.cpp \
     ShotEditor/ShotManager.cpp \
-    ShotEditor/ShotViewer.cpp \
+    ShotEditor/ShotScrollArea.cpp \
     UI/CustomRectItem.cpp \
     UI/DialogChangeSection.cpp \
     UI/InputMimicPose.cpp \

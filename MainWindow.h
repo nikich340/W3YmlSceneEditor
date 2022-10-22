@@ -26,9 +26,7 @@ private:
     YmlSceneManager *ymlManager;
 	ShotManager *shotManager;
 	QGraphicsScene *gScene;
-	QGraphicsScene *gDgScene;
-	QGraphicsScene *gShotScene;
-	QGraphicsScene *gLabelScene;
+    QGraphicsScene *gDialogsScene;
 	void readSceneRepos();
     void resizeEvent(QResizeEvent* event);
 	void writeSetting(QString name, QVariant value);

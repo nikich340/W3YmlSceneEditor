@@ -1,5 +1,7 @@
 #include <QDebug>
 #include <QGraphicsSceneMouseEvent>
+#include <QGraphicsScene>
+#include <QGraphicsView>
 #include <QFontMetrics>
 #include "CustomRectItem.h"
 
@@ -111,30 +113,20 @@ void CustomRectItem::setBordersRect(const QRectF &newBordersRect)
     m_bordersRect = newBordersRect;
 }
 
-const QString &CustomRectItem::shotName() const
-{
-    return m_shotName;
-}
-
-void CustomRectItem::setShotName(const QString &newShotName)
-{
-    m_shotName = newShotName;
-}
-
-int CustomRectItem::actorID() const
-{
-    return m_assetID;
-}
-
-void CustomRectItem::setAssetID(int newAssetID)
-{
-    m_assetID = newAssetID;
-}
-
 void CustomRectItem::setButtonImages(const QImage &newButtonImageEnabled, const QImage &newButtonImageDisabled)
 {
     m_buttonImageEnabled = newButtonImageEnabled;
     m_buttonImageDisabled = newButtonImageDisabled;
+}
+
+QVariant CustomRectItem::data(const QString &key)
+{
+    return m_data.value(key);
+}
+
+void CustomRectItem::setData(const QString &newKey, const QVariant &newValue)
+{
+    m_data[newKey] = newValue;
 }
 
 int CustomRectItem::labelFontHeight() const {
@@ -161,9 +153,9 @@ void CustomRectItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *op
     painter->setRenderHint(QPainter::SmoothPixmapTransform);
     painter->setRenderHint(QPainter::TextAntialiasing);
 
-    if (m_buttonState && !m_buttonImageEnabled.isNull())
+    if (!m_buttonState && !m_buttonImageEnabled.isNull())
         painter->drawImage(3, 3, m_buttonImageEnabled);
-    else if (!m_buttonState && !m_buttonImageDisabled.isNull())
+    else if (m_buttonState && !m_buttonImageDisabled.isNull())
         painter->drawImage(3, 3, m_buttonImageDisabled);
 
     if (m_duration > 0 && m_blendIn > 0) {
@@ -226,21 +218,10 @@ QVariant CustomRectItem::itemChange(GraphicsItemChange change, const QVariant &v
 
 void CustomRectItem::mouseDoubleClickEvent(QGraphicsSceneMouseEvent *event)
 {
+    //qDebug() << "mouseDoubleClickEvent! m_buttonState = " << m_buttonState;
     m_buttonState = !m_buttonState;
     this->update(this->boundingRect());
-    emit onButtonClick(m_buttonState);
+    emit onDoubleClick(m_buttonState);
     event->accept();
-}
-
-void CustomRectItem::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
-{
-    if (m_buttonImageEnabled.rect().contains(event->pos().toPoint())) {
-        m_buttonState = !m_buttonState;
-        this->update(this->boundingRect());
-        emit onButtonClick(m_buttonState);
-        event->accept();
-        return;
-    }
-    super::mouseReleaseEvent(event);
 }
 

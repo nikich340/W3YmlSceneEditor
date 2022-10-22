@@ -1,5 +1,7 @@
-<!DOCTYPE RCC><RCC version="1.0">
-<qresource>
-    <file>lines.en.csv</file>
-</qresource>
+<RCC>
+    <qresource prefix="/">
+        <file>lines.en.csv</file>
+        <file alias="hide.png">../UI/icons/hide.png</file>
+        <file alias="show.png">../UI/icons/show.png</file>
+    </qresource>
 </RCC>

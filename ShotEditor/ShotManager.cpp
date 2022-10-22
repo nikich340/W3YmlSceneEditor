@@ -4,34 +4,37 @@
 ShotManager::ShotManager(YmlSceneManager* newYmlManager, QObject *parent) : QObject(parent)
 {
     m_pYmlManager = newYmlManager;
+
+    //m_LightYellowGradient = QLinearGradient(QGradient::CloudyKnoxville);
+    m_LightYellowGradient.setStart(0, 0);
+    m_LightYellowGradient.setFinalStop(SEC_TO_X(30), SHOT_LABEL_HEIGHT * m_groupsActorNumMax);
+    m_LightYellowGradient.setCoordinateMode(QGradient::LogicalMode);
+    m_LightYellowGradient.setColorAt(0, QColor("#eeeeec"));
+    m_LightYellowGradient.setColorAt(1.0, QColor("#e9e9e7"));
 }
 
-void ShotManager::setShotScenes(QGraphicsScene* gDgScene, QGraphicsScene* gLabelScene, QGraphicsScene* gShotScene) {
-	pDgScene = gDgScene;
-	pLabelScene = gLabelScene;
-	pShotScene = gShotScene;
+void ShotManager::setWidgets(QGraphicsScene *newDialogScene, QScrollArea *newShotLabelArea, QScrollArea *newShotArea)
+{
+    m_pDialogScene = newDialogScene;
+    m_pShotLabelArea = newShotLabelArea;
+    m_pShotArea = newShotArea;
+    m_pShotLabelWidget = newShotLabelArea->widget();
+    m_pShotWidget = newShotArea->widget();
 
-    pShotScene->views()[0]->setMouseTracking(true);
-    pShotScene->installEventFilter(this);
-
-    /* one-time constant UI things */
-
-    /* red navigation line */
-    m_pNavigationLine = new QGraphicsLineItem;
-    m_pNavigationLine->setZValue(1.0);
-    m_pNavigationLine->setPen( QPen(Qt::red) );
-    m_pNavigationLine->setPos(0, 0);
-    m_pNavigationLine->setLine(0, 0, 0, SHOT_SCENE_HEIGHT);
-    m_pNavigationLine->setFlag(QGraphicsItem::ItemIgnoresTransformations);
-    pShotScene->addItem(m_pNavigationLine);
+    m_pShotLabelArea->setFixedWidth(SHOT_LABEL_WIDTH);
+    /* one-time constant UI things - shared scene */
+    //m_pShotSceneShared->views()[0]->setMouseTracking(true);
+    //m_pShotSceneShared->installEventFilter(this);
 }
 
 bool ShotManager::eventFilter(QObject *obj, QEvent *event) {
 	//qDebug() << "event:" << event->type();
-	if (obj == pShotScene && event->type() == QEvent::GraphicsSceneMouseMove) {
+    if (event->type() == QEvent::GraphicsSceneMouseMove) {
 		QGraphicsSceneMouseEvent* hoverEvent = static_cast<QGraphicsSceneMouseEvent*>(event);
-        if (m_pNavigationLine != nullptr)
-            m_pNavigationLine->setPos( hoverEvent->scenePos().x(), 0 );
+        upn(i, 0, m_pAssets.count() - 1) {
+            if (m_pAssets[i]->pNavigationLine != nullptr)
+            m_pAssets[i]->pNavigationLine->setPos( hoverEvent->scenePos().x(), 0 );
+        }
 	}
     return false;
 }
@@ -42,27 +45,33 @@ bool ShotManager::isAssetSpecificType(EShotActionType type)
 }
 
 void ShotManager::clearShotEditor() {
-    pLabelScene->clear();
-	pDgScene->clear();
-	pShotScene->clear();
+    m_pDialogScene->clear();
+    m_dialogCueRectByShotname.clear();
+    m_blocksByShotName.clear();
+    m_pDialogSecondNumbers.clear();
 
-    m_dgCueRectByShotname.clear();
-    m_knownAssetsID.clear();
-    m_assetsStartY.clear();
-    m_assetsEndY.clear();
-    m_isAssetCollapsed.clear();
-    m_assetLabels.clear();
-    m_pNavigationLine = nullptr;
+    upn(i, 0, m_pAssets.count() - 1) {
+        m_pShotLabelWidget->layout()->removeWidget(m_pAssets[i]->pViewLabel);
+        m_pAssets[i]->pViewLabel->deleteLater();
+        m_pAssets[i]->pSceneLabel->deleteLater();
+        m_pShotWidget->layout()->removeWidget(m_pAssets[i]->pView);
+        m_pAssets[i]->pView->deleteLater();
+        m_pAssets[i]->pScene->deleteLater();
+        delete m_pAssets[i];
+    }
+    m_pAssets.clear();
+    m_pAssetByID.clear();
+    m_pAssetByScene.clear();
 }
 
 /* actually update */
-void ShotManager::updateCueText(QString shotname) {
+void ShotManager::updateDialogCueText(QString shotname) {
     int idx = m_pDialogLink->getIdx(shotname);
     QString cleanLine = m_pYmlManager->getCleanLine(m_pDialogLink->lines[idx]);
     QString durationStr = QString::number(m_pDialogLink->durations[idx], 'f', 3);
 
-    m_dgCueRectByShotname[shotname]->setTextMain(cleanLine);
-    m_dgCueRectByShotname[shotname]->setTextSecondary(durationStr);
+    m_dialogCueRectByShotname[shotname]->setTextMain(cleanLine);
+    m_dialogCueRectByShotname[shotname]->setTextSecondary(durationStr);
 }
 
 QColor ShotManager::getBlockColorForActionType(EShotActionType type)
@@ -226,13 +235,13 @@ QColor ShotManager::getBlockColorForActionType(EShotActionType type)
 
 double ShotManager::getMinYForAction(shotAction *action)
 {
-    int asset_id = getActorIdForAction(action);
+    //int asset_id = getAssetIDForAction(action);
     //qDebug() << QString("getMinYForAction: %1, isActorSpecificType = %2, actor id = %3").arg(EShotActionToString[action->actionType]).arg(isActorSpecificType(action->actionType)).arg(actor_id);
-    if ( isAssetSpecificType(action->actionType) && asset_id >= 0 ) {
+    /*if ( isAssetSpecificType(action->actionType) && asset_id >= 0 ) {
         int asset_idx = m_knownAssetsID.indexOf(asset_id);
         //qDebug() << QString("getMinYForAction: actor IDX = %1").arg(actor_idx);
         return m_assetsStartY[asset_idx] + SHOT_LABEL_HEIGHT * EShotActionToGroupNum[action->actionType];
-    }
+    }*/
     return SHOT_LABEL_HEIGHT * EShotActionToGroupNum[action->actionType];
     // Y_max = Y_min + SHOT_DG_HEIGHT - SHOT_LABEL_PEN_WIDTH - 1;
 }
@@ -245,7 +254,7 @@ QString ShotManager::shotNameByNum(int shotNum)
 void ShotManager::getShotInfoForPoint(QPoint p, int &shotNum, double &shotCoord, int &actorNum, int &groupNum)
 {
     // get groupNum, actorNum (Y)
-    if (p.y() < SHOT_LABEL_HEIGHT * 2) {
+    /*if (p.y() < SHOT_LABEL_HEIGHT * 2) {
         groupNum = p.y() / SHOT_LABEL_HEIGHT;
         actorNum = -1;
     } else {
@@ -284,10 +293,10 @@ void ShotManager::getShotInfoForPoint(QPoint p, int &shotNum, double &shotCoord,
     }
     qDebug() << QString("getShotInfoForPoint: group = %1, actor = %2 (%3), shot = %4 (%5), shotCoord = %6")
                 .arg(groupNum).arg(actorNum).arg(m_pYmlManager->sceneGlobals()->getName( m_knownAssetsID[actorNum] ))
-                .arg(shotNum).arg(shotNameByNum(shotNum)).arg(shotCoord);
+                .arg(shotNum).arg(shotNameByNum(shotNum)).arg(shotCoord);*/
 }
 
-int ShotManager::getActorIdForAction(shotAction *action)
+int ShotManager::getAssetIDForAction(shotAction *action)
 {
     if ( !isAssetSpecificType(action->actionType) )
         return -1;
@@ -363,39 +372,17 @@ void ShotManager::onLoadShots(QString sectionName) {
                      .arg(sectionName));
     m_pDialogLink = &(m_pYmlManager->dgLinkBySectionName[sectionName]);
 
-    /* set scene sizes */
-    double sceneWidth = qMax(SHOT_SCENE_WIDTH, m_pDialogLink->totalDuration * 2.0 * SHOT_SECOND);
-    double sceneHeight = qMax(SHOT_SCENE_HEIGHT, SHOT_LABEL_HEIGHT * (2 + m_pYmlManager->sceneGlobals()->actors.count() * m_groupsActorNumMax));
+    m_pDialogScene->setSceneRect(0,0, sceneWidth(), SHOT_DG_HEIGHT);
+    m_pDialogScene->views().at(0)->setMaximumWidth(sceneWidth());
 
-    pDgScene->setSceneRect(0,0, sceneWidth, SHOT_DG_HEIGHT);
-    pDgScene->views().at(0)->setMaximumWidth(sceneWidth);
+    /*m_pShotSceneShared->setSceneRect(0,0, sceneWidth, sceneHeight);
+    m_pShotSceneShared->views().at(0)->setMaximumWidth(sceneWidth);
+    m_pShotSceneShared->views().at(0)->setMaximumHeight(sceneHeight);
 
-    pShotScene->setSceneRect(0,0, sceneWidth, sceneHeight);
-    pShotScene->views().at(0)->setMaximumWidth(sceneWidth);
-    pShotScene->views().at(0)->setMaximumHeight(sceneHeight);
+    m_pLabelSceneShared->setSceneRect(0,0, SHOT_LABEL_WIDTH, sceneHeight);
+    m_pLabelSceneShared->views().at(0)->setMaximumHeight(sceneHeight);*/
 
-    pLabelScene->setSceneRect(0,0, SHOT_LABEL_WIDTH, sceneHeight);
-    pLabelScene->views().at(0)->setMaximumHeight(sceneHeight);
-
-    /* camera & env groups */
-    QVector<QString> groups = {"CAMERAS", "ENV/WORLD"};
-    QVector<EShotActionType> type_samples = {EShotCam, EShotEnvBlendIn};
-    upn(i, 0, 1) {
-        CustomRectItem* labelRect = new CustomRectItem;
-        labelRect->setRect(0, 0, SHOT_LABEL_WIDTH - SHOT_LABEL_PEN_WIDTH * 2, SHOT_LABEL_HEIGHT - SHOT_LABEL_PEN_WIDTH);
-        labelRect->setPos(0, SHOT_LABEL_HEIGHT * i);
-        labelRect->setBackgroundColor( QColorDark(getBlockColorForActionType(type_samples[i]).hsvHue()) );
-        labelRect->setPen( QPen(QSvg::honeydew, SHOT_LABEL_PEN_WIDTH, Qt::SolidLine, Qt::FlatCap, Qt::BevelJoin) );
-        labelRect->setTextParamsSecondary(QColorConstants::Svg::gold, 10, "Sans Serif", Qt::AlignCenter | Qt::TextWordWrap);
-        labelRect->setTextSecondary( groups[i] );
-        pLabelScene->addItem( labelRect );
-    }
-    QPen bigPen(QSvg::darkslateblue, 2.0, Qt::SolidLine, Qt::FlatCap, Qt::BevelJoin);
-    QPen mediumPen(QSvg::darkolivegreen, 1.0, Qt::DashLine, Qt::FlatCap, Qt::BevelJoin);
-    bigPen.setCosmetic(true);
-    mediumPen.setCosmetic(true);
-    pShotScene->addLine(0, SHOT_LABEL_HEIGHT * 1, sceneWidth, SHOT_LABEL_HEIGHT * 1, mediumPen);
-    pShotScene->addLine(0, SHOT_LABEL_HEIGHT * 2, sceneWidth, SHOT_LABEL_HEIGHT * 2, bigPen);
+    onAssetLoad(-1); // camera & env
 
     /* load actors and props */
     for (asset actor : m_pYmlManager->sceneGlobals()->actors) {
@@ -407,33 +394,79 @@ void ShotManager::onLoadShots(QString sectionName) {
         onAssetLoad(prop.nameID);
     }
 
-    /* draw seconds and dash lines */
-	double cur_x = 0;
-    QPen mediumPen2(QSvg::darkslateblue, 1.0, Qt::DashLine, Qt::FlatCap, Qt::BevelJoin);
-    mediumPen2.setCosmetic(true);
-    QFont fontNum("Arial", 9);
-	QBrush brush(Qt::darkGreen);
-
-    for (int i = 1; i < m_pDialogLink->totalDuration * 2.0; ++i) {
-		cur_x += SHOT_SECOND;
-        pShotScene->addLine(cur_x, 0, cur_x, sceneHeight, mediumPen2);
-
-		QGraphicsSimpleTextItem *textItem = new QGraphicsSimpleTextItem( qn(i) );
-		textItem->setPos(cur_x - 1.5, SHOT_DG_HEIGHT * 0.65);
-        textItem->setFont(fontNum);
-		textItem->setBrush(brush);
-		textItem->setFlag(QGraphicsItem::ItemIgnoresTransformations);
-		pDgScene->addItem(textItem);
-	}
-
     /* horizontal blue dash line after actors rects */
-    pDgScene->addLine(0, SHOT_DG_HEIGHT * 0.6, sceneWidth, SHOT_DG_HEIGHT * 0.6, mediumPen2);
+    // TODO
+    m_pDialogScene->addLine(0, SHOT_DG_HEIGHT * 0.6, sceneWidth(), SHOT_DG_HEIGHT * 0.6, QPen(Qt::blue));
 
     /* draw actor name+phrase+duration label rects and dash lines */
-
-    for (int i = 0; i < m_pDialogLink->lines.size(); ++i) {
+    for (int i = 0; i < m_pDialogLink->lines.count(); ++i) {
         onShotLoad(i);
-	}
+    }
+    onRepaintSecondNumbers();
+    onRepaintVerticalLines();
+}
+
+void ShotManager::onRepaintSecondNumbers()
+{
+    for (QGraphicsSimpleTextItem* itemNumber : m_pDialogSecondNumbers) {
+        m_pDialogScene->removeItem(itemNumber);
+        delete itemNumber;
+    }
+    m_pDialogSecondNumbers.clear();
+
+    int current_x = 0;
+    QFont fontNum("Arial", 9);
+    QBrush brush(Qt::darkGreen);
+    for (int i = 1; i < m_pDialogLink->totalDuration + 30; ++i) {
+        current_x += SHOT_SECOND;
+
+        QGraphicsSimpleTextItem *textItem = new QGraphicsSimpleTextItem( qn(i) );
+        textItem->setPos(current_x - 1.5, SHOT_DG_HEIGHT * 0.65);
+        textItem->setFont(fontNum);
+        textItem->setBrush(brush);
+        textItem->setFlag(QGraphicsItem::ItemIgnoresTransformations);
+        m_pDialogSecondNumbers.append(textItem);
+        m_pDialogScene->addItem(textItem);
+    }
+}
+
+void ShotManager::onRepaintVerticalLines()
+{
+    upn(i, 0, m_pAssets.count() - 1) {
+        onRepaintVerticalLinesForAssetID(m_pAssets[i]->assetID);
+    }
+}
+
+void ShotManager::onRepaintVerticalLinesForAssetID(int assetID)
+{
+    ShotAsset* pAsset = m_pAssetByID[assetID];
+    upn(j, 0, pAsset->pVerticalLines.count() - 1) {
+            pAsset->pScene->removeItem(pAsset->pVerticalLines[j]);
+            delete pAsset->pVerticalLines[j];
+    }
+    pAsset->pVerticalLines.clear();
+
+    /* Bold lines between shots */
+    QPen blackBoldPen(Qt::black, 2.0, Qt::SolidLine, Qt::FlatCap, Qt::BevelJoin);
+    blackBoldPen.setCosmetic(true);
+    double current_sec = 0;
+
+    upn(i, 0, m_pDialogLink->shots.count() - 1) {
+        current_sec += m_pDialogLink->durations[i];
+        QGraphicsLineItem* boldLine = pAsset->pScene->addLine(SEC_TO_X(current_sec), 0, SEC_TO_X(current_sec), pAsset->pScene->height(), blackBoldPen);
+        pAsset->pVerticalLines.append( boldLine );
+    }
+
+    /* Dash lines for seconds */
+    QPen mediumPen2(QSvg::darkslateblue, 1.0, Qt::DashLine, Qt::FlatCap, Qt::BevelJoin);
+    mediumPen2.setCosmetic(true);
+    int current_x = 0;
+
+    for (int i = 1; i < m_pDialogLink->totalDuration + 30; ++i) {
+        current_x += SHOT_SECOND;
+        QGraphicsLineItem* dashLine = pAsset->pScene->addLine(current_x, 0, current_x, pAsset->pScene->height(), mediumPen2);
+        pAsset->pVerticalLines.append( dashLine );
+    }
 }
 
 void ShotManager::onShotLoad(QString shotName) {
@@ -466,7 +499,8 @@ void ShotManager::onShotLoad(int shotNum) {
         actorCueLabel->setBrush( QBrush(colorDgViewChoice) );
     } else {
         //QString speakerName = m_ymlManager->sceneGlobals()->getName(currentDgLink->speakers[shotNum]);
-        int speakerIdx = m_knownAssetsID.indexOf( m_pDialogLink->speakers[shotNum] );
+        //int speakerIdx = m_assets.indexOf( m_pDialogLink->speakers[shotNum] );
+        int speakerIdx = 1; // TODO
         if (speakerIdx == -1) {
             speakerIdx = 0;
             m_pYmlManager->error("ShotManager: actor not in m_knownActors: " + m_pYmlManager->sceneGlobals()->getName(m_pDialogLink->speakers[shotNum]));
@@ -475,30 +509,28 @@ void ShotManager::onShotLoad(int shotNum) {
         actorCueLabel->setBrush( QBrush(colorDgViewActors[speakerIdx]) );
     }
 
-    pDgScene->addItem(actorCueLabel);
-    m_dgCueRectByShotname[shotName] = actorCueLabel;
-    updateCueText(shotName);
+    m_pDialogScene->addItem(actorCueLabel);
+    m_dialogCueRectByShotname[shotName] = actorCueLabel;
+    updateDialogCueText(shotName);
 
     /* draw action blocks for shot in editor */
-    m_blocksByShotName[shotName] = QVector<CustomRectItem*>();
-    upn(j, 0, m_pDialogLink->shots[shotNum].actions.size() - 1) {
+    m_blocksByShotName[shotName] = QSet<CustomRectItem*>();
+    upn(j, 0, m_pDialogLink->shots[shotNum].actions.count() - 1) {
         onShotActionLoad(shotNum, j);
     }
-
-    /* vertical line after shot */
-    pShotScene->addLine((start_sec + duration_sec) * SHOT_SECOND, 0, (start_sec + duration_sec) * SHOT_SECOND, pShotScene->sceneRect().height(), dialogLabelPen);
 }
 
 void ShotManager::onShotActionLoad(int shotNum, int actionNum) {
     double start_sec = m_pDialogLink->getStartTimeForLine(shotNum);
     double dur_sec = m_pDialogLink->durations[shotNum];
+    QString shotName = shotNameByNum(shotNum);
 
     shotAction* sa = &m_pDialogLink->shots[shotNum].actions[actionNum];
-    QString secondaryInfo = QString("[%1]").arg(sa->start, 0, 'f', 3 );
+    QString secondaryInfo = QString("[%1]").arg( sa->start, 0, 'f', 3 );
     double actionDuration = getDurationForAction(sa);
 
     // connect: click/clone/delete action ?
-    CustomRectItem* actionRect = new CustomRectItem();
+    CustomRectItem* actionRect = new CustomRectItem;
     if (actionDuration > 0) {
         actionRect->setRect( QRectF(0, 0, actionDuration * SHOT_SECOND, SHOT_LABEL_HEIGHT / 2.2) );
         secondaryInfo += QString(": %1 s").arg(actionDuration, 0, 'f', 2 );
@@ -517,15 +549,14 @@ void ShotManager::onShotActionLoad(int shotNum, int actionNum) {
     actionRect->setTextSecondary( secondaryInfo );
     actionRect->setZValue(2.0);
     actionRect->setShotAction( sa );
-    actionRect->setShotName( shotNameByNum(shotNum) );
-    pShotScene->addItem(actionRect);
-    m_blocksByShotName[ shotNameByNum(shotNum) ].append(actionRect);
+    actionRect->setData( "shotName", shotName );
 
-    int actorID = getActorIdForAction(sa);
-    actionRect->setAssetID( actorID );
-    if (actorID >= 0) {
-        m_blocksByAssetID[ getActorIdForAction(sa) ].append(actionRect);
-    }
+    int assetID = getAssetIDForAction(sa);
+    m_pAssetByID[assetID]->pScene->addItem(actionRect);
+    actionRect->setData( "assetID", assetID );
+    qDebug() << QString("Insert rect to ID: %2").arg(assetID);
+    m_pAssetByID[assetID]->actionRects.insert(actionRect);
+    m_blocksByShotName[shotName].insert(actionRect);
 
     m_pYmlManager->info(QString("Add shot: [%1] %2")
                      .arg(sa->start, 0, 'f', 3 )
@@ -539,7 +570,7 @@ void ShotManager::onShotActionAdd(int shotNum, EShotActionType type)
 
 void ShotManager::onShotActionRemove(int shotNum, int actionNum)
 {
-    shotAction* sa = &m_pDialogLink->shots[shotNum].actions[actionNum];
+    //shotAction* sa = &m_pDialogLink->shots[shotNum].actions[actionNum];
     // TODO
 }
 
@@ -550,97 +581,163 @@ void ShotManager::onShotActionUpdate(int shotNum, int actionNum)
 
 void ShotManager::onAssetLoad(int assetID)
 {
-    m_blocksByAssetID[assetID] = QVector<CustomRectItem*>();
-    m_assetLabels.append( QVector<CustomRectItem*>() );
-    m_knownAssetsID.append( assetID );
-    int asset_idx = m_knownAssetsID.count() - 1;
-    bool isProp = m_isAssetProp(asset_idx);
-    /* draw labels */
+    QGraphicsView* pNewView = new QGraphicsView(m_pShotWidget);
+    QGraphicsScene* pNewScene = new QGraphicsScene(pNewView);
+    //pNewView->setInteractive(false);
+    pNewScene->setBackgroundBrush(m_LightYellowGradient);
+    pNewView->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    pNewView->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    //pNewView->setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::MinimumExpanding);
 
+    QGraphicsView* pNewViewLabel = new QGraphicsView(m_pShotLabelWidget);
+    QGraphicsScene* pNewSceneLabel = new QGraphicsScene(pNewViewLabel);
+   // pNewViewLabel->setInteractive(false);
+    pNewViewLabel->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    pNewViewLabel->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    //pNewViewLabel->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+
+    ShotAsset* newAsset = new ShotAsset(pNewView, pNewScene, pNewViewLabel, pNewSceneLabel, assetID);
+
+    int asset_idx = m_pAssets.count();
+    newAsset->isProp = m_pYmlManager->sceneGlobals()->props.contains(assetID);
+
+    /* draw labels */
     QPen bigPen(QSvg::darkslateblue, 2.0, Qt::SolidLine, Qt::FlatCap, Qt::BevelJoin);
     QPen mediumPen(QSvg::darkolivegreen, 1.0, Qt::DashLine, Qt::FlatCap, Qt::BevelJoin);
     bigPen.setCosmetic(true);
     mediumPen.setCosmetic(true);
 
-    double startY = asset_idx > 0 ? m_assetsEndY[asset_idx - 1] : SHOT_LABEL_HEIGHT * 2;
-    double endY = startY + SHOT_LABEL_HEIGHT * (isProp ? m_groupsPropNumMax : m_groupsActorNumMax);
-    m_assetsStartY.append( startY );
-    m_assetsEndY.append( endY );
-
     QVector<QString> groups;
     QVector<EShotActionType> type_samples;
-    if (isProp) {
+    if (assetID == -1) {
+        groups = {"CAMERAS", "ENV/WORLD"};
+        type_samples = {EShotCam, EShotEnvBlendIn};
+        newAsset->assetName = "";
+    } else if (newAsset->isProp) {
         groups = {"STATE", "PLACEMENT", "SFX"};
         type_samples = {EShotPropShow, EShotPropPlacement, EShotPropEffectStart};
+        newAsset->assetName = m_pYmlManager->sceneGlobals()->getName(assetID);
     } else {
         groups = {"STATE", "ANIMS", "POSE/ADDITIVES", "MIMICS", "LOOKATS", "PLACEMENT", "SFX/VFX"};
         type_samples = {EShotActorShow, EShotActorAnim, EShotActorAnimPose, EShotActorMimicAnim, EShotActorLookat, EShotActorPlacement, EShotActorEffectStart};
+        newAsset->assetName = m_pYmlManager->sceneGlobals()->getName(assetID);
     }
+    pNewScene->setSceneRect(0, 0, SEC_TO_X(m_pDialogLink->totalDuration + 30), SHOT_LABEL_HEIGHT * groups.count());
+    pNewView->setScene(pNewScene);
+    pNewView->setSceneRect(0, 0, SEC_TO_X(m_pDialogLink->totalDuration + 30), SHOT_LABEL_HEIGHT * groups.count());
+    pNewView->setFixedSize(SEC_TO_X(m_pDialogLink->totalDuration + 30), SHOT_LABEL_HEIGHT * groups.count());
+    //pNewView->setSceneRect(0, 0, 5000, SHOT_LABEL_HEIGHT * groups.count());
+    //pNewView->setFixedSize(SEC_TO_X(m_pDialogLink->totalDuration + 30), SHOT_LABEL_HEIGHT * groups.count());
+
+    pNewSceneLabel->setSceneRect(0, 0, SHOT_LABEL_WIDTH, SHOT_LABEL_HEIGHT * groups.count());
+    pNewViewLabel->setScene(pNewSceneLabel);
+    pNewViewLabel->setSceneRect(0, 0, SHOT_LABEL_WIDTH, SHOT_LABEL_HEIGHT * groups.count());
+    pNewViewLabel->setFixedSize(SHOT_LABEL_WIDTH, SHOT_LABEL_HEIGHT * groups.count());
+
+    /* add label rects */
     upn(i, 0, groups.count() - 1) {
         CustomRectItem* labelRect = new CustomRectItem;
-        labelRect->setRect(0, 0, SHOT_LABEL_WIDTH - SHOT_LABEL_PEN_WIDTH * 2, SHOT_LABEL_HEIGHT - SHOT_LABEL_PEN_WIDTH);
-        labelRect->setPos(0, startY + SHOT_LABEL_HEIGHT * i);
+        labelRect->setRect(0, 0, SHOT_LABEL_WIDTH - SHOT_LABEL_PEN_WIDTH, SHOT_LABEL_HEIGHT - SHOT_LABEL_PEN_WIDTH);
+        labelRect->setPos(0, SHOT_LABEL_HEIGHT * i);
         labelRect->setBackgroundColor( QColorDark(getBlockColorForActionType(type_samples[i]).hsvHue()) );
         labelRect->setPen( QPen(QSvg::honeydew, SHOT_LABEL_PEN_WIDTH, Qt::SolidLine, Qt::FlatCap, Qt::BevelJoin) );
         labelRect->setTextParamsMain(colorDgViewActors[asset_idx % colorDgViewActors.count()], 10, "Helvetica", Qt::AlignTop | Qt::AlignHCenter);
         labelRect->setTextParamsSecondary(QColorConstants::Svg::gold, 10, "Sans Serif", Qt::AlignVCenter | Qt::AlignHCenter | Qt::TextWordWrap);
         labelRect->setTextSecondary( groups[i] );
-        //if (i == 0)
-        labelRect->setTextMain( m_pYmlManager->sceneGlobals()->getName(assetID) );
-        pLabelScene->addItem( labelRect );
-        m_assetLabels[asset_idx].append( labelRect );
+        labelRect->setData( "assetID", assetID );
+        labelRect->setData( "groupNum", i );
+        labelRect->setTextMain( newAsset->assetName );
+
+        /* show/hide button */
+        if (assetID >= 0) {
+            labelRect->setButtonImages(QImage(":/hide.png").scaledToHeight(20, Qt::SmoothTransformation), QImage(":/show.png").scaledToHeight(20, Qt::SmoothTransformation));
+            connect(labelRect, SIGNAL(onDoubleClick(bool)), this, SLOT(onAssetCollapse(bool)));
+        }
+        pNewSceneLabel->addItem(labelRect);
         /* horizontal separator */
-        if (i > 0)
-            pShotScene->addLine(0, startY + SHOT_LABEL_HEIGHT * i, pShotScene->sceneRect().width(), startY + SHOT_LABEL_HEIGHT * i, mediumPen);
+        if (i > 0) {
+            QGraphicsLineItem* horizontalDash = pNewScene->addLine(0, SHOT_LABEL_HEIGHT * i, pNewScene->width(), SHOT_LABEL_HEIGHT * i, mediumPen);
+            newAsset->pHorizontalLines.append( horizontalDash );
+        }
     }
 
-    /* horizontal line before/after actor */
-    pShotScene->addLine(0, endY, pShotScene->sceneRect().width(), endY, bigPen);
-    qDebug() << "onAssetAdd [" << m_knownAssetsID.indexOf(assetID) << "]: " << assetID;
+    m_pShotWidget->layout()->addWidget(pNewView);
+    m_pShotLabelWidget->layout()->addWidget(pNewViewLabel);
+    m_pAssets.append(newAsset);
+    m_pAssetByID[assetID] = newAsset;
+    m_pAssetByScene[pNewScene] = newAsset;
+    qDebug() << "onAssetAdd [" << m_pAssets.count() << "]: " << assetID;
     // TODO
 }
 
 void ShotManager::onAssetChange(int assetID)
 {
     // TODO - redraw ?
-    m_assetLabels[ m_knownAssetsID.indexOf(assetID) ].first()->setTextMain( "(" + m_pYmlManager->sceneGlobals()->getName(assetID) + ")" );
+    //m_assetLabels[ m_knownAssetsID.indexOf(assetID) ].first()->setTextMain( "(" + m_pYmlManager->sceneGlobals()->getName(assetID) + ")" );
 }
 
 void ShotManager::onAssetRemove(int assetID)
 {
-    for (CustomRectItem* block : m_blocksByAssetID[assetID]) {
-        pShotScene->removeItem(block);
-        block->deleteLater();
+    ShotAsset* shotAsset = m_pAssetByID[assetID];
+    m_pAssetByScene.remove(shotAsset->pScene);
+
+    for (QGraphicsItem* item : shotAsset->pScene->items()) {
+        CustomRectItem* rectItem = static_cast<CustomRectItem*>(item);
+        m_blocksByShotName[rectItem->data("shotName").toString()].remove(rectItem);
     }
-    m_blocksByAssetID.remove(assetID);
-    m_assetLabels.remove( m_knownAssetsID.indexOf(assetID) );
-    m_knownAssetsID.remove( m_knownAssetsID.indexOf(assetID) );
-    // TODO - redraw or move?
+    shotAsset->pScene->clear();
+    shotAsset->pVerticalLines.clear();
+    shotAsset->pHorizontalLines.clear();
+    m_pShotLabelWidget->layout()->removeWidget(shotAsset->pViewLabel);
+    shotAsset->pViewLabel->deleteLater(); // should delete scene too
+    m_pShotWidget->layout()->removeWidget(shotAsset->pView);
+    shotAsset->pView->deleteLater(); // should delete scene too
+
+    m_pAssetByID.remove(assetID);
+    upn(i, 0, m_pAssets.count() - 1) {
+        if (m_pAssets[i]->assetID == assetID) {
+            m_pAssets.removeAt(i);
+            break;
+        }
+    }
 }
 
-void ShotManager::onAssetCollapse(int assetID)
+void ShotManager::onAssetCollapse(bool isCollapsed)
 {
-    m_isAssetCollapsed[ m_knownAssetsID.indexOf(assetID) ] = true;
-    ///pDgScene->views().at(0)->repaint();
-    // TODO - redraw or move?
-}
-
-void ShotManager::onAssetUncollapse(int assetID)
-{
-    m_isAssetCollapsed[ m_knownAssetsID.indexOf(assetID) ] = false;
+    CustomRectItem* rectItem = static_cast<CustomRectItem*>(sender());
+    int assetID = rectItem->data("assetID").toInt();
+    int groupNum = rectItem->data("groupNum").toInt();
+    qDebug() << "assetID: " << assetID << ", isCollapsed: " << isCollapsed;
+    m_pAssetByID[assetID]->isCollapsed = isCollapsed;
+    if (isCollapsed) {
+        m_pAssetByID[assetID]->pView->setSceneRect(0, SHOT_LABEL_HEIGHT * groupNum, SEC_TO_X(m_pDialogLink->totalDuration + 30), SHOT_LABEL_HEIGHT * (groupNum + 1));
+        m_pAssetByID[assetID]->pView->setFixedHeight(SHOT_LABEL_HEIGHT);
+        m_pAssetByID[assetID]->pViewLabel->setSceneRect(0, SHOT_LABEL_HEIGHT * groupNum, SHOT_LABEL_WIDTH, SHOT_LABEL_HEIGHT * (groupNum + 1));
+        m_pAssetByID[assetID]->pViewLabel->setFixedHeight(SHOT_LABEL_HEIGHT);
+    } else {
+        m_pAssetByID[assetID]->pView->setSceneRect(0, 0, SEC_TO_X(m_pDialogLink->totalDuration + 30), SHOT_LABEL_HEIGHT * (m_pAssetByID[assetID]->isProp ? m_groupsPropNumMax : m_groupsActorNumMax));
+        m_pAssetByID[assetID]->pView->setFixedHeight(SHOT_LABEL_HEIGHT * (m_pAssetByID[assetID]->isProp ? m_groupsPropNumMax : m_groupsActorNumMax));
+        m_pAssetByID[assetID]->pViewLabel->setSceneRect(0, 0, SEC_TO_X(m_pDialogLink->totalDuration + 30), SHOT_LABEL_HEIGHT * (m_pAssetByID[assetID]->isProp ? m_groupsPropNumMax : m_groupsActorNumMax));
+        m_pAssetByID[assetID]->pViewLabel->setFixedHeight(SHOT_LABEL_HEIGHT * (m_pAssetByID[assetID]->isProp ? m_groupsPropNumMax : m_groupsActorNumMax));
+    }
     // TODO - redraw
 }
 
-void ShotManager::onShotRename(QString oldName, QString newName) {
-    m_blocksByShotName[newName] = m_blocksByShotName[oldName];
-    m_blocksByShotName.remove(oldName);
+void ShotManager::onShotRename(QString oldShotName, QString newShotName) {
+    m_blocksByShotName[newShotName] = m_blocksByShotName[oldShotName];
+    m_blocksByShotName.remove(oldShotName);
+    for (CustomRectItem* rectItem : m_blocksByShotName[newShotName]) {
+        rectItem->setData("shotName", newShotName);
+    }
     // TODO m_ymlManager->renameShot(shotName);
 }
 void ShotManager::onShotRemove(QString shotName) {
-    for (CustomRectItem* block : m_blocksByShotName[shotName]) {
-        pShotScene->removeItem(block);
-        block->deleteLater();
+    for (CustomRectItem* rectItem : m_blocksByShotName[shotName]) {
+        m_pAssetByID[rectItem->data("assetID").toInt()]->actionRects.remove(rectItem);
+        rectItem->scene()->removeItem(rectItem);
+        rectItem->deleteLater();
     }
     m_blocksByShotName.remove(shotName);
+    onRepaintVerticalLines();
     // TODO m_ymlManager->removeShot(shotName);
 }

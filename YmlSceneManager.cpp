@@ -721,7 +721,12 @@ bool YmlSceneManager::loadShotActions(const YAML::Node actsNode, shot& sh) {
 			{
 				if (isExtended) {
 					newAction.start = paramNode[".@pos"][0].as<double>();
-					newAction.values["actor"] = paramNode[".@pos"][1].as<QString>();
+                    name = paramNode[".@pos"][1].as<QString>();
+                    if (!SG.hasName(SASSETS, name)) {
+                        error("loadShotActions: shot " + sh.shotName + ", actor " + name + " not found in repo!");
+                        continue;
+                    }
+                    newAction.values["actor"] = SG.getID(SASSETS, name);
 					if (paramNode[".@pos"][2].IsSequence()) {
 						newAction.values["lookat_pos"] = paramNode[".@pos"][2].as<QVector3D>();
 					} else {
@@ -2214,10 +2219,8 @@ double YmlSceneManager::getTextDuration(QString line) {
 		//     <200: 0.0725            0.073
 }
 
-void YmlSceneManager::setShotScenes(QGraphicsScene* gDgScene, QGraphicsScene* gLabelScene, QGraphicsScene* gShotScene) {
+void YmlSceneManager::setShotScenes(QGraphicsScene* gDgScene) {
 	pDgScene = gDgScene;
-	pLabelScene = gLabelScene;
-	pShotScene = gShotScene;
 }
 
 void YmlSceneManager::loadShotEditor(QString sectionName) {
