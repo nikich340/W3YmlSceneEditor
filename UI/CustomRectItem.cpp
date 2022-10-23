@@ -221,7 +221,13 @@ void CustomRectItem::mouseDoubleClickEvent(QGraphicsSceneMouseEvent *event)
     //qDebug() << "mouseDoubleClickEvent! m_buttonState = " << m_buttonState;
     m_buttonState = !m_buttonState;
     this->update(this->boundingRect());
-    emit onDoubleClick(m_buttonState);
+    emit doubleClick(m_buttonState);
+    event->accept();
+}
+
+void CustomRectItem::contextMenuEvent(QGraphicsSceneContextMenuEvent *event)
+{
+    emit contextEvent(event->screenPos());
     event->accept();
 }
 

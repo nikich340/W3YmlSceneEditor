@@ -287,7 +287,7 @@ struct shotAction {
 };
 
 struct shot {
-	QVector<shotAction> actions;
+    QVector<shotAction> actions;
 	QString shotName;
 };
 
@@ -312,7 +312,7 @@ struct dialogLink {
         }
         return ret;
     }
-	int getIdx(QString shotName) {
+    int shotNumByName(QString shotName) {
 		upn(i, 0, shots.size() - 1) {
 			if (shots[i].shotName == shotName)
 				return i;

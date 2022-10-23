@@ -338,7 +338,7 @@ void GraphicsSectionItem::contextMenuEvent(QGraphicsSceneContextMenuEvent *event
 QVariant GraphicsSectionItem::itemChange(QGraphicsItem::GraphicsItemChange change, const QVariant &value) {
 	if ( change == QGraphicsItem::ItemSelectedHasChanged ) {
 		if ( value.toBool() ) {
-			ymlManager->loadShotEditor( sLink->sectionName );
+            emit ymlManager->sectionLoaded(sLink->sectionName);
 
 			// push output edges on top
 			putOutputEdgesOnTop();
@@ -458,6 +458,7 @@ void GraphicsSectionItem::changeMe() {
 					break;
 				}
 			}
+            emit ymlManager->sectionTypeChanged(sName(), sLink->type);
 		}
 		// upd instances in prev sections
 		if (sName() != oldData.sectionName) {

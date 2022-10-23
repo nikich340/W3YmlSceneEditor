@@ -14,6 +14,9 @@ class YmlSceneManager : public QObject
 private:
     sceneInfo SG; // = "Scene Globals"
 
+    template<typename HashContainer>
+    void removeAssetsFromSG(HashContainer& container, bool clearRepo);
+
 	QVector<GraphicsSectionItem*> unusedItems;
 	QGraphicsScene* pScene = nullptr;
     QGraphicsScene* pDgScene = nullptr; // TODO remove?
@@ -28,7 +31,11 @@ private:
 
 public:
 	/* scene general */
-
+    QVector<QString> getMapKeys(const YAML::Node& node);
+    QVector<YAML::Node> getMapSeqNodes(const YAML::Node& node);
+    QVector<QVariant> getSeqValues(const YAML::Node& node, const QStringList& types);
+    QVector<QVariant> getSeqValues(const YAML::Node& node, const QString& type);
+    QVariant getScalar(const YAML::Node& node, const QString& type);
 
 	bool hasChanges = false;
 	bool hasShotChanges = false;
@@ -67,6 +74,10 @@ public:
     }
 
 	/* shot editor */
+    YAML::Node shotActionToNode(shotAction* sa);
+    void updateShot(QString sectionName, QString shotName);
+    void removeShot(QString sectionName, QString shotName);
+    void addShot(QString sectionName, QString shotName);
     QMap<QString, dialogLine> lineById;
     QMap<QString, dialogLink> dgLinkBySectionName;
     QSet<QString> dgActors, dgProps;
@@ -74,7 +85,6 @@ public:
 	QString getCleanLine(QString text);
 	double getTextDuration(QString text);
     void setShotScenes(QGraphicsScene* gDgScene);
-	void loadShotEditor(QString sectionName);
 
     /* global logs */
 	void error(QString s);
@@ -88,7 +98,12 @@ signals:
 	void print_info(QString msg);
 	void print_warning(QString msg);
     void print_error(QString msg);
-	void loadShots(QString sectionName);
+    void ymlFileLoaded(QString filePath);
+
+    void sectionDeleted(QString sectionName);
+    void sectionNameChanged(QString oldSectionName, QString newSectionName);
+    void sectionTypeChanged(QString sectionName, int newType);
+    void sectionLoaded(QString sectionName);
 };
 
 #endif // YMLSCENEMANAGER_H

@@ -15,7 +15,7 @@ MainWindow::MainWindow(QWidget *parent)
 	gScene->setSceneRect(0,0, SCENE_WIDTH, SCENE_HEIGHT);
 
     gDialogsScene = new QGraphicsScene(this);
-    gDialogsScene->setSceneRect(0,0, SHOT_SCENE_WIDTH, SHOT_DG_HEIGHT);
+    ui->gViewShotDialogs->setScene(gDialogsScene);
 
 	ymlManager = new YmlSceneManager(this, gScene);
     ymlManager->setShotScenes(gDialogsScene);
@@ -23,8 +23,6 @@ MainWindow::MainWindow(QWidget *parent)
 	ui->gView->setScene(gScene);
     ui->gView->setYmlManager(ymlManager);
 
-    ui->gViewShotDialogs->setScene(gDialogsScene);
-    ui->gViewShotDialogs->setMaximumWidth(SHOT_SCENE_WIDTH);
     ui->gScrollShot->setChildViews(ui->gScrollShotLabel, ui->gViewShotDialogs);
 
 	shotManager = new ShotManager(ymlManager, this);
@@ -39,7 +37,11 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ymlManager, SIGNAL(print_info(QString)), this, SLOT(print_info(QString)));
 	connect(ymlManager, SIGNAL(print_error(QString)), this, SLOT(print_error(QString)));
 	connect(ymlManager, SIGNAL(print_warning(QString)), this, SLOT(print_warning(QString)));
-	connect(ymlManager, SIGNAL(loadShots(QString)), shotManager, SLOT(onLoadShots(QString)));
+    connect(ymlManager, SIGNAL(sectionTypeChanged(QString,int)), shotManager, SLOT(onUpdateSectionType(QString,int)));
+    connect(ymlManager, SIGNAL(sectionNameChanged(QString,QString)), shotManager, SLOT(onUpdateSectionName(QString,QString)));
+    connect(ymlManager, SIGNAL(sectionLoaded(QString)), shotManager, SLOT(onLoadSectionShots(QString)));
+    connect(ymlManager, SIGNAL(sectionDeleted(QString)), shotManager, SLOT(onClearEditor()));
+    connect(ymlManager, SIGNAL(ymlFileLoaded(QString)), shotManager, SLOT(onClearEditor()));
     //connect(ui->gViewShotEditor, SIGNAL(wasScaled(double)), shotManager, SLOT(onScaledView(double)));
     //connect(ui->gViewShotEditor, SIGNAL(addActionIntent(QPointF p)), shotManager, SLOT(OnAddActionIntent(QPointF)));
 	connect(ui->repoActorsButton, SIGNAL(clicked()), this, SLOT(onClicked_RepoActors()));

@@ -47,6 +47,7 @@ protected:
 	void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget = nullptr) override;
     QVariant itemChange(QGraphicsItem::GraphicsItemChange change, const QVariant &value) override;
     void mouseDoubleClickEvent(QGraphicsSceneMouseEvent *event) override;
+    void contextMenuEvent(QGraphicsSceneContextMenuEvent *event) override;
 
 public:
     CustomRectItem(qreal x, qreal y, qreal width, qreal height, QGraphicsItem *parent = nullptr);
@@ -117,7 +118,8 @@ public:
     void setData(const QString &newKey, const QVariant& newValue);
 
 signals:
-    void onDoubleClick(bool buttonState);
+    void doubleClick(bool buttonState);
+    void contextEvent(QPointF screenPos);
 };
 
 #endif // CUSTOMRECTITEM_H

@@ -3,7 +3,7 @@
 
 #include <QObject>
 #include "YmlSceneManager.h"
-#include "GraphicsActionRect.h"
+#include "ShotScrollArea.h"
 #include <QColor>
 #include "CustomRectItem.h"
 
@@ -51,17 +51,17 @@ private:
     // general
     YmlSceneManager* m_pYmlManager = nullptr;
     dialogLink* m_pDialogLink = nullptr;
+    QString m_sectionName;
 
     QGraphicsScene* m_pDialogScene      = nullptr;
     QScrollArea* m_pShotLabelArea = nullptr;
     QWidget* m_pShotLabelWidget = nullptr;
-    QScrollArea* m_pShotArea = nullptr;
+    ShotScrollArea* m_pShotArea = nullptr;
     QWidget* m_pShotWidget = nullptr;
 
     QVector<QGraphicsSimpleTextItem*>   m_pDialogSecondNumbers;
 
     // labels
-    QLinearGradient m_LightYellowGradient;
     const int m_groupsActorNumMax = 7;
     const int m_groupsPropNumMax = 3;
     QHash<QString, CustomRectItem*> m_dialogCueRectByShotname;  /* cue rect by shotname (edit on: load, clone, new, remove, move) */
@@ -73,17 +73,18 @@ private:
     QHash<QGraphicsScene*, ShotAsset*>  m_pAssetByScene;
     QHash<QString, QSet<CustomRectItem*>> m_blocksByShotName;
 
+    QLinearGradient createGradient(QColor startColor, QColor endColor, double W, double H);
     double sceneWidth() {
-        return qMax(SHOT_SCENE_WIDTH, m_pDialogLink->totalDuration * 2.0 * SHOT_SECOND);
+        return (m_pDialogLink->totalDuration + 30.0) * SHOT_SECOND;
     }
     double sceneHeight() {
-        return qMax(SHOT_SCENE_HEIGHT, SHOT_LABEL_HEIGHT * (2 + m_pYmlManager->sceneGlobals()->actors.count() * m_groupsActorNumMax + m_pYmlManager->sceneGlobals()->props.count() * m_groupsPropNumMax));
+        return (2 + m_pYmlManager->sceneGlobals()->actors.count() * m_groupsActorNumMax + m_pYmlManager->sceneGlobals()->props.count() * m_groupsPropNumMax);
     }
     //const QPen cosmeticPen();
 
 public:
     explicit ShotManager(YmlSceneManager* newYmlManager, QObject *parent = nullptr);
-    void setWidgets(QGraphicsScene* newDialogScene, QScrollArea* newShotLabelArea, QScrollArea* newShotArea);
+    void setWidgets(QGraphicsScene* newDialogScene, QScrollArea* newShotLabelArea, ShotScrollArea* newShotArea);
     bool eventFilter(QObject *obj, QEvent *event) override;
 
     bool isAssetSpecificType(EShotActionType type);
@@ -104,11 +105,19 @@ public:
     int getAssetIDForAction(shotAction* action);
     void addLabel(QString text, EShotActionType type, double offsetX, double offsetY);
     QColor getBlockColorForActionType(EShotActionType type);
+
+    void updateHorizontalAdvance();
+    void updateVerticalAdvance();
 signals:
 
 public slots:
-	void onLoadShots(QString sectionName);
+    void onClearEditor();
+    void onLoadSectionShots(QString sectionName);
+    void onUpdateSectionName(QString oldSectionName, QString newSectionName);
+    void onUpdateSectionType(QString sectionName, int newType);
     void onRepaintSecondNumbers();
+    void onRepaintHorizontalLines();
+    void onRepaintHorizontalLinesForAssetID(int assetID);
     void onRepaintVerticalLines();
     void onRepaintVerticalLinesForAssetID(int assetID);
     void onScaledView(double factor) {}
@@ -118,15 +127,17 @@ public slots:
     void onAssetRemove(int assetID);
     void onAssetCollapse(bool isCollapsed);
 
+    void onShotContextEvent(QPointF screenPos);
     void onShotLoad(int shotNum);
     void onShotLoad(QString shotName);
     void onShotRename(QString oldName, QString newName);
     void onShotRemove(QString shotName);
 
+    void onShotActionContextEvent(QPointF screenPos);
     void onShotActionLoad(int shotNum, int actionNum);
-    void onShotActionAdd(int shotNum, EShotActionType type);
-    void onShotActionRemove(int shotNum, int actionNum);
-    void onShotActionUpdate(int shotNum, int actionNum);
+    //void onShotActionAdd(QString shotName, int assetID, EShotActionType type);
+    void onShotActionRemove(CustomRectItem* rect, bool updateYML = true);
+    //void onShotActionUpdate(CustomRectItem* rect, bool updateYML = true);
 };
 
 #endif // SHOTMANAGER_H
