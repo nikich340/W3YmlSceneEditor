@@ -12,6 +12,7 @@
 #include <limits>
 #include <list>
 #include <map>
+#include <iomanip>
 #include <sstream>
 #include <type_traits>
 #include <vector>
@@ -109,7 +110,7 @@ inner_encode(const T& rhs, std::stringstream& stream){
       stream << ".inf";
     }
   } else {
-    stream << rhs;
+    stream << std::setprecision(5) << std::fixed << rhs;
   }
 }
 
