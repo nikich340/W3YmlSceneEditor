@@ -21,24 +21,34 @@ private:
     QGraphicsView* m_pDialogView;
     QVector<QGraphicsView*> m_pShotViews;
     int m_originX, m_originY;
+    bool m_inPress = false;
+
     qreal m_scaleFactor = 1.0;
+    qreal m_lastHorizontalPos = 1.0;
+    qint64 m_lastHorizontalAdjust = -1;
 
 public:
     ShotScrollArea(QWidget *parent = nullptr);
+    void addShotView(QGraphicsView* newShotView);
+    void removeShotView(QGraphicsView* newShotView);
+    void clearAllShotViews();
     void setChildViews(QScrollArea* newLabelArea, QGraphicsView* newDialogView);
 
+    qreal scaleFactor() const;
+    void resetScaleFactor();
+
 protected:
+    bool eventFilter(QObject *watched, QEvent *event) override;
 #if QT_CONFIG(wheelevent)
     void wheelEvent(QWheelEvent *event) override;
 #endif
-    void mousePressEvent(QMouseEvent* event) override;
-    void mouseReleaseEvent(QMouseEvent* event) override;
-    void mouseMoveEvent(QMouseEvent* event) override;
     void contextMenuEvent(QContextMenuEvent* event) override;
 
 signals:
     //void wasScaled(double factor);
     void addActionIntent(QPointF p);
+public slots:
+    void onUpdateHorizontalSlider();
 };
 
 #endif // SHOTSCROLLAREA_H
