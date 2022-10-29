@@ -52,6 +52,7 @@ private:
     YmlSceneManager* m_pYmlManager = nullptr;
     dialogLink* m_pDialogLink = nullptr;
     QString m_sectionName;
+    int m_sectionType;
 
     QGraphicsScene* m_pDialogScene      = nullptr;
     QScrollArea* m_pShotLabelArea = nullptr;

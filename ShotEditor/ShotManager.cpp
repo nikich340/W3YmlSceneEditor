@@ -341,7 +341,12 @@ void ShotManager::onLoadSectionShots(QString sectionName) {
     onRepaintSecondNumbers();
     onRepaintVerticalLines();
 
-    onUpdateSectionType( sectionName, m_pYmlManager->getSectionLink(sectionName)->type );
+    m_sectionType = m_pYmlManager->getSectionLink(sectionName)->type;
+    bool shotsAllowed = (m_sectionType != scriptS && m_sectionType != exitS);
+    m_pShotArea->setEnabled(shotsAllowed);
+    m_pShotLabelArea->setEnabled(shotsAllowed);
+    m_pDialogScene->views().first()->setEnabled(shotsAllowed);
+
     m_pYmlManager->info(QString("onLoadShots()>: section [%1] loaded in %2 ms")
                         .arg(sectionName).arg(timer.elapsed()));
 }
@@ -355,10 +360,7 @@ void ShotManager::onUpdateSectionName(QString oldSectionName, QString newSection
 
 void ShotManager::onUpdateSectionType(QString sectionName, int newType)
 {
-    bool shotsAllowed = (newType != scriptS && newType != exitS);
-    m_pShotArea->setEnabled(shotsAllowed);
-    m_pShotLabelArea->setEnabled(shotsAllowed);
-    m_pDialogScene->views().first()->setEnabled(shotsAllowed);
+    onLoadSectionShots(sectionName);
 }
 
 void ShotManager::onRepaintSecondNumbers()
@@ -731,8 +733,15 @@ void ShotManager::onShotContextEvent(QPointF screenPos)
     CustomRectItem* rect = qobject_cast<CustomRectItem*>(sender());
     QString shotName = rect->data("shotName").toString();
     QMenu menu;
-    QAction *removeAction = menu.addAction("Delete shot");
+    if (m_sectionType == choiceS)
+        return;
+
+    QAction *addActionAFTER = menu.addAction("Add new shot AFTER this");
+    QAction *addActionBEFORE = menu.addAction("Add new shot BEFORE this");
+    QAction *removeAction = menu.addAction("Delete this shot");
+    // TODO: more actions here
     QAction *selectedAction = menu.exec(screenPos.toPoint());
+
     if (selectedAction == removeAction) {
         QMessageBox msgBox;
         msgBox.setText("Are you sure want to delete shot [" + shotName + "] ?");

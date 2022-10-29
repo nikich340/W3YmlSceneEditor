@@ -2567,6 +2567,11 @@ void YmlSceneManager::removeShot(QString sectionName, QString shotName)
     updateDialogscriptSection(sectionName);
 }
 
+void YmlSceneManager::addShot(QString sectionName, QString shotName)
+{
+
+}
+
 template<typename HashContainer>
 void YmlSceneManager::removeAssetsFromSG(HashContainer& container, bool clearRepo)
 {
