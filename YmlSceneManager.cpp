@@ -98,67 +98,29 @@ namespace YAML {
       }
 }
 
-QVector<QString> YmlSceneManager::getMapKeys(const YAML::Node &node)
+QStringList YmlSceneManager::nodeKeys(const YAML::Node &node)
 {
-    QVector<QString> ret;
+    QStringList ret;
     if (node.Type() == YAML::NodeType::Map) {
         for (auto it = node.begin(); it != node.end(); ++it) {
-            ret.push_back(it->XKey.as<QString>());
+            ret.append(it->XKey.as<QString>());
         }
     }
     return ret;
 }
 
-QVector<YAML::Node> YmlSceneManager::getMapSeqNodes(const YAML::Node &node)
+YAML::Node YmlSceneManager::firstCloned(const YAML::Node &node)
 {
-    QVector<YAML::Node> ret;
-    if (node.Type() == YAML::NodeType::Map) {
-        for (auto it = node.begin(); it != node.end(); ++it) {
-            ret.push_back(it->YValue);
-        }
-    } else if (node.Type() == YAML::NodeType::Sequence) {
-        upn(i, 0, node.size() - 1) {
-            ret.push_back(node[i]);
-        }
-    }
-    return ret;
+    if (!node.IsSequence() || node.size() < 1)
+        return YAML::Node();
+    return YAML::Clone(node[0]);
 }
 
-QVector<QVariant> YmlSceneManager::getSeqValues(const YAML::Node &node, const QStringList& types)
+YAML::Node YmlSceneManager::lastCloned(const YAML::Node &node)
 {
-    QVector<QVariant> ret;
-    if (node.Type() == YAML::NodeType::Sequence) {
-        upn(i, 0, node.size() - 1) {
-            ret.push_back( getScalar(node[i], types.at(i)) );
-        }
-    }
-    return ret;
-}
-
-QVector<QVariant> YmlSceneManager::getSeqValues(const YAML::Node &node, const QString &type)
-{
-    QVector<QVariant> ret;
-    if (node.Type() == YAML::NodeType::Sequence) {
-        upn(i, 0, node.size() - 1) {
-            ret.push_back( getScalar(node[i], type) );
-        }
-    }
-    return ret;
-}
-
-QVariant YmlSceneManager::getScalar(const YAML::Node &node, const QString& type)
-{
-    QVariant ret;
-    if (node.Type() == YAML::NodeType::Scalar) {
-        if (type == "string") {
-            ret = node.as<QString>();
-        } else if (type == "int") {
-            ret = node.as<int>();
-        } else if (type == "double") {
-            ret = node.as<double>();
-        }
-    }
-    return ret;
+    if (!node.IsSequence() || node.size() < 1)
+        return YAML::Node();
+    return YAML::Clone(node[node.size() - 1]);
 }
 
 YmlSceneManager::YmlSceneManager(QObject *parent, QGraphicsScene* gScene) : QObject(parent)
@@ -1791,9 +1753,9 @@ bool YmlSceneManager::loadShotsInfo() {
                     dur = it->begin()->YValue.as<double>();
 				} else {
 					dur = sectionGraph[sectionName]->timeLimit;
+                    if (dur < 0.0)
+                        dur = 10.0;
 				}
-				if (dur < 0.0)
-					dur = 10.0;
 
 				newDgLink.durations.pb( dur );
 
@@ -2069,12 +2031,12 @@ void YmlSceneManager::renameSectionLink(QString sectionName, QString oldName) {
 }
 
 void YmlSceneManager::updateSectionLink(QString sectionName) {
-	sectionLink* link = sectionGraph[sectionName];
+    sectionLink* pLink = sectionGraph[sectionName];
 
     if (root["dialogscript"][sectionName]) {
         YAML::Node sNode = root["dialogscript"][sectionName];
         YAML::Node sNode2;
-		switch ( link->type ) {
+        switch ( pLink->type ) {
 			case exitS: {
 				// simple EXIT scalar
 				sNode2 = "EXIT";
@@ -2083,37 +2045,37 @@ void YmlSceneManager::updateSectionLink(QString sectionName) {
 			case choiceS: {
 				YAML::Node tempSeq;
 				YAML::Node tempMap;
-				for (int i = 0; i < link->names.size(); ++i) {
-					if ( link->names[i].isEmpty() )
+                for (int i = 0; i < pLink->names.size(); ++i) {
+                    if ( pLink->names[i].isEmpty() )
 						continue;
 					tempMap.SetStyle(YAML::EmitterStyle::Block);
 					tempMap["choice"].SetStyle(YAML::EmitterStyle::Flow);
 
 					// dialog line
-					tempMap["choice"].push_back( link->choiceLines[i] );
+                    tempMap["choice"].push_back( pLink->choiceLines[i] );
 					// next section name
-					tempMap["choice"].push_back( link->names[i] );
+                    tempMap["choice"].push_back( pLink->names[i] );
 					// add action values
-					if ( !link->choiceActions[i].action.isEmpty() ) {
-						tempMap["choice"].push_back( link->choiceActions[i].action );
-						if ( link->choiceActions[i].amount != -1 ) {
-							tempMap["choice"].push_back( link->choiceActions[i].amount );
-							if ( link->choiceActions[i].grantExp ) {
+                    if ( !pLink->choiceActions[i].action.isEmpty() ) {
+                        tempMap["choice"].push_back( pLink->choiceActions[i].action );
+                        if ( pLink->choiceActions[i].amount != -1 ) {
+                            tempMap["choice"].push_back( pLink->choiceActions[i].amount );
+                            if ( pLink->choiceActions[i].grantExp ) {
 								tempMap["choice"].push_back( true );
 							}
 						}
 					}
 					// add conition block
-					if ( !link->conditions[i].condFact.isEmpty() ) {
-						tempMap["condition"] = link->conditions[i];
+                    if ( !pLink->conditions[i].condFact.isEmpty() ) {
+                        tempMap["condition"] = pLink->conditions[i];
 						tempMap["condition"].SetStyle(YAML::EmitterStyle::Flow);
 					}
 					tempMap["choice"][0].SetTag("!"); // hack to add quotes
 					// single_use block
-					if ( link->single_use[i] )
+                    if ( pLink->single_use[i] )
 						tempMap["single_use"] = true;
 					// emphasize block
-					if ( link->emphasize[i] )
+                    if ( pLink->emphasize[i] )
 						tempMap["emphasize"] = true;
 
 					// push -choice to CHOICE block
@@ -2121,8 +2083,8 @@ void YmlSceneManager::updateSectionLink(QString sectionName) {
 					tempMap.reset();
 				}
 				// add TIME_LIMIT if exists
-				if ( link->timeLimit > 0.0 ) {
-					tempMap["TIME_LIMIT"] = link->timeLimit;
+                if ( pLink->timeLimit > 0.0 ) {
+                    tempMap["TIME_LIMIT"] = pLink->timeLimit;
 					tempSeq.push_back(tempMap);
 				}
 				sNode2["CHOICE"] = tempSeq;
@@ -2130,16 +2092,16 @@ void YmlSceneManager::updateSectionLink(QString sectionName) {
 			}
 			case conditionS: {
 				YAML::Node tempMap;
-				tempMap["condition"] = link->conditions[0];
+                tempMap["condition"] = pLink->conditions[0];
 				tempMap["condition"].SetStyle(YAML::EmitterStyle::Flow);
-				tempMap["on_true"] = link->names[0];
-				tempMap["on_false"] = link->names[1];
+                tempMap["on_true"] = pLink->names[0];
+                tempMap["on_false"] = pLink->names[1];
 				sNode2["NEXT"] = tempMap;
 				break;
 			}
 			case randomS: {
 				YAML::Node tempSeq;
-				for (auto s : link->names) {
+                for (auto s : pLink->names) {
 					if ( s.isEmpty() )
 						continue;
 					tempSeq.push_back(s);
@@ -2150,7 +2112,7 @@ void YmlSceneManager::updateSectionLink(QString sectionName) {
 			default: {
 				// { scriptS/nextS }
 				// simple block NEXT: section_next
-				sNode2["NEXT"] = link->names[0];
+                sNode2["NEXT"] = pLink->names[0];
 				break;
 			}
 		}
@@ -2158,7 +2120,7 @@ void YmlSceneManager::updateSectionLink(QString sectionName) {
         // update last element in section node
         sNode[sNode.size() - 1] = sNode2;
     } else {
-        error("ERROR: section [" + sectionName + "] not found during updateSection!");
+        error("ERROR: section [" + sectionName + "] not found for updateSection!");
     }
 }
 
@@ -2273,16 +2235,62 @@ double YmlSceneManager::getTextDuration(QString line) {
 		//     <200: 0.0725            0.073
 }
 
-void YmlSceneManager::setShotScenes(QGraphicsScene* gDgScene) {
-	pDgScene = gDgScene;
-}
-
 /* ASSET EDITOR */
 void YmlSceneManager::removeActorAsset(int actorID) {
 	QString actorName = SG.getName(actorID);
 	SG.actors.remove(actorID);
 	SG.removeID(actorID);
     // TODO!
+}
+
+/*
+void YmlSceneManager::updateStoryboardSection(QString sectionName)
+{
+    if (root["storyboard"][sectionName]) {
+        YAML::Node sectionMap = root["storyboard"][sectionName];
+        sectionMap.reset();
+        upn(i, 0, dgLinkBySectionName[sectionName].shots.count() - 1) {
+            QString shotName = dgLinkBySectionName[sectionName].shots[i].shotName;
+            if (dgLinkBySectionName[sectionName].shots[shotNum].actions.count() > 0) {
+                sectionMap[shotName] = YAML::Node();
+                updateShot(sectionName, shotName);
+            }
+        }
+        shotSeq = newSeq;
+    } else {
+        error("ERROR: section [" + sectionName + "][" + shotName + "] not found for updateStoryboardSection!");
+    }
+}
+*/
+
+void YmlSceneManager::updateDialogscriptSection(QString sectionName)
+{
+    if (root["dialogscript"][sectionName]) {
+        YAML::Node sectionSeq = YAML::Node(YAML::NodeType::Sequence);
+
+        upn(i, 0, dgLinkBySectionName[sectionName].lines.count() - 1) {
+            dialogLink* pDialogLink = &dgLinkBySectionName[sectionName];
+            // handled as section link, shot cue is never defined directly (always called CHOICE_1)
+            if (pDialogLink->lines[i] == "CHOICE") {
+                break;
+            // PAUSE/actor cases
+           } else {
+                QString actorName = SG.getName(pDialogLink->speakers[i]);
+                // add CUE shot reference only if it is not empty
+                if (pDialogLink->shots[i].actions.count() > 0) {
+                    sectionSeq.push_back( singleMapNode("CUE", pDialogLink->shots[i].shotName) );
+                }
+                if (actorName == "PAUSE")
+                    sectionSeq.push_back( singleMapNode(actorName, pDialogLink->durations[i]) );
+                else
+                    sectionSeq.push_back( singleMapNode(actorName, pDialogLink->lines[i]) );
+            }
+        }
+        sectionSeq.push_back( lastCloned(root["dialogscript"][sectionName]) );
+        root["dialogscript"][sectionName] = sectionSeq;
+    } else {
+        error("ERROR: section [" + sectionName + "] not found for updateDialogscriptSection!");
+    }
 }
 
 YAML::Node YmlSceneManager::shotActionToNode(shotAction *sa)
@@ -2496,71 +2504,67 @@ YAML::Node YmlSceneManager::shotActionToNode(shotAction *sa)
 void YmlSceneManager::updateShot(QString sectionName, QString shotName)
 {
     int shotNum = dgLinkBySectionName[sectionName].shotNumByName(shotName);
-    if (root["storyboard"][sectionName][shotName]) {
-        YAML::Node shotSeq = root["storyboard"][sectionName][shotName];
-        YAML::Node newSeq;
-        upn(i, 0, dgLinkBySectionName[sectionName].shots[shotNum].actions.count() - 1) {
-            shotAction* sa = &dgLinkBySectionName[sectionName].shots[shotNum].actions[i];
-            newSeq.push_back( shotActionToNode(sa) );
+    updateShot(sectionName, shotNum);
+}
+
+void YmlSceneManager::updateShot(QString sectionName, int shotNum)
+{
+    QString shotName = dgLinkBySectionName[sectionName].shots[shotNum].shotName;
+    int actionsCount = dgLinkBySectionName[sectionName].shots[shotNum].actions.count();
+
+    // remove shot if no actions, remove sb section if no shots
+    if (actionsCount == 0 && root["storyboard"][sectionName][shotName]) {
+        root["storyboard"][sectionName].remove(shotName);
+        if (root["storyboard"][sectionName].size() == 0) {
+            root["storyboard"].remove(sectionName);
         }
-        shotSeq = newSeq;
-    } else {
-        error("ERROR: shot [" + sectionName + "][" + shotName + "] not found during updateShot!");
+        // update dg section to remove CUE for empty shots
+        updateDialogscriptSection(sectionName);
+    }
+
+    // create shot if actions are added
+    if (actionsCount > 0) {
+        // create sb section if shot is going to be added
+        if (!root["storyboard"][sectionName]) {
+            root["storyboard"][sectionName] = YAML::Node(YAML::NodeType::Map);
+        }
+        // create sb shot if actions are added
+        if (!root["storyboard"][sectionName][shotName]) {
+            root["storyboard"][sectionName][shotName] = YAML::Node(YAML::NodeType::Map);
+            // update dg section to add CUE for shot
+            updateDialogscriptSection(sectionName);
+        }
+        YAML::Node shotSeq(YAML::NodeType::Sequence);
+        shotSeq.SetStyle(YAML::EmitterStyle::Block);
+        upn(i, 0, actionsCount - 1) {
+            shotAction* sa = &dgLinkBySectionName[sectionName].shots[shotNum].actions[i];
+            shotSeq.push_back( shotActionToNode(sa) );
+        }
+        root["storyboard"][sectionName][shotName] = shotSeq;
     }
 }
 
 void YmlSceneManager::removeShot(QString sectionName, QString shotName)
 {
     int shotNum = dgLinkBySectionName[sectionName].shotNumByName(shotName);
+
+    // remove dialog info
     dgLinkBySectionName[sectionName].shots.removeAt(shotNum);
     dgLinkBySectionName[sectionName].durations.removeAt(shotNum);
     dgLinkBySectionName[sectionName].lines.removeAt(shotNum);
     dgLinkBySectionName[sectionName].speakers.removeAt(shotNum);
 
-    QSet<QString> cueKeys = { "CUE", "HINT", "REFERENCE" };
+    // remove shot from storyboard section
     if (root["storyboard"][sectionName][shotName]) {
         root["storyboard"][sectionName].remove(shotName);
-    } else {
-        error("ERROR: shot [" + sectionName + "][" + shotName + "] not found during removeShot!");
+        // remove section if empty
+        if (root["storyboard"][sectionName].size() == 0) {
+            root["storyboard"].remove(sectionName);
+        }
     }
 
-    // TODO - fully update dialogscript ?
-    if (root["dialogscript"][sectionName]) {
-        // - CUE: shot_4
-        int removeIdx = -1;
-        YAML::Node nodes = root["dialogscript"][sectionName];
-        qDebug() << "old size: " << nodes.size();
-
-        upn(i, 0, nodes.size() - 1) {
-            if (nodes[i].IsMap()) {
-                // CUE: shot_4
-                QString key = nodes[i].begin()->XKey.as<QString>();
-                if (cueKeys.contains( key.toUpper() )) {
-                    QString shotVal = nodes[i].begin()->YValue.as<QString>();
-                    if (shotVal == shotName) {
-                        removeIdx = i;
-                        break;
-                    }
-                }
-            }
-        }
-        qDebug() << "removeIdx: " << removeIdx;
-        if (removeIdx >= 0) {
-            nodes.remove(removeIdx);
-            if (nodes[removeIdx].IsMap()) {
-                // delete the following dialog/pause line
-                QString key = nodes[removeIdx].begin()->XKey.as<QString>();
-                if (key.toUpper() == "PAUSE" || dgActors.contains(key)) {
-                    qDebug() << "removeIdx 2: key = " << key;
-                    nodes.remove(removeIdx);
-                }
-            }
-        }
-        qDebug() << "new size: " << nodes.size();
-
-    } else {
-        error("ERROR: dialogscript section [" + sectionName + "] not found during removeShot!");
-    }
+    // update dg section to remove actor line and CUE
+    updateDialogscriptSection(sectionName);
 }
 
 template<typename HashContainer>
@@ -2577,3 +2581,18 @@ void YmlSceneManager::removeAssetsFromSG(HashContainer& container, bool clearRep
     }
 }
 
+
+template<typename T>
+YAML::Node YmlSceneManager::scalarNode(const T &value)
+{
+    YAML::Node node(YAML::NodeType::Scalar);
+    node = value;
+    return node;
+}
+template<typename T>
+YAML::Node YmlSceneManager::singleMapNode(const QString &key, const T &value)
+{
+    YAML::Node node(YAML::NodeType::Map);
+    node[key] = value;
+    return node;
+}

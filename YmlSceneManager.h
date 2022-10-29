@@ -19,23 +19,24 @@ private:
 
 	QVector<GraphicsSectionItem*> unusedItems;
 	QGraphicsScene* pScene = nullptr;
-    QGraphicsScene* pDgScene = nullptr; // TODO remove?
     QString filePath;
     QStringList sectionNames;
     YAML::Node root;
-	QMap<QString, sectionLink*> sectionGraph;
+    QHash<QString, sectionLink*> sectionGraph;
     QVector<QString> startSections;              // for init drawing
     QVector< QVector<QString> > sectionsByDepth; // for init drawing
-    QMap<QString, GraphicsSectionItem*> itemBySectionName;
+    QHash<QString, GraphicsSectionItem*> itemBySectionName;
     QSet<QString> wasDrawn;                      // for init drawing
 
 public:
 	/* scene general */
-    QVector<QString> getMapKeys(const YAML::Node& node);
-    QVector<YAML::Node> getMapSeqNodes(const YAML::Node& node);
-    QVector<QVariant> getSeqValues(const YAML::Node& node, const QStringList& types);
-    QVector<QVariant> getSeqValues(const YAML::Node& node, const QString& type);
-    QVariant getScalar(const YAML::Node& node, const QString& type);
+    QStringList nodeKeys(const YAML::Node& node);
+    YAML::Node firstCloned(const YAML::Node& node);
+    YAML::Node lastCloned(const YAML::Node& node);
+    template<typename T>
+    YAML::Node scalarNode(const T& value);
+    template<typename T>
+    YAML::Node singleMapNode(const QString& key, const T& value);
 
 	bool hasChanges = false;
 	bool hasShotChanges = false;
@@ -74,17 +75,18 @@ public:
     }
 
 	/* shot editor */
-    YAML::Node shotActionToNode(shotAction* sa);
+    void updateDialogscriptSection(QString sectionName);
     void updateShot(QString sectionName, QString shotName);
+    void updateShot(QString sectionName, int shotNum);
     void removeShot(QString sectionName, QString shotName);
     void addShot(QString sectionName, QString shotName);
-    QMap<QString, dialogLine> lineById;
-    QMap<QString, dialogLink> dgLinkBySectionName;
+    YAML::Node shotActionToNode(shotAction* sa);
+    QHash<QString, dialogLine> lineById;
+    QHash<QString, dialogLink> dgLinkBySectionName;
     QSet<QString> dgActors, dgProps;
 
 	QString getCleanLine(QString text);
 	double getTextDuration(QString text);
-    void setShotScenes(QGraphicsScene* gDgScene);
 
     /* global logs */
 	void error(QString s);

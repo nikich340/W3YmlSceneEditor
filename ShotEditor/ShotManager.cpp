@@ -5,7 +5,6 @@
 QLinearGradient ShotManager::createGradient(QColor startColor, QColor endColor, double W, double H)
 {
     QLinearGradient grad(0,0, W,H);
-    qDebug() << "QLinearGradient: " << grad.finalStop();
     grad.setCoordinateMode(QGradient::LogicalMode);
     grad.setColorAt(0, startColor);
     grad.setColorAt(1, endColor);

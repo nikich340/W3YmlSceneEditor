@@ -18,7 +18,6 @@ MainWindow::MainWindow(QWidget *parent)
     ui->gViewShotDialogs->setScene(gDialogsScene);
 
 	ymlManager = new YmlSceneManager(this, gScene);
-    ymlManager->setShotScenes(gDialogsScene);
 
 	ui->gView->setScene(gScene);
     ui->gView->setYmlManager(ymlManager);
