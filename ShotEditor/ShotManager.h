@@ -86,7 +86,7 @@ private:
 public:
     explicit ShotManager(YmlSceneManager* newYmlManager, QObject *parent = nullptr);
     void setWidgets(QGraphicsScene* newDialogScene, QScrollArea* newShotLabelArea, ShotScrollArea* newShotArea);
-    bool eventFilter(QObject *obj, QEvent *event) override;
+    //bool eventFilter(QObject *obj, QEvent *event) override;
 
     bool isAssetSpecificType(EShotActionType type);
 	void clearShotEditor();
@@ -121,19 +121,21 @@ public slots:
     void onRepaintHorizontalLinesForAssetID(int assetID);
     void onRepaintVerticalLines();
     void onRepaintVerticalLinesForAssetID(int assetID);
-    void onScaledView(double factor) {}
+    void onLineMove(QPointF scenePos);
 
     void onAssetLoad(int assetID);
     void onAssetChange(int assetID);
     void onAssetRemove(int assetID);
     void onAssetCollapse(bool isCollapsed);
 
+    void onSceneContextEvent(QGraphicsScene* pScene, QPoint screenPos);
     void onShotContextEvent(QPointF screenPos);
     void onShotLoad(int shotNum);
     void onShotLoad(QString shotName);
     void onShotRename(QString oldName, QString newName);
     void onShotRemove(QString shotName);
 
+    //void onMouseMove(QPointF pos);
     void onShotActionContextEvent(QPointF screenPos);
     void onShotActionLoad(int shotNum, int actionNum);
     //void onShotActionAdd(QString shotName, int assetID, EShotActionType type);

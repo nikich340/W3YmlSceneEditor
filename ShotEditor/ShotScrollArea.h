@@ -6,6 +6,7 @@
 #include <QScrollBar>
 #include <QWheelEvent>
 #include <QMouseEvent>
+#include <QGraphicsSceneMouseEvent>
 #include <QContextMenuEvent>
 #include <QGraphicsView>
 #include <QObject>
@@ -45,8 +46,8 @@ protected:
     void contextMenuEvent(QContextMenuEvent* event) override;
 
 signals:
-    //void wasScaled(double factor);
-    void addActionIntent(QPointF p);
+    void lineMoveEvent(QPointF scenePos);
+    void contextEvent(QGraphicsScene* scene, QPoint screenPos);
 public slots:
     void onUpdateHorizontalSlider();
 };

@@ -54,39 +54,46 @@ void ShotScrollArea::setChildViews(QScrollArea *newLabelArea, QGraphicsView *new
 
 bool ShotScrollArea::eventFilter(QObject *watched, QEvent *event)
 {
-    QWidget* gViewport = qobject_cast<QWidget*>(watched);
-    QMouseEvent* mouseEvent = static_cast<QMouseEvent*>(event);
-    if (gViewport != nullptr && mouseEvent != nullptr) {
-        if (event->type() == QEvent::MouseButtonPress && !m_inPress && mouseEvent->buttons() & Qt::MiddleButton) {
-            m_originX = mouseEvent->x();
-            m_originY = mouseEvent->y();
+    QGraphicsSceneMouseEvent* mouseEvent = static_cast<QGraphicsSceneMouseEvent*>(event);
+    QGraphicsScene* pScene = static_cast<QGraphicsScene*>(watched);
+    qDebug() << "EVENT: " << event->type();
+    if (pScene != nullptr && mouseEvent != nullptr) {
+        if (event->type() == QEvent::GraphicsSceneMousePress && !m_inPress && mouseEvent->buttons() & Qt::MiddleButton) {
+            m_originX = mouseEvent->screenPos().x();
+            m_originY = mouseEvent->screenPos().y();
             m_inPress = true;
             QApplication::setOverrideCursor(Qt::ClosedHandCursor);
             event->accept();
             return true;
-        } else if (event->type() == QEvent::MouseMove && m_inPress && mouseEvent->buttons() & Qt::MiddleButton) {
-            //qDebug() << "hor max: " << horizontalScrollBar()->maximum() << ", vert max: " << verticalScrollBar()->maximum();
-            int dx = mouseEvent->x() - m_originX;
-            int dy = mouseEvent->y() - m_originY;
-            int new_x = qMin(horizontalScrollBar()->maximum(), qMax(0, horizontalScrollBar()->value() - dx));
-            int new_y = qMin(verticalScrollBar()->maximum(), qMax(0, verticalScrollBar()->value() - dy));
+        } else if (event->type() == QEvent::GraphicsSceneMouseMove) {
+            emit lineMoveEvent(mouseEvent->scenePos());
 
-            horizontalScrollBar()->setValue( new_x );
-            verticalScrollBar()->setValue( new_y );
-            m_pDialogView->horizontalScrollBar()->setValue( new_x );
-            m_pLabelArea->verticalScrollBar()->setValue( new_y );
+            if (m_inPress && mouseEvent->buttons() & Qt::MiddleButton) {
+                //qDebug() << "hor max: " << horizontalScrollBar()->maximum() << ", vert max: " << verticalScrollBar()->maximum();
+                int dx = mouseEvent->screenPos().x() - m_originX;
+                int dy = mouseEvent->screenPos().y() - m_originY;
+                int new_x = qMin(horizontalScrollBar()->maximum(), qMax(0, horizontalScrollBar()->value() - dx));
+                int new_y = qMin(verticalScrollBar()->maximum(), qMax(0, verticalScrollBar()->value() - dy));
 
-            m_originX = mouseEvent->x();
-            m_originY = mouseEvent->y();
-            event->accept();
-            return true;
-        } else if (event->type() == QEvent::MouseButtonRelease) {
-            m_originX = mouseEvent->x();
-            m_originY = mouseEvent->y();
+                horizontalScrollBar()->setValue( new_x );
+                verticalScrollBar()->setValue( new_y );
+                m_pDialogView->horizontalScrollBar()->setValue( new_x );
+                m_pLabelArea->verticalScrollBar()->setValue( new_y );
+
+                m_originX = mouseEvent->screenPos().x();
+                m_originY = mouseEvent->screenPos().y();
+                event->accept();
+                return true;
+            }
+        } else if (event->type() == QEvent::GraphicsSceneMouseRelease) {
+            m_originX = mouseEvent->screenPos().x();
+            m_originY = mouseEvent->screenPos().y();
             m_inPress = false;
             QApplication::restoreOverrideCursor();
             event->accept();
             return true;
+        } else if (event->type() == QEvent::GraphicsSceneContextMenu) {
+            emit contextEvent(pScene, mouseEvent->screenPos());
         }
     }
     return false; // -> handled by children

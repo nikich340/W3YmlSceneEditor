@@ -37,6 +37,7 @@ HEADERS += \
     ShotEditor/ShotScrollArea.h \
     UI/CustomRectItem.h \
     UI/DialogChangeSection.h \
+    UI/InputDialogshot.h \
     UI/InputMimicPose.h \
     UI/InputPlacement.h \
     UI/InputPose.h \
@@ -107,6 +108,7 @@ HEADERS += \
 
 FORMS += \
     UI/DialogChangeSection.ui \
+    UI/InputDialogshot.ui \
     UI/InputMimicPose.ui \
     UI/InputPlacement.ui \
     UI/InputPose.ui \
@@ -129,6 +131,7 @@ SOURCES += \
     ShotEditor/ShotScrollArea.cpp \
     UI/CustomRectItem.cpp \
     UI/DialogChangeSection.cpp \
+    UI/InputDialogshot.cpp \
     UI/InputMimicPose.cpp \
     UI/InputPlacement.cpp \
     UI/InputPose.cpp \

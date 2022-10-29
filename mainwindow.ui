@@ -241,50 +241,6 @@
            <property name="spacing">
             <number>0</number>
            </property>
-           <item row="3" column="1">
-            <widget class="ShotScrollArea" name="gScrollShot">
-             <property name="lineWidth">
-              <number>0</number>
-             </property>
-             <property name="verticalScrollBarPolicy">
-              <enum>Qt::ScrollBarAlwaysOff</enum>
-             </property>
-             <property name="horizontalScrollBarPolicy">
-              <enum>Qt::ScrollBarAlwaysOn</enum>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
-             </property>
-             <widget class="QWidget" name="gScrollShotWidget">
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
-              </property>
-              <layout class="QVBoxLayout" name="verticalLayout_7">
-               <property name="spacing">
-                <number>0</number>
-               </property>
-               <property name="sizeConstraint">
-                <enum>QLayout::SetFixedSize</enum>
-               </property>
-               <property name="leftMargin">
-                <number>0</number>
-               </property>
-               <property name="topMargin">
-                <number>0</number>
-               </property>
-               <property name="rightMargin">
-                <number>0</number>
-               </property>
-               <property name="bottomMargin">
-                <number>0</number>
-               </property>
-              </layout>
-             </widget>
-            </widget>
-           </item>
            <item row="0" column="1">
             <widget class="QGraphicsView" name="gViewShotDialogs">
              <property name="sizePolicy">
@@ -310,7 +266,7 @@
              </property>
             </widget>
            </item>
-           <item row="2" column="0" rowspan="2">
+           <item row="1" column="0" rowspan="2">
             <widget class="QScrollArea" name="gScrollShotLabel">
              <property name="lineWidth">
               <number>0</number>
@@ -325,6 +281,14 @@
               <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
              </property>
              <widget class="QWidget" name="gScrollShotLabelWidget">
+              <property name="geometry">
+               <rect>
+                <x>0</x>
+                <y>0</y>
+                <width>0</width>
+                <height>0</height>
+               </rect>
+              </property>
               <property name="sizePolicy">
                <sizepolicy hsizetype="Fixed" vsizetype="Expanding">
                 <horstretch>0</horstretch>
@@ -332,6 +296,58 @@
                </sizepolicy>
               </property>
               <layout class="QVBoxLayout" name="verticalLayout_2">
+               <property name="spacing">
+                <number>0</number>
+               </property>
+               <property name="sizeConstraint">
+                <enum>QLayout::SetFixedSize</enum>
+               </property>
+               <property name="leftMargin">
+                <number>0</number>
+               </property>
+               <property name="topMargin">
+                <number>0</number>
+               </property>
+               <property name="rightMargin">
+                <number>0</number>
+               </property>
+               <property name="bottomMargin">
+                <number>0</number>
+               </property>
+              </layout>
+             </widget>
+            </widget>
+           </item>
+           <item row="2" column="1">
+            <widget class="ShotScrollArea" name="gScrollShot">
+             <property name="lineWidth">
+              <number>0</number>
+             </property>
+             <property name="verticalScrollBarPolicy">
+              <enum>Qt::ScrollBarAlwaysOff</enum>
+             </property>
+             <property name="horizontalScrollBarPolicy">
+              <enum>Qt::ScrollBarAlwaysOn</enum>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+             </property>
+             <widget class="QWidget" name="gScrollShotWidget">
+              <property name="geometry">
+               <rect>
+                <x>0</x>
+                <y>0</y>
+                <width>0</width>
+                <height>0</height>
+               </rect>
+              </property>
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <layout class="QVBoxLayout" name="verticalLayout_7">
                <property name="spacing">
                 <number>0</number>
                </property>

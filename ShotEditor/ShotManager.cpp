@@ -33,18 +33,6 @@ void ShotManager::setWidgets(QGraphicsScene *newDialogScene, QScrollArea *newSho
     //m_pShotSceneShared->installEventFilter(this);
 }
 
-bool ShotManager::eventFilter(QObject *obj, QEvent *event) {
-	//qDebug() << "event:" << event->type();
-    if (event->type() == QEvent::GraphicsSceneMouseMove) {
-		QGraphicsSceneMouseEvent* hoverEvent = static_cast<QGraphicsSceneMouseEvent*>(event);
-        upn(i, 0, m_pAssets.count() - 1) {
-            if (m_pAssets[i]->pNavigationLine != nullptr)
-            m_pAssets[i]->pNavigationLine->setPos( hoverEvent->scenePos().x(), 0 );
-        }
-	}
-    return false;
-}
-
 bool ShotManager::isAssetSpecificType(EShotActionType type)
 {
     return !NonAssetEShotActions.contains(type);
@@ -452,6 +440,15 @@ void ShotManager::onRepaintVerticalLinesForAssetID(int assetID)
     }
 }
 
+void ShotManager::onLineMove(QPointF scenePos)
+{
+    qDebug() << "onLineMove: " << scenePos;
+    upn(i, 0, m_pAssets.count() - 1) {
+        if (m_pAssets[i]->pNavigationLine != nullptr)
+            m_pAssets[i]->pNavigationLine->setPos( scenePos.x(), 0 );
+    }
+}
+
 void ShotManager::onShotLoad(QString shotName) {
     upn(i, 0, m_pDialogLink->shots.size() - 1) {
         if (m_pDialogLink->shots[i].shotName == shotName) {
@@ -587,24 +584,23 @@ void ShotManager::onShotActionRemove(CustomRectItem *rect, bool updateYML)
 void ShotManager::onAssetLoad(int assetID)
 {
     QGraphicsView* pNewView = new QGraphicsView(m_pShotWidget);
-
     pNewView->viewport()->setMouseTracking(true);
-    pNewView->viewport()->installEventFilter(m_pShotArea);
-
     pNewView->setTransformationAnchor(QGraphicsView::NoAnchor);
     pNewView->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     pNewView->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     pNewView->verticalScrollBar()->setEnabled(false);
     pNewView->horizontalScrollBar()->setEnabled(false);
     QGraphicsScene* pNewScene = new QGraphicsScene(pNewView);
+    pNewScene->installEventFilter(m_pShotArea);
 
     QGraphicsView* pNewViewLabel = new QGraphicsView(m_pShotLabelWidget);
-    //pNewViewLabel->installEventFilter(m_pShotArea);
+    //pNewView->viewport()->setMouseTracking(true);
     pNewViewLabel->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     pNewViewLabel->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     pNewViewLabel->verticalScrollBar()->setEnabled(false);
     pNewViewLabel->horizontalScrollBar()->setEnabled(false);
     QGraphicsScene* pNewSceneLabel = new QGraphicsScene(pNewViewLabel);
+    //pNewSceneLabel->installEventFilter(m_pShotArea);
 
     ShotAsset* newAsset = new ShotAsset(pNewView, pNewScene, pNewViewLabel, pNewSceneLabel, assetID);
     int asset_idx = m_pAssets.count();
@@ -670,6 +666,7 @@ void ShotManager::onAssetLoad(int assetID)
     m_pAssetByID[assetID] = newAsset;
     m_pAssetByScene[pNewScene] = newAsset;
 
+    newAsset->repaintNavigationLine();
     onRepaintVerticalLinesForAssetID(assetID);
     onRepaintHorizontalLinesForAssetID(assetID);
     qDebug() << "onAssetLoad [" << m_pAssets.count() << "]: " << assetID;
@@ -726,6 +723,11 @@ void ShotManager::onAssetCollapse(bool isCollapsed)
         m_pAssetByID[assetID]->pViewLabel->setFixedHeight(SHOT_LABEL_HEIGHT * (m_pAssetByID[assetID]->isProp ? m_groupsPropNumMax : m_groupsActorNumMax));
     }
     // TODO - redraw
+}
+
+void ShotManager::onSceneContextEvent(QGraphicsScene *pScene, QPoint screenPos)
+{
+
 }
 
 void ShotManager::onShotContextEvent(QPointF screenPos)
