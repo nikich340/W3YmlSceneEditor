@@ -30,8 +30,8 @@ private:
     double m_blendIn = -1.0, m_blendOut = -1.0; // duration
     shotAction* m_shotAction = nullptr;
     QHash<QString, QVariant> m_data;
-    QImage m_buttonImageEnabled = QImage();
-    QImage m_buttonImageDisabled = QImage();
+    QPixmap m_buttonImageEnabled = QPixmap();
+    QPixmap m_buttonImageDisabled = QPixmap();
     bool m_buttonState = false;
     QRectF m_bordersRect;
 
@@ -112,7 +112,7 @@ public:
         return m_bordersRect;
     }
     void setBordersRect(const QRectF &newBordersRect);
-    void setButtonImages(const QImage &newButtonImageEnabled, const QImage &newButtonImageDisabled);
+    void setButtonImages(const QPixmap &newButtonImageEnabled, const QPixmap &newButtonImageDisabled);
 
     QVariant data(const QString& key);
     void setData(const QString &newKey, const QVariant& newValue);

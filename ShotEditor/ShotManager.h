@@ -74,14 +74,13 @@ private:
     dialogLink* m_pDialogLink = nullptr;
     QString m_sectionName;
     int m_sectionType;
+    QPixmap m_pixShow, m_pixHide;
 
     QGraphicsScene* m_pDialogScene      = nullptr;
     QScrollArea* m_pShotLabelArea = nullptr;
     QWidget* m_pShotLabelWidget = nullptr;
     ShotScrollArea* m_pShotArea = nullptr;
     QWidget* m_pShotWidget = nullptr;
-
-
 
     // labels
     const int m_groupsActorNumMax = 7;

@@ -113,7 +113,7 @@ void CustomRectItem::setBordersRect(const QRectF &newBordersRect)
     m_bordersRect = newBordersRect;
 }
 
-void CustomRectItem::setButtonImages(const QImage &newButtonImageEnabled, const QImage &newButtonImageDisabled)
+void CustomRectItem::setButtonImages(const QPixmap &newButtonImageEnabled, const QPixmap &newButtonImageDisabled)
 {
     m_buttonImageEnabled = newButtonImageEnabled;
     m_buttonImageDisabled = newButtonImageDisabled;
@@ -154,9 +154,9 @@ void CustomRectItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *op
     painter->setRenderHint(QPainter::TextAntialiasing);
 
     if (!m_buttonState && !m_buttonImageEnabled.isNull())
-        painter->drawImage(3, 3, m_buttonImageEnabled);
+        painter->drawPixmap(3, 3, m_buttonImageEnabled);
     else if (m_buttonState && !m_buttonImageDisabled.isNull())
-        painter->drawImage(3, 3, m_buttonImageDisabled);
+        painter->drawPixmap(3, 3, m_buttonImageDisabled);
 
     if (m_duration > 0 && m_blendIn > 0) {
         double blendInBorderX = (m_blendIn / m_duration) * virtualRect.width();

@@ -28,9 +28,10 @@ void ShotManager::setWidgets(QGraphicsScene *newDialogScene, QScrollArea *newSho
     m_pShotLabelArea->setFixedWidth(SHOT_LABEL_WIDTH);
     m_pDialogScene->setSceneRect(0,0, SHOT_SCENE_WIDTH, SHOT_DG_HEIGHT);
     m_pDialogScene->views().first()->setFixedHeight(SHOT_DG_HEIGHT);
+
     /* one-time constant UI things - shared scene */
-    //m_pShotSceneShared->views()[0]->setMouseTracking(true);
-    //m_pShotSceneShared->installEventFilter(this);
+    m_pixShow = QPixmap(":/show.png").scaledToHeight(20, Qt::SmoothTransformation);
+    m_pixHide = QPixmap(":/hide.png").scaledToHeight(20, Qt::SmoothTransformation);
 }
 
 bool ShotManager::isAssetSpecificType(EShotActionType type)
@@ -549,9 +550,13 @@ void ShotManager::onShotLoad(int shotNum) {
     /* draw action blocks for shot in editor */
     upn(i, 0, m_pAssets.count() - 1) {
         m_pAssets[i]->actionRectsByShotName[shotName] = QSet<CustomRectItem*>();
+        m_pAssets[i]->pView->setViewportUpdateMode(QGraphicsView::NoViewportUpdate);
     }
     upn(j, 0, m_pDialogLink->shots[shotNum].actions.count() - 1) {
         onShotActionLoad(shotNum, j);
+    }
+    upn(i, 0, m_pAssets.count() - 1) {
+        m_pAssets[i]->pView->setViewportUpdateMode(QGraphicsView::MinimalViewportUpdate);
     }
 }
 
@@ -592,10 +597,10 @@ void ShotManager::onShotActionLoad(int shotNum, int actionNum) {
     m_pAssetByID[assetID]->actionRectsByShotName[shotName].insert(actionRect);
     connect(actionRect, SIGNAL(contextEvent(QPointF)), this, SLOT(onShotActionContextEvent(QPointF)));
 
-    m_pYmlManager->info(QString("Add shot: [%1] %2, assetID = %3")
+    /*m_pYmlManager->info(QString("Add shot: [%1] %2, assetID = %3")
                         .arg(sa->start, 0, 'f', 3 )
                         .arg( EShotActionToString[sa->actionType] )
-                        .arg(assetID));
+                        .arg(assetID));*/
 }
 
 void ShotManager::onShotActionAdd(int shotNum, int assetID, EShotActionType actionType, double shotPoint)
@@ -665,6 +670,11 @@ void ShotManager::onAssetLoad(int assetID)
     QGraphicsScene* pNewSceneLabel = new QGraphicsScene(pNewViewLabel);
     //pNewSceneLabel->installEventFilter(m_pShotArea);
 
+    pNewScene->setItemIndexMethod(QGraphicsScene::NoIndex);
+    pNewSceneLabel->setItemIndexMethod(QGraphicsScene::NoIndex);
+    pNewView->setViewportUpdateMode(QGraphicsView::NoViewportUpdate);
+    pNewViewLabel->setViewportUpdateMode(QGraphicsView::NoViewportUpdate);
+
     ShotAsset* newAsset = new ShotAsset(pNewView, pNewScene, pNewViewLabel, pNewSceneLabel, assetID);
     int asset_idx = m_pAssets.count();
     newAsset->isProp = m_pYmlManager->sceneGlobals()->props.contains(assetID);
@@ -717,7 +727,7 @@ void ShotManager::onAssetLoad(int assetID)
 
         /* show/hide button */
         if (assetID >= 0) {
-            labelRect->setButtonImages(QImage(":/hide.png").scaledToHeight(20, Qt::SmoothTransformation), QImage(":/show.png").scaledToHeight(20, Qt::SmoothTransformation));
+            labelRect->setButtonImages(m_pixHide, m_pixShow);
             connect(labelRect, SIGNAL(doubleClick(bool)), this, SLOT(onAssetCollapse(bool)));
         }
         pNewSceneLabel->addItem(labelRect);
@@ -732,6 +742,9 @@ void ShotManager::onAssetLoad(int assetID)
     newAsset->repaintNavigationLine();
     onRepaintVerticalLinesForAssetID(assetID);
     onRepaintHorizontalLinesForAssetID(assetID);
+
+    pNewView->setViewportUpdateMode(QGraphicsView::MinimalViewportUpdate);
+    pNewViewLabel->setViewportUpdateMode(QGraphicsView::MinimalViewportUpdate);
     qDebug() << "onAssetLoad [" << m_pAssets.count() << "]: " << assetID;
 }
 
