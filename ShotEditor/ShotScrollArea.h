@@ -9,9 +9,11 @@
 #include <QGraphicsSceneMouseEvent>
 #include <QContextMenuEvent>
 #include <QGraphicsView>
+#include "CustomRectItem.h"
 #include <QObject>
 #include <QWidget>
 #include <QVector>
+#include "constants.h"
 
 class ShotScrollArea : public QScrollArea
 {
@@ -43,11 +45,11 @@ protected:
 #if QT_CONFIG(wheelevent)
     void wheelEvent(QWheelEvent *event) override;
 #endif
-    void contextMenuEvent(QContextMenuEvent* event) override;
+    //void contextMenuEvent(QContextMenuEvent* event) override;
 
 signals:
     void lineMoveEvent(QPointF scenePos);
-    void contextEvent(QGraphicsScene* scene, QPoint screenPos);
+    void contextEvent(QGraphicsScene* pScene, QPoint screenPos, QPointF scenePos);
 public slots:
     void onUpdateHorizontalSlider();
 };

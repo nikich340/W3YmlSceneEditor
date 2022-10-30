@@ -45,8 +45,8 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ymlManager, SIGNAL(ymlFileLoaded(QString)), shotManager, SLOT(onClearEditor()));
     //connect(ui->gViewShotEditor, SIGNAL(wasScaled(double)), shotManager, SLOT(onScaledView(double)));
     //connect(ui->gViewShotEditor, SIGNAL(addActionIntent(QPointF p)), shotManager, SLOT(OnAddActionIntent(QPointF)));
-    connect(ui->gScrollShot, SIGNAL(lineMoveEvent(QPointF)), shotManager, SLOT(onLineMove(QPointF)));
-    connect(ui->gScrollShot, SIGNAL(contextEvent(QGraphicsScene*,QPoint)), shotManager, SLOT(onSceneContextEvent(QGraphicsScene*,QPoint)));
+    connect(ui->gScrollShot, SIGNAL(lineMoveEvent(QPointF)), shotManager, SLOT(onNavigationLineMove(QPointF)));
+    connect(ui->gScrollShot, SIGNAL(contextEvent(QGraphicsScene*,QPoint,QPointF)), shotManager, SLOT(onSceneContextEvent(QGraphicsScene*,QPoint,QPointF)));
     connect(ui->repoActorsButton, SIGNAL(clicked()), this, SLOT(onClicked_RepoActors()));
 
 	connect(ui->actionQuit, SIGNAL(triggered()), this, SLOT(onClicked_Quit()));

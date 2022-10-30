@@ -4,6 +4,7 @@
 
 #include <QHash>
 #include <QSet>
+#include <QVector>
 #include <QString>
 #include <QColor>
 
@@ -196,7 +197,27 @@ const QHash<EShotActionType, int> EShotActionToGroupNum = {
     { EShotPropPlacementKey,    1   },
     { EShotPropPlacementEnd,    1   }
 };
-const QSet<EShotActionType> NonAssetEShotActions = {
+const QVector<QVector<EShotActionType>> GroupNumToEShotActionShared = {
+    { /* 0 */ EShotCam, EShotCamBlendStart, EShotCamBlendKey, EShotCamBlendEnd, EShotCamBlendTogame },
+    { /* 1 */ EShotEnvBlendIn, EShotEnvBlendOut, EShotFadeIn, EShotFadeOut, EShotWorldAddfact, EShotWorldWeather, EShotWorldEffectStart, EShotWorldEffectStop }
+};
+const QVector<QVector<EShotActionType>> GroupNumToEShotActionActor = {
+    { /* 0 */ EShotActorShow, EShotActorHide, EShotActorAppearance, EShotActorEquipRight,
+      EShotActorEquipLeft, EShotActorUnequipRight, EShotActorUnequipLeft, EShotActorGamestate,
+      EShotActorScabbardShow, EShotActorScabbardHide },
+    { /* 1 */ EShotActorAnim },
+    { /* 2 */ EShotActorAnimAdditive, EShotActorAnimPose },
+    { /* 3 */ EShotActorMimicAnim, EShotActorMimicPose },
+    { /* 4 */ EShotActorLookat, EShotActorMimicPose },
+    { /* 5 */ EShotActorPlacement, EShotActorPlacementStart, EShotActorPlacementKey, EShotActorPlacementEnd },
+    { /* 6 */ EShotActorEffectStart, EShotActorEffectStop, EShotActorSound },
+};
+const QVector<QVector<EShotActionType>> GroupNumToEShotActionProp = {
+    { /* 0 */ EShotPropShow, EShotPropHide },
+    { /* 1 */ EShotPropPlacement, EShotPropPlacementStart, EShotPropPlacementKey, EShotPropPlacementEnd },
+    { /* 2 */ EShotPropEffectStart, EShotPropEffectStop }
+};
+const QSet<EShotActionType> EShotActionsShared = {
     EShotCam,
     EShotCamBlendStart,
     EShotCamBlendKey,

@@ -20,7 +20,8 @@ private:
 	QVector<GraphicsSectionItem*> unusedItems;
 	QGraphicsScene* pScene = nullptr;
     QString filePath;
-    QStringList sectionNames;
+    QStringList m_sectionNames;
+
     YAML::Node root;
     QHash<QString, sectionLink*> sectionGraph;
     QVector<QString> startSections;              // for init drawing
@@ -79,10 +80,10 @@ public:
     void updateShot(QString sectionName, QString shotName);
     void updateShot(QString sectionName, int shotNum);
     void removeShot(QString sectionName, QString shotName);
-    void addShot(QString sectionName, QString shotName);
+    void addShot(QString sectionName, int shotNum);
     YAML::Node shotActionToNode(shotAction* sa);
     QHash<QString, dialogLine> lineById;
-    QHash<QString, dialogLink> dgLinkBySectionName;
+    QHash<QString, dialogLink> m_dialogLinkBySectionName;
     QSet<QString> dgActors, dgProps;
 
 	QString getCleanLine(QString text);

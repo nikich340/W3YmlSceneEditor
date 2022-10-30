@@ -205,7 +205,7 @@ void YmlSceneManager::clearData(bool clearRepo) {
 	unusedItems.clear();
 
 	// clear old (dialogscript + storyboard shots)
-	dgLinkBySectionName.clear();
+    m_dialogLinkBySectionName.clear();
 	dgActors.clear();
 	dgProps.clear();
 
@@ -315,7 +315,7 @@ bool YmlSceneManager::saveYmlFile() {
         return false;
     ymlFile.close();
 
-	if ( sectionNames.empty() ) {
+    if ( m_sectionNames.empty() ) {
 		QMessageBox msgBox;
 		msgBox.setText("Save is not allowed: no sections found!");
 		msgBox.setInformativeText("Scene should contain at least start and exit sections.");
@@ -325,7 +325,7 @@ bool YmlSceneManager::saveYmlFile() {
 
 		return false;
 	}
-	for (auto name : sectionNames) {
+    for (auto name : m_sectionNames) {
 		if ( itemBySectionName[name]->state == GraphicsSectionItem::incomplete ) {
 			QMessageBox msgBox;
 			msgBox.setText("Save is not allowed: section [" + name + "] is incomplete!");
@@ -519,7 +519,7 @@ bool YmlSceneManager::loadSectionsInfo() {
                 }
 
                 // all is fine, add to graph
-                sectionNames.append(sectionName);
+                m_sectionNames.append(sectionName);
                 sectionGraph.insert(sectionName, tmpLink);
 				qd << "ADD: " << sectionName;
 			} else if ( sectionName == "actors" ) {
@@ -1085,7 +1085,7 @@ bool YmlSceneManager::loadSceneRepository() {
                 qw << ("loadSceneRepository()>: mimic anim " + mapName + " already exist! Overwriting.");
 				//continue;
 			}
-			int nameID = SG.getID(SMIMICANIMS, mapName);
+            int nameID = SG.getID(SMIMICANIMS, mapName);
 
             if ( !it->YValue["animation"] || !it->YValue["frames"] ) {
 				warning("loadSceneRepository()>: Can't find animation/frames for mimic anim: " + mapName);
@@ -1705,7 +1705,7 @@ bool YmlSceneManager::loadShotsInfo() {
 	nextKeys = { "NEXT", "SCRIPT", "RANDOM", "EXIT", "OUTPUT", "BLACKSCREEN", "CAMERA_BLEND" };
 	cueKeys = { "CUE", "HINT", "REFERENCE" };
 
-	for (auto sectionName : sectionNames) {
+    for (auto sectionName : m_sectionNames) {
 		if (!root["dialogscript"][sectionName])	{
 			qDebug() << "Exception0: no dialogscript found for section [" << sectionName << "]";
 			continue;
@@ -1714,7 +1714,6 @@ bool YmlSceneManager::loadShotsInfo() {
 		YAML::Node sNode = root["dialogscript"][sectionName];
 
 		dialogLink newDgLink;
-		QSet<QString> usedShotNames;
 		QString prevShotName = QString();
 		qInfo() << "--- Loading dialog for section [" << sectionName << "]";
 
@@ -1763,13 +1762,13 @@ bool YmlSceneManager::loadShotsInfo() {
 				if ( prevShotName.isEmpty() ) {
 					prevShotName = key.toUpper() + "_";
 					int idx = 1;
-					while ( usedShotNames.contains( prevShotName + qn(idx) ) ) {
+                    while ( newDgLink.shotNames.contains( prevShotName + qn(idx) ) ) {
 						++idx;
 					}
 					prevShotName += qn(idx);
 				}
 				newShot.shotName = prevShotName;
-				usedShotNames.insert(prevShotName);
+                newDgLink.shotNames.insert(prevShotName);
 				newDgLink.shots.pb( newShot );
 
 				prevShotName = QString();
@@ -1794,13 +1793,13 @@ bool YmlSceneManager::loadShotsInfo() {
 				if ( prevShotName.isEmpty() ) {
 					prevShotName = key;
 					int idx = 1;
-					while ( usedShotNames.contains( prevShotName + qn(idx) ) ) {
+                    while ( newDgLink.shotNames.contains( prevShotName + qn(idx) ) ) {
 						++idx;
 					}
 					prevShotName += qn(idx);
 				}
 				newShot.shotName = prevShotName;
-				usedShotNames.insert(prevShotName);
+                newDgLink.shotNames.insert(prevShotName);
 				newDgLink.shots.pb( newShot );
 
 				prevShotName = QString();
@@ -1816,7 +1815,7 @@ bool YmlSceneManager::loadShotsInfo() {
 					 << newDgLink.shots[i].shotName << "], duration: [" << newDgLink.durations[i] << "]";
 		}*/
 		newDgLink.calculateTotalDuration();
-		dgLinkBySectionName[sectionName]= newDgLink;
+        m_dialogLinkBySectionName[sectionName]= newDgLink;
 	}
 
 	if (root["storyboard"]) {
@@ -1828,7 +1827,7 @@ bool YmlSceneManager::loadShotsInfo() {
 				qCritical() << "loadShotsInfo()>: Exception4: sbui section not a map!";
 				continue;
 			}
-			if ( !sectionNames.contains(sectionName) ) {
+            if ( !m_sectionNames.contains(sectionName) ) {
 				qInfo() << "loadShotsInfo()>: Skipping " + sectionName + ": not a real section (defaults?)";
 				continue;
 			}
@@ -1841,13 +1840,13 @@ bool YmlSceneManager::loadShotsInfo() {
 					qCritical() << "loadShotsInfo()>: Exception5: shot actions are not a list!";
 					continue;
 				}
-                int shotIdx = dgLinkBySectionName[sectionName].shotNumByName(shotName);
+                int shotIdx = m_dialogLinkBySectionName[sectionName].shotNumByName(shotName);
 				if (shotIdx == -1) {
 					qCritical() << "loadShotsInfo()>: Exception6: shot was not found in dialogscript!";
 					continue;
 				}
 
-                if ( !loadShotActions(jt->YValue, dgLinkBySectionName[sectionName].shots[shotIdx]) ) {
+                if ( !loadShotActions(jt->YValue, m_dialogLinkBySectionName[sectionName].shots[shotIdx]) ) {
 					error("loadShotsInfo()>: error loading shot: " + shotName + " (section " + sectionName + ")");
 					return false;
 				}
@@ -1981,11 +1980,11 @@ bool YmlSceneManager::dfsDrawGraph(QString sectionName) {
 void YmlSceneManager::addSectionLink(QPointF pos) {
 	QString sectionName = "section_new_";
 	int j = 1;
-	while ( sectionNames.contains(sectionName + qn(j)) ) {
+    while ( m_sectionNames.contains(sectionName + qn(j)) ) {
 		++j;
 	}
 	sectionName = sectionName + qn(j);
-	sectionNames.append(sectionName);
+    m_sectionNames.append(sectionName);
 	sectionLink* tmpLink = new sectionLink;
 	tmpLink->type = nextS;
 	tmpLink->sectionName = sectionName;
@@ -2016,8 +2015,8 @@ void YmlSceneManager::renameSectionLink(QString sectionName, QString oldName) {
 		sectionGraph[sectionName] = link;
 		itemBySectionName.remove(oldName);
 		itemBySectionName[sectionName] = item;
-		sectionNames.removeAll(oldName);
-		sectionNames << sectionName;
+        m_sectionNames.removeAll(oldName);
+        m_sectionNames << sectionName;
 
 		YAML::Node tempNode = root["dialogscript"];
 		for (auto it = tempNode.begin(); it != tempNode.end(); ++it) {
@@ -2127,7 +2126,7 @@ void YmlSceneManager::updateSectionLink(QString sectionName) {
 void YmlSceneManager::deleteSection(QString sectionName) {
     delete sectionGraph[sectionName];
     sectionGraph.remove( sectionName );
-	sectionNames.removeAll( sectionName );
+    m_sectionNames.removeAll( sectionName );
 
 	GraphicsSectionItem* pItem = itemBySectionName[sectionName];
 	pScene->removeItem( pItem );
@@ -2158,7 +2157,7 @@ GraphicsSectionItem* YmlSceneManager::getSectionItem(QString sectionName) {
 }
 
 QStringList YmlSceneManager::getSectionNames() {
-    return sectionNames;
+    return m_sectionNames;
 }
 
 QString YmlSceneManager::getCleanLine(QString text) {
@@ -2268,8 +2267,8 @@ void YmlSceneManager::updateDialogscriptSection(QString sectionName)
     if (root["dialogscript"][sectionName]) {
         YAML::Node sectionSeq = YAML::Node(YAML::NodeType::Sequence);
 
-        upn(i, 0, dgLinkBySectionName[sectionName].lines.count() - 1) {
-            dialogLink* pDialogLink = &dgLinkBySectionName[sectionName];
+        upn(i, 0, m_dialogLinkBySectionName[sectionName].lines.count() - 1) {
+            dialogLink* pDialogLink = &m_dialogLinkBySectionName[sectionName];
             // handled as section link, shot cue is never defined directly (always called CHOICE_1)
             if (pDialogLink->lines[i] == "CHOICE") {
                 break;
@@ -2503,14 +2502,14 @@ YAML::Node YmlSceneManager::shotActionToNode(shotAction *sa)
 
 void YmlSceneManager::updateShot(QString sectionName, QString shotName)
 {
-    int shotNum = dgLinkBySectionName[sectionName].shotNumByName(shotName);
+    int shotNum = m_dialogLinkBySectionName[sectionName].shotNumByName(shotName);
     updateShot(sectionName, shotNum);
 }
 
 void YmlSceneManager::updateShot(QString sectionName, int shotNum)
 {
-    QString shotName = dgLinkBySectionName[sectionName].shots[shotNum].shotName;
-    int actionsCount = dgLinkBySectionName[sectionName].shots[shotNum].actions.count();
+    QString shotName = m_dialogLinkBySectionName[sectionName].shots[shotNum].shotName;
+    int actionsCount = m_dialogLinkBySectionName[sectionName].shots[shotNum].actions.count();
 
     // remove shot if no actions, remove sb section if no shots
     if (actionsCount == 0 && root["storyboard"][sectionName][shotName]) {
@@ -2537,7 +2536,7 @@ void YmlSceneManager::updateShot(QString sectionName, int shotNum)
         YAML::Node shotSeq(YAML::NodeType::Sequence);
         shotSeq.SetStyle(YAML::EmitterStyle::Block);
         upn(i, 0, actionsCount - 1) {
-            shotAction* sa = &dgLinkBySectionName[sectionName].shots[shotNum].actions[i];
+            shotAction* sa = &m_dialogLinkBySectionName[sectionName].shots[shotNum].actions[i];
             shotSeq.push_back( shotActionToNode(sa) );
         }
         root["storyboard"][sectionName][shotName] = shotSeq;
@@ -2546,13 +2545,13 @@ void YmlSceneManager::updateShot(QString sectionName, int shotNum)
 
 void YmlSceneManager::removeShot(QString sectionName, QString shotName)
 {
-    int shotNum = dgLinkBySectionName[sectionName].shotNumByName(shotName);
+    int shotNum = m_dialogLinkBySectionName[sectionName].shotNumByName(shotName);
 
     // remove dialog info
-    dgLinkBySectionName[sectionName].shots.removeAt(shotNum);
-    dgLinkBySectionName[sectionName].durations.removeAt(shotNum);
-    dgLinkBySectionName[sectionName].lines.removeAt(shotNum);
-    dgLinkBySectionName[sectionName].speakers.removeAt(shotNum);
+    m_dialogLinkBySectionName[sectionName].shots.removeAt(shotNum);
+    m_dialogLinkBySectionName[sectionName].durations.removeAt(shotNum);
+    m_dialogLinkBySectionName[sectionName].lines.removeAt(shotNum);
+    m_dialogLinkBySectionName[sectionName].speakers.removeAt(shotNum);
 
     // remove shot from storyboard section
     if (root["storyboard"][sectionName][shotName]) {
@@ -2567,9 +2566,27 @@ void YmlSceneManager::removeShot(QString sectionName, QString shotName)
     updateDialogscriptSection(sectionName);
 }
 
-void YmlSceneManager::addShot(QString sectionName, QString shotName)
+void YmlSceneManager::addShot(QString sectionName, int shotNum)
 {
+    dialogLink* pDialogLink = &m_dialogLinkBySectionName[sectionName];
 
+    info( QString("onShotAdd: in %1, at [%2]").arg(sectionName).arg(shotNum) );
+    int shotNameNumber = 0;
+    while (pDialogLink->shotNames.contains("shot_" + qn(shotNameNumber) )) {
+        ++shotNameNumber;
+    }
+    QString shotName = "shot_" + qn(shotNameNumber);
+
+    pDialogLink->shotNames.insert( shotName );
+
+    pDialogLink->durations.insert( shotNum, 5.0 );
+    pDialogLink->lines.insert( shotNum, "PAUSE" );
+    pDialogLink->speakers.insert( shotNum, sceneGlobals()->getID(SASSETS, "PAUSE") );
+    pDialogLink->shots.insert( shotNum, shot(shotName) );
+    pDialogLink->calculateTotalDuration();
+
+    updateShot(sectionName, shotName);
+    updateDialogscriptSection(sectionName);
 }
 
 template<typename HashContainer>

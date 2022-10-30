@@ -2,6 +2,7 @@
 #ifndef YMLSTRUCTS_H
 #define YMLSTRUCTS_H
 
+#include <algorithm>
 #include <QVector>
 #include <QDebug>
 #include <QString>
@@ -278,7 +279,7 @@ struct dialogLine {
 
 struct shotAction {
     EShotActionType actionType;
-    double start, globalStart; // TODO!
+    double start;
     QHash<QString, QVariant> values;
     shotAction(EShotActionType _actionType = EShotUnknown, double _start = -1.0) {
         actionType = _actionType;
@@ -289,9 +290,21 @@ struct shotAction {
 struct shot {
     QVector<shotAction> actions;
 	QString shotName;
+    shot(QString _shotName = QString()) {
+        shotName = _shotName;
+    }
+    void sortActionsByStart() {
+        std::sort(actions.begin(), actions.end(),
+            [](const shotAction& a, const shotAction& b) -> bool
+            {
+                return a.start < b.start;  // asending
+            }
+        );
+    }
 };
 
 struct dialogLink {
+    QSet< QString > shotNames;
 	QVector< shot > shots;
 	QVector< int > speakers;
 	QVector< QString > lines;
@@ -305,9 +318,9 @@ struct dialogLink {
 			totalDuration += d;
 		}
 	}
-    double getStartTimeForLine(int lineNum) {
+    double getStartTimeForShot(int shotNum) {
         double ret = 0.0;
-        upn(i, 0, lineNum - 1) {
+        upn(i, 0, shotNum - 1) {
             ret += durations[i];
         }
         return ret;

@@ -54,54 +54,65 @@ void ShotScrollArea::setChildViews(QScrollArea *newLabelArea, QGraphicsView *new
 
 bool ShotScrollArea::eventFilter(QObject *watched, QEvent *event)
 {
-    QGraphicsSceneMouseEvent* mouseEvent = static_cast<QGraphicsSceneMouseEvent*>(event);
     QGraphicsScene* pScene = static_cast<QGraphicsScene*>(watched);
-    qDebug() << "EVENT: " << event->type();
-    if (pScene != nullptr && mouseEvent != nullptr) {
-        if (event->type() == QEvent::GraphicsSceneMousePress && !m_inPress && mouseEvent->buttons() & Qt::MiddleButton) {
-            m_originX = mouseEvent->screenPos().x();
-            m_originY = mouseEvent->screenPos().y();
-            m_inPress = true;
-            QApplication::setOverrideCursor(Qt::ClosedHandCursor);
-            event->accept();
-            return true;
-        } else if (event->type() == QEvent::GraphicsSceneMouseMove) {
-            emit lineMoveEvent(mouseEvent->scenePos());
+    if (pScene != nullptr) {
+        //qDebug() << "EVENT: " << event->type();
+        QGraphicsSceneMouseEvent* pMouseEvent = static_cast<QGraphicsSceneMouseEvent*>(event);
+        QGraphicsSceneContextMenuEvent* pContextEvent = static_cast<QGraphicsSceneContextMenuEvent*>(event);
+        switch (event->type()) {
+            case QEvent::GraphicsSceneMousePress:
+                if (!m_inPress && pMouseEvent->buttons() & Qt::MiddleButton) {
+                    m_originX = pMouseEvent->screenPos().x();
+                    m_originY = pMouseEvent->screenPos().y();
+                    m_inPress = true;
+                    QApplication::setOverrideCursor(Qt::ClosedHandCursor);
+                    event->accept();
+                    return true;
+                }
+                break;
+            case QEvent::GraphicsSceneMouseMove:
+                emit lineMoveEvent(pMouseEvent->scenePos());
+                if (m_inPress && pMouseEvent->buttons() & Qt::MiddleButton) {
+                    int dx = pMouseEvent->screenPos().x() - m_originX;
+                    int dy = pMouseEvent->screenPos().y() - m_originY;
+                    int new_x = qMin(horizontalScrollBar()->maximum(), qMax(0, horizontalScrollBar()->value() - dx));
+                    int new_y = qMin(verticalScrollBar()->maximum(), qMax(0, verticalScrollBar()->value() - dy));
 
-            if (m_inPress && mouseEvent->buttons() & Qt::MiddleButton) {
-                //qDebug() << "hor max: " << horizontalScrollBar()->maximum() << ", vert max: " << verticalScrollBar()->maximum();
-                int dx = mouseEvent->screenPos().x() - m_originX;
-                int dy = mouseEvent->screenPos().y() - m_originY;
-                int new_x = qMin(horizontalScrollBar()->maximum(), qMax(0, horizontalScrollBar()->value() - dx));
-                int new_y = qMin(verticalScrollBar()->maximum(), qMax(0, verticalScrollBar()->value() - dy));
+                    horizontalScrollBar()->setValue( new_x );
+                    verticalScrollBar()->setValue( new_y );
+                    m_pDialogView->horizontalScrollBar()->setValue( new_x );
+                    m_pLabelArea->verticalScrollBar()->setValue( new_y );
 
-                horizontalScrollBar()->setValue( new_x );
-                verticalScrollBar()->setValue( new_y );
-                m_pDialogView->horizontalScrollBar()->setValue( new_x );
-                m_pLabelArea->verticalScrollBar()->setValue( new_y );
-
-                m_originX = mouseEvent->screenPos().x();
-                m_originY = mouseEvent->screenPos().y();
+                    m_originX = pMouseEvent->screenPos().x();
+                    m_originY = pMouseEvent->screenPos().y();
+                    event->accept();
+                    return true;
+                }
+                break;
+            case QEvent::GraphicsSceneMouseRelease:
+                m_originX = pMouseEvent->screenPos().x();
+                m_originY = pMouseEvent->screenPos().y();
+                m_inPress = false;
+                QApplication::restoreOverrideCursor();
                 event->accept();
                 return true;
-            }
-        } else if (event->type() == QEvent::GraphicsSceneMouseRelease) {
-            m_originX = mouseEvent->screenPos().x();
-            m_originY = mouseEvent->screenPos().y();
-            m_inPress = false;
-            QApplication::restoreOverrideCursor();
-            event->accept();
-            return true;
-        } else if (event->type() == QEvent::GraphicsSceneContextMenu) {
-            emit contextEvent(pScene, mouseEvent->screenPos());
+                break;
+            case QEvent::GraphicsSceneContextMenu:
+                if (pScene->views().first() != nullptr) {
+                    QGraphicsItem* pItem = pScene->itemAt( pContextEvent->scenePos(), pScene->views().first()->transform() );
+                    qDebug() << "pItem: " << pItem;
+                    if (pItem != nullptr && !pItem->data(IsNavigationLine).toBool()) {
+                        return false;
+                    }
+                }
+                emit contextEvent(pScene, pContextEvent->screenPos(), pContextEvent->scenePos());
+                event->accept();
+                return true;
+            default:
+                return false;
         }
     }
-    return false; // -> handled by children
-}
-
-void ShotScrollArea::contextMenuEvent(QContextMenuEvent *event)
-{
-    qDebug() << "contextMenuEvent!";
+    return false;
 }
 
 #if QT_CONFIG(wheelevent)

@@ -5,6 +5,7 @@
 #include <QColor>
 #define QSvg QColorConstants::Svg
 
+static const int IsNavigationLine = 0;
 const static QColor colorSceneGradient0(235, 235, 224), colorSceneGradient1(195, 195, 162);
 const static QColor colorSceneGradient00(235, 235, 224), colorSceneGradient11(195, 20, 162);
 const static QColor colorSectionNormal(240, 255, 112), colorSectionIncomplete(255, 122, 122);
@@ -40,7 +41,7 @@ const static QString SREPO_TEMP = "_repo_temp_";
 const static QString SCAMERAS = "cameras";
 const static QString SASSETS = "assets"; // for unification: actors + props
 const static QString SANIMS = "animations";
-const static QString SMIMICANIMS = "animations.mimic";
+const static QString SMIMICANIMS = "animations"; // for unification: anim + anim.mimic
 const static QString SANIMPOSES = "actor.poses";
 const static QString SMIMICPOSES = "mimics";
 const static QString SSOUNDBANKS = "soundbanks";

@@ -35,7 +35,7 @@ void ShotManager::setWidgets(QGraphicsScene *newDialogScene, QScrollArea *newSho
 
 bool ShotManager::isAssetSpecificType(EShotActionType type)
 {
-    return !NonAssetEShotActions.contains(type);
+    return !EShotActionsShared.contains(type);
 }
 
 void ShotManager::updateDialogCueText(QString shotname) {
@@ -126,6 +126,10 @@ QColor ShotManager::getBlockColorForActionType(EShotActionType type)
     }
 }
 
+/**
+ * @brief ShotManager::updateHorizontalAdvance
+ * No way
+ */
 void ShotManager::updateHorizontalAdvance()
 {
     // dialogs
@@ -145,27 +149,25 @@ void ShotManager::updateHorizontalAdvance()
 
 void ShotManager::onClearEditor()
 {
+    /* dialog scene */
     m_pShotArea->clearAllShotViews();
     m_pShotArea->resetScaleFactor();
     m_pDialogScene->views().first()->resetTransform();
-
     m_pDialogScene->clear();
+
     m_dialogCueRectByShotname.clear();
-    m_blocksByShotName.clear();
     m_pDialogSecondNumbers.clear();
 
+    /* assets labels scene & actions scene */
     upn(i, 0, m_pAssets.count() - 1) {
         m_pShotLabelWidget->layout()->removeWidget(m_pAssets[i]->pViewLabel);
-        m_pAssets[i]->pViewLabel->deleteLater();
-        m_pAssets[i]->pSceneLabel->deleteLater();
         m_pShotWidget->layout()->removeWidget(m_pAssets[i]->pView);
-        m_pAssets[i]->pView->deleteLater();
-        m_pAssets[i]->pScene->deleteLater();
+        m_pAssets[i]->clearAll();
         delete m_pAssets[i];
     }
     m_pAssets.clear();
     m_pAssetByID.clear();
-    m_pAssetByScene.clear();
+    m_assetIDByScene.clear();
 }
 
 double ShotManager::getMinYForAction(shotAction *action)
@@ -292,16 +294,45 @@ double ShotManager::getDurationForAction(shotAction* sa) {
     return duration;
 }
 
+int ShotManager::X_TO_ShotNum(double x)
+{
+    double sec = 0.0;
+    upn(i, 0, m_pDialogLink->durations.count() - 1) {
+        double beginX = SEC_TO_X(sec);
+        sec += m_pDialogLink->durations[i];
+        double endX = SEC_TO_X(sec);
+        if (x >= beginX && x < endX) {  // < endX to avoid 1.0]
+            return i;
+        }
+    }
+    return -1;  // -1 = out of shots range
+}
+
+double ShotManager::X_TO_ShotPoint(double x)
+{
+    double sec = 0.0;
+    upn(i, 0, m_pDialogLink->durations.count() - 1) {
+        double beginX = SEC_TO_X(sec);
+        sec += m_pDialogLink->durations[i];
+        double endX = SEC_TO_X(sec);
+        if (x >= beginX && x < endX) {  // < endX to avoid 1.0]
+            return (x - beginX) / (endX - beginX);
+        }
+    }
+    return -1.0;  // -1 = out of shots range
+}
+
 void ShotManager::onLoadSectionShots(QString sectionName) {
     QElapsedTimer timer;
     timer.start();
+
     onClearEditor();
     m_pShotArea->setEnabled(true);
     m_pShotLabelArea->setEnabled(true);
     m_pDialogScene->views().first()->setEnabled(true);
     m_sectionName = sectionName;
 
-    m_pDialogLink = &(m_pYmlManager->dgLinkBySectionName[sectionName]);
+    m_pDialogLink = &(m_pYmlManager->m_dialogLinkBySectionName[sectionName]);
 
     m_pDialogScene->setSceneRect(0,0, sceneWidth(), SHOT_DG_HEIGHT);
     // DONT USE m_pDialogScene->views().first()->setFixedWidth(sceneWidth() * m_pShotArea->scaleFactor());
@@ -384,6 +415,7 @@ void ShotManager::onRepaintHorizontalLines()
 
 void ShotManager::onRepaintHorizontalLinesForAssetID(int assetID)
 {
+    ShotAsset* pAsset = m_pAssetByID[assetID];
     int groupNum = 2;
     if (assetID == -1) {
         groupNum = 2;
@@ -395,9 +427,17 @@ void ShotManager::onRepaintHorizontalLinesForAssetID(int assetID)
 
     QPen mediumPen(QSvg::darkolivegreen, 1.0, Qt::DashLine, Qt::FlatCap, Qt::BevelJoin);
     mediumPen.setCosmetic(true);
+    upn(i, 0, pAsset->pHorizontalLines.count() - 1) {
+        QGraphicsLineItem* pLine = pAsset->pHorizontalLines[i];
+        if (pLine->scene() != nullptr)
+            pLine->scene()->removeItem( pLine );
+        delete pLine;
+    }
+    pAsset->pHorizontalLines.clear();
+
     upn(i, 1, groupNum - 1) {
-        QGraphicsLineItem* horizontalDash = m_pAssetByID[assetID]->pScene->addLine(0, SHOT_LABEL_HEIGHT * i, sceneWidth(), SHOT_LABEL_HEIGHT * i, mediumPen);
-        m_pAssetByID[assetID]->pHorizontalLines.append( horizontalDash );
+        QGraphicsLineItem* horizontalDash = pAsset->pScene->addLine(0, SHOT_LABEL_HEIGHT * i, sceneWidth(), SHOT_LABEL_HEIGHT * i, mediumPen);
+        pAsset->pHorizontalLines.append( horizontalDash );
     }
 }
 
@@ -414,6 +454,15 @@ void ShotManager::onRepaintVerticalLinesForAssetID(int assetID)
     upn(j, 0, pAsset->pVerticalLines.count() - 1) {
             pAsset->pScene->removeItem(pAsset->pVerticalLines[j]);
             delete pAsset->pVerticalLines[j];
+    }
+    pAsset->pVerticalLines.clear();
+
+    /* Remove old vertical lines */
+    upn(i, 0, pAsset->pVerticalLines.count() - 1) {
+        QGraphicsLineItem* pLine = pAsset->pVerticalLines[i];
+        if (pLine->scene() != nullptr)
+            pLine->scene()->removeItem( pLine );
+        delete pLine;
     }
     pAsset->pVerticalLines.clear();
 
@@ -440,9 +489,8 @@ void ShotManager::onRepaintVerticalLinesForAssetID(int assetID)
     }
 }
 
-void ShotManager::onLineMove(QPointF scenePos)
+void ShotManager::onNavigationLineMove(QPointF scenePos)
 {
-    qDebug() << "onLineMove: " << scenePos;
     upn(i, 0, m_pAssets.count() - 1) {
         if (m_pAssets[i]->pNavigationLine != nullptr)
             m_pAssets[i]->pNavigationLine->setPos( scenePos.x(), 0 );
@@ -459,7 +507,7 @@ void ShotManager::onShotLoad(QString shotName) {
 }
 
 void ShotManager::onShotLoad(int shotNum) {
-    double start_sec = m_pDialogLink->getStartTimeForLine(shotNum);
+    double start_sec = m_pDialogLink->getStartTimeForShot(shotNum);
     double duration_sec = m_pDialogLink->durations[shotNum];
     QString shotName = shotNameByNum(shotNum);
 
@@ -499,15 +547,16 @@ void ShotManager::onShotLoad(int shotNum) {
     connect(actorCueLabel, SIGNAL(contextEvent(QPointF)), this, SLOT(onShotContextEvent(QPointF)));
 
     /* draw action blocks for shot in editor */
-    m_blocksByShotName[shotName] = QSet<CustomRectItem*>();
-
+    upn(i, 0, m_pAssets.count() - 1) {
+        m_pAssets[i]->actionRectsByShotName[shotName] = QSet<CustomRectItem*>();
+    }
     upn(j, 0, m_pDialogLink->shots[shotNum].actions.count() - 1) {
         onShotActionLoad(shotNum, j);
     }
 }
 
 void ShotManager::onShotActionLoad(int shotNum, int actionNum) {
-    double start_sec = m_pDialogLink->getStartTimeForLine(shotNum);
+    double start_sec = m_pDialogLink->getStartTimeForShot(shotNum);
     double dur_sec = m_pDialogLink->durations[shotNum];
     QString shotName = shotNameByNum(shotNum);
 
@@ -540,14 +589,29 @@ void ShotManager::onShotActionLoad(int shotNum, int actionNum) {
     int assetID = getAssetIDForAction(sa);
     m_pAssetByID[assetID]->pScene->addItem(actionRect);
     actionRect->setData( "assetID", assetID );
-    qDebug() << QString("Insert rect to ID: %2").arg(assetID);
-    m_pAssetByID[assetID]->actionRects.insert(actionRect);
-    m_blocksByShotName[shotName].insert(actionRect);
+    m_pAssetByID[assetID]->actionRectsByShotName[shotName].insert(actionRect);
     connect(actionRect, SIGNAL(contextEvent(QPointF)), this, SLOT(onShotActionContextEvent(QPointF)));
 
-    m_pYmlManager->info(QString("Add shot: [%1] %2")
-                     .arg(sa->start, 0, 'f', 3 )
-                        .arg( EShotActionToString[sa->actionType] ));
+    m_pYmlManager->info(QString("Add shot: [%1] %2, assetID = %3")
+                        .arg(sa->start, 0, 'f', 3 )
+                        .arg( EShotActionToString[sa->actionType] )
+                        .arg(assetID));
+}
+
+void ShotManager::onShotActionAdd(int shotNum, int assetID, EShotActionType actionType, double shotPoint)
+{
+    m_pYmlManager->info( QString("onShotActionAdd: shotNum = %1 [%2], assetID = %3, actionType = %4")
+                         .arg(shotNum).arg(shotPoint).arg(assetID).arg(EShotActionToString[actionType]));
+    shotAction sh(actionType, shotPoint);
+    if (assetID >= 0) {
+        sh.values["actor"] = assetID;
+    }
+    // TODO! Use input UI interface to get default shotAction for this type
+    m_pDialogLink->shots[shotNum].actions.pb(sh);
+    m_pDialogLink->shots[shotNum].sortActionsByStart();
+    m_pYmlManager->updateShot(m_sectionName, shotNum);
+
+    onShotActionLoad(shotNum, m_pDialogLink->shots[shotNum].actions.count() - 1);
 }
 
 void ShotManager::onShotActionRemove(CustomRectItem *rect, bool updateYML)
@@ -564,8 +628,7 @@ void ShotManager::onShotActionRemove(CustomRectItem *rect, bool updateYML)
     shotAction* sa = rect->getShotAction();
     qDebug() << "onShotActionRemove: [" << sa->start << "] " << EShotActionToString[sa->actionType] << " from " << shotName;
 
-    m_pAssetByID[assetID]->actionRects.remove(rect);
-    m_blocksByShotName[shotName].remove(rect);
+    m_pAssetByID[assetID]->actionRectsByShotName[shotName].remove(rect);
     m_pAssetByID[assetID]->pScene->removeItem(rect);
     delete rect;
     int shotNum = m_pDialogLink->shotNumByName(shotName);
@@ -664,7 +727,7 @@ void ShotManager::onAssetLoad(int assetID)
     m_pShotLabelWidget->layout()->addWidget(pNewViewLabel);
     m_pAssets.append(newAsset);
     m_pAssetByID[assetID] = newAsset;
-    m_pAssetByScene[pNewScene] = newAsset;
+    m_assetIDByScene[pNewScene] = assetID;
 
     newAsset->repaintNavigationLine();
     onRepaintVerticalLinesForAssetID(assetID);
@@ -680,21 +743,8 @@ void ShotManager::onAssetChange(int assetID)
 
 void ShotManager::onAssetRemove(int assetID)
 {
-    ShotAsset* shotAsset = m_pAssetByID[assetID];
-    m_pAssetByScene.remove(shotAsset->pScene);
-
-    for (QGraphicsItem* item : shotAsset->pScene->items()) {
-        CustomRectItem* rectItem = static_cast<CustomRectItem*>(item);
-        m_blocksByShotName[rectItem->data("shotName").toString()].remove(rectItem);
-    }
-    shotAsset->pScene->clear();
-    shotAsset->pVerticalLines.clear();
-    shotAsset->pHorizontalLines.clear();
-    m_pShotLabelWidget->layout()->removeWidget(shotAsset->pViewLabel);
-    shotAsset->pViewLabel->deleteLater(); // should delete scene too
-    m_pShotWidget->layout()->removeWidget(shotAsset->pView);
-    shotAsset->pView->deleteLater(); // should delete scene too
-
+    ShotAsset* pAsset = m_pAssetByID[assetID];
+    m_assetIDByScene.remove(pAsset->pScene);
     m_pAssetByID.remove(assetID);
     upn(i, 0, m_pAssets.count() - 1) {
         if (m_pAssets[i]->assetID == assetID) {
@@ -702,6 +752,18 @@ void ShotManager::onAssetRemove(int assetID)
             break;
         }
     }
+
+    /*for (QString shotName : pAsset->actionRectsByShotName.keys()) {
+        for (CustomRectItem* pRectItem : pAsset->actionRectsByShotName[shotName]) {
+            pAsset->pScene->removeItem(pRectItem);
+        }
+    }
+    for (CustomRectItem* pRectItem : pAsset->labelRects) {
+        pAsset->pSceneLabel->removeItem(pRectItem);
+    }*/
+    m_pShotLabelWidget->layout()->removeWidget(pAsset->pViewLabel);
+    m_pShotWidget->layout()->removeWidget(pAsset->pView);
+    pAsset->clearAll();
 }
 
 void ShotManager::onAssetCollapse(bool isCollapsed)
@@ -725,21 +787,86 @@ void ShotManager::onAssetCollapse(bool isCollapsed)
     // TODO - redraw
 }
 
-void ShotManager::onSceneContextEvent(QGraphicsScene *pScene, QPoint screenPos)
+void ShotManager::onSceneContextEvent(QGraphicsScene *pScene, QPoint screenPos, QPointF scenePos)
 {
+    if (pScene == m_pDialogScene) {
+        QMenu menu;
+        QAction *addShotActionFirst = menu.addAction("Add new shot BEFORE first");
+        QAction *addShotActionLast = menu.addAction("Add new shot AFTER last");
+        QAction *selectedAction = menu.exec(screenPos);
+        if (selectedAction == addShotActionFirst) {
+            onShotAdd( 0 );
+        } else if (selectedAction == addShotActionLast) {
+            onShotAdd( m_pDialogLink->shots.count() );
+        }
+        return;
+    }
+    upn(i, 0, m_pAssets.count() - 1) {
+        if (pScene == m_pAssets[i]->pScene) {
+            QMenu menu;
+            QVector<QAction*> pActions;
+            QVector<EShotActionType> pAvailableActionsVec;
 
+            int groupNum = Y_TO_GroupNum(scenePos.y());
+            int shotNum = X_TO_ShotNum(scenePos.x());
+            double shotPoint = X_TO_ShotPoint(scenePos.x());
+
+            if (m_pAssets[i]->assetID == -1) {
+                if (groupNum >= GroupNumToEShotActionShared.count()) {
+                    qDebug() << "onSceneContextEvent: warning: out of range: groupNum: " << groupNum;
+                    return;
+                }
+                // camera, env
+                pAvailableActionsVec = GroupNumToEShotActionShared[groupNum];
+            } else if (m_pAssets[i]->isProp) {
+                if (groupNum >= GroupNumToEShotActionProp.count()) {
+                    qDebug() << "onSceneContextEvent: warning: out of range: groupNum: " << groupNum;
+                    return;
+                }
+                // prop
+                pAvailableActionsVec = GroupNumToEShotActionProp[groupNum];
+            } else {
+                if (groupNum >= GroupNumToEShotActionActor.count()) {
+                    qDebug() << "onSceneContextEvent: warning: out of range: groupNum: " << groupNum;
+                    return;
+                }
+                // actor
+                pAvailableActionsVec = GroupNumToEShotActionActor[groupNum];
+            }
+            if (shotNum < 0) {
+                qDebug() << "onSceneContextEvent: warning: out of range: shotNum: " << shotNum;
+                return;
+            }
+
+            upn(j, 0, pAvailableActionsVec.count() - 1) {
+                QAction* pAction = new QAction("Add shot action: " + EShotActionToString[ pAvailableActionsVec[j] ]);
+                pAction->setData( pAvailableActionsVec[j] );
+                menu.addAction(pAction);
+                pActions.pb(pAction);
+            }
+
+            QAction *selectedAction = menu.exec(screenPos);
+            upn(j, 0, pActions.count() - 1) {
+                if (selectedAction == pActions[j]) {
+                    onShotActionAdd(shotNum, m_assetIDByScene[pScene], pAvailableActionsVec.at(j), shotPoint);
+                    break;
+                }
+            }
+            return;
+        }
+    }
 }
 
 void ShotManager::onShotContextEvent(QPointF screenPos)
 {
     CustomRectItem* rect = qobject_cast<CustomRectItem*>(sender());
     QString shotName = rect->data("shotName").toString();
-    QMenu menu;
     if (m_sectionType == choiceS)
         return;
 
-    QAction *addActionAFTER = menu.addAction("Add new shot AFTER this");
+    QMenu menu;
     QAction *addActionBEFORE = menu.addAction("Add new shot BEFORE this");
+    QAction *addActionAFTER = menu.addAction("Add new shot AFTER this");
     QAction *removeAction = menu.addAction("Delete this shot");
     // TODO: more actions here
     QAction *selectedAction = menu.exec(screenPos.toPoint());
@@ -755,28 +882,43 @@ void ShotManager::onShotContextEvent(QPointF screenPos)
         if ( selected == QMessageBox::Yes ) {
             onShotRemove(shotName);
         }
+    } else if (selectedAction == addActionBEFORE) {
+        onShotAdd( m_pDialogLink->shotNumByName(shotName) );
+    } else if (selectedAction == addActionAFTER) {
+        onShotAdd( m_pDialogLink->shotNumByName(shotName) + 1 );
     }
 }
 
+void ShotManager::onShotAdd(int newShotNum)
+{
+    m_pYmlManager->addShot(m_sectionName, newShotNum);
+
+    updateHorizontalAdvance();
+    // TODO! reload dg rects part only + action rects
+    onLoadSectionShots(m_sectionName);
+}
+
 void ShotManager::onShotRename(QString oldShotName, QString newShotName) {
-    m_blocksByShotName[newShotName] = m_blocksByShotName[oldShotName];
-    m_blocksByShotName.remove(oldShotName);
-    for (CustomRectItem* rectItem : m_blocksByShotName[newShotName]) {
+    m_actionRectsByShotName[newShotName] = m_actionRectsByShotName[oldShotName];
+    m_actionRectsByShotName.remove(oldShotName);
+    for (CustomRectItem* rectItem : m_actionRectsByShotName[newShotName]) {
         rectItem->setData("shotName", newShotName);
     }
+
     // TODO m_ymlManager->renameShot(shotName);
 }
 void ShotManager::onShotRemove(QString shotName) {
-    auto setCopy = m_blocksByShotName.value(shotName);
-    for (CustomRectItem* rectItem : setCopy) {
-        m_pAssetByID[rectItem->data("assetID").toInt()]->actionRects.remove(rectItem);
-        rectItem->scene()->removeItem(rectItem);
-        rectItem->deleteLater();
+    upn(i, 0, m_pAssets.count() - 1) {  // ? needed
+        for (CustomRectItem* pRectItem : m_pAssets[i]->actionRectsByShotName[shotName]) {
+            m_pAssets[i]->pScene->removeItem( pRectItem );
+            pRectItem->deleteLater();
+        }
+        m_pAssets[i]->actionRectsByShotName.remove(shotName);
     }
-    m_blocksByShotName.remove(shotName);
-    onRepaintVerticalLines();
+
     m_pYmlManager->removeShot(m_sectionName, shotName);
-    // TODO!
+    updateHorizontalAdvance();
+    // TODO! reload dg rects part only + action rects
     onLoadSectionShots(m_sectionName);
 }
 
