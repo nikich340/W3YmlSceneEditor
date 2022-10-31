@@ -13,7 +13,6 @@ public:
     QGraphicsEllipseItem *socketStart = nullptr, *socketEnd = nullptr;
     EdgeItem(QGraphicsItem *parent = nullptr);
     void setState(EdgeState state);
-    EdgeState getState();
     void setStartPoint(QGraphicsEllipseItem* socket);
     void setEndPoint(QGraphicsEllipseItem* socket);
     void draw();
@@ -23,7 +22,7 @@ public:
 private:
     QString sectionNameStart, sectionNameEnd;
     QPainterPath path;
-    EdgeState currentState;
+    EdgeState currentState = normal;
 
 protected:
     void mousePressEvent(QGraphicsSceneMouseEvent *event) override;

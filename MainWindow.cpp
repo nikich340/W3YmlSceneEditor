@@ -12,12 +12,14 @@ MainWindow::MainWindow(QWidget *parent)
 	ui->infoField->setVisible( readSetting("logFieldVisible", true).toBool() );
 
     gScene = new QGraphicsScene(this);
-	gScene->setSceneRect(0,0, SCENE_WIDTH, SCENE_HEIGHT);
+    gScene->setSceneRect(0,0, CONSTANTS::SCENE_WIDTH, CONSTANTS::SCENE_HEIGHT);
+    gScene->setItemIndexMethod(QGraphicsScene::NoIndex);
 
     gDialogsScene = new QGraphicsScene(this);
     ui->gViewShotDialogs->setScene(gDialogsScene);
     ui->gViewShotDialogs->viewport()->setMouseTracking(true);
     gDialogsScene->installEventFilter(ui->gScrollShot);
+    gDialogsScene->setItemIndexMethod(QGraphicsScene::NoIndex);
 
 	ymlManager = new YmlSceneManager(this, gScene);
 
@@ -29,9 +31,9 @@ MainWindow::MainWindow(QWidget *parent)
 	shotManager = new ShotManager(ymlManager, this);
     shotManager->setWidgets(gDialogsScene, ui->gScrollShotLabel, ui->gScrollShot);
 
-    QLinearGradient gradient(0, 0, SCENE_WIDTH, SCENE_HEIGHT);
-	gradient.setColorAt(0, colorSceneGradient0);
-	gradient.setColorAt(1.0, colorSceneGradient1);
+    QLinearGradient gradient(0, 0, CONSTANTS::SCENE_WIDTH, CONSTANTS::SCENE_HEIGHT);
+    gradient.setColorAt(0, CONSTANTS::colorSceneGradient0);
+    gradient.setColorAt(1.0, CONSTANTS::colorSceneGradient1);
     gScene->setBackgroundBrush(gradient);
     gDialogsScene->setBackgroundBrush(gradient);
 
@@ -121,7 +123,6 @@ void MainWindow::onClicked_Load()
 
 	QElapsedTimer timer;
 	timer.start();
-	gScene->clear();
     if ( ymlManager->loadYmlFile(fileName) ) {
         setWindowTitle("Radish YML Scene Editor [" + fileName + "]");
     } else {
@@ -130,7 +131,7 @@ void MainWindow::onClicked_Load()
 
 
 	if ( ymlManager->drawSectionsGraph() ) {
-		print_info("Sections graph was successfully drawn in " + QString::number(timer.elapsed()) + " ms.");
+        print_info("Sections graph painted in: " + QString::number(timer.elapsed()) + " ms.");
     } else {
         print_error("Failed to draw sections: INCORRECT YML!");
     }

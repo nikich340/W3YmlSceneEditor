@@ -310,7 +310,7 @@ struct dialogLink {
 	QVector< QString > lines;
 	QVector< double > durations;
 
-	double totalDuration = -1.0;
+    double totalDuration = 0.0;
 
 	void calculateTotalDuration() {
 		totalDuration = 0.0;
@@ -443,6 +443,10 @@ struct sectionLink {
 		return !(lhs == rhs);
 	}
     sectionLink() {}
+    sectionLink(QString _sectionName = QString(), sectionType _type = nextS) {
+        type = _type;
+        sectionName = _sectionName;
+    }
 };
 
 #endif // YMLSTRUCTS_H

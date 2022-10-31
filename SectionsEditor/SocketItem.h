@@ -12,6 +12,9 @@ private:
     bool inCreate = false;
 
 public:
+    SocketItem(QGraphicsItem *parent = nullptr);
+    ~SocketItem();
+    SocketItem(qreal x, qreal y, qreal width, qreal height, QGraphicsItem *parent = nullptr);
     QGraphicsSimpleTextItem* textLabel;
 
     bool isInputSocket = false;
@@ -23,10 +26,7 @@ public:
 	QVector<EdgeItem*> getEges();
     void setLabel(QString text);
     void redrawAllEdges();
-    void deleteAllEdges();
-    SocketItem(QGraphicsItem *parent = nullptr);
-    ~SocketItem() override;
-    SocketItem(qreal x, qreal y, qreal width, qreal height, QGraphicsItem *parent = nullptr);
+
     enum { Type = QGraphicsEllipseItem::UserType + 1 };
     int type() const override { return Type; }
 

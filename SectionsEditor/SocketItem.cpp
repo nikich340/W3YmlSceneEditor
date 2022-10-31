@@ -11,7 +11,7 @@ SocketItem::SocketItem(QGraphicsItem *parent) : QGraphicsEllipseItem(parent)
 	scene()->addItem(textLabel);
 	//textLabel->setParentItem(this);
     textLabel->hide(); // disable until hover/press
-	textLabel->setBrush(QBrush(colorSocketLabel));
+    textLabel->setBrush(QBrush(CONSTANTS::colorSocketLabel));
 	textLabel->setFont( QFont("Arial", 7) );
 }
 SocketItem::SocketItem(qreal x, qreal y, qreal width, qreal height, QGraphicsItem *parent) : QGraphicsEllipseItem(x, y, width, height, parent)
@@ -24,20 +24,15 @@ SocketItem::SocketItem(qreal x, qreal y, qreal width, qreal height, QGraphicsIte
 	scene()->addItem(textLabel);
 	//textLabel->setParentItem(this);
     textLabel->hide(); // disable until hover/press
-	textLabel->setBrush(QBrush(colorSocketLabel));
+    textLabel->setBrush(QBrush(CONSTANTS::colorSocketLabel));
 	textLabel->setFont( QFont("Arial", 7) );
 }
 SocketItem::~SocketItem() {
-    /*if ( !isInputSocket ) {
-        deleteAllEdges();
-    }*/
-}
-void SocketItem::deleteAllEdges() {
-    // ALL DELETIONS MUST BE IN GraphicsSectionItem !!!
-    for (int i = 0; i < edges.size(); ++i) {
+    // deleted somewhere else
+    /*for (int i = 0; i < edges.size(); ++i) {
         delete edges[i];
     }
-    edges.clear();
+    edges.clear();*/
 }
 void SocketItem::redrawAllEdges() {
     for (int i = 0; i < edges.size(); ++i) {
@@ -200,12 +195,12 @@ void SocketItem::hoverEnterEvent(QGraphicsSceneHoverEvent *event) {
     if (isInputSocket) {
         for (auto it: edges) {
             SocketItem* begin = static_cast<SocketItem*>( it->socketStart );
-			begin->textLabel->setPos( begin->scenePos() + QPointF(WIDTH / 10, 0) );
+            begin->textLabel->setPos( begin->scenePos() + QPointF(CONSTANTS::WIDTH / 10, 0) );
             begin->textLabel->show();
 			it->setState(EdgeItem::highlight);
         }
     } else {
-		textLabel->setPos( scenePos() + QPointF(WIDTH / 10, 0) );
+        textLabel->setPos( scenePos() + QPointF(CONSTANTS::WIDTH / 10, 0) );
         textLabel->show();
 		if (hasEdges()) {
 			edges[0]->setState(EdgeItem::highlight);

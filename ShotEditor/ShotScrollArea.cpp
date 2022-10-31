@@ -101,7 +101,7 @@ bool ShotScrollArea::eventFilter(QObject *watched, QEvent *event)
                 if (pScene->views().first() != nullptr) {
                     QGraphicsItem* pItem = pScene->itemAt( pContextEvent->scenePos(), pScene->views().first()->transform() );
                     qDebug() << "pItem: " << pItem;
-                    if (pItem != nullptr && !pItem->data(IsNavigationLine).toBool()) {
+                    if (pItem != nullptr && !pItem->data(CONSTANTS::IsNavigationLine).toBool()) {
                         return false;
                     }
                 }

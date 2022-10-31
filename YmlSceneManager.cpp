@@ -2,6 +2,7 @@
 #include "GraphicsSectionItem.h"
 #include <yaml-cpp/exceptions.h>
 
+#include <typeinfo>
 #include <QDebug>
 #include <fstream>
 #include <QFile>
@@ -125,7 +126,7 @@ YAML::Node YmlSceneManager::lastCloned(const YAML::Node &node)
 
 YmlSceneManager::YmlSceneManager(QObject *parent, QGraphicsScene* gScene) : QObject(parent)
 {
-	pScene = gScene;
+    m_pScene = gScene;
     qDebug() << "YmlSceneManager()";
 
     /* Init SceneGlobals */
@@ -161,7 +162,15 @@ YmlSceneManager::YmlSceneManager(QObject *parent, QGraphicsScene* gScene) : QObj
 	   qInfo() << "Loaded {" << lineById.size() << "} dg lines of total {" << cnt << "}.";
 	} else {
 		qCritical() << "Failed to read lines.en.csv!";
-	}
+    }
+}
+
+YmlSceneManager::~YmlSceneManager()
+{
+    //m_pScene->clear();
+    deletePointersFromContainer( m_pSectionLinkBySectionName );
+    deletePointersFromContainer( m_pDialogLinkBySectionName );
+    qDebug() << "~YmlSceneManager()";
 }
 
 void YmlSceneManager::showError(QString text, QString title, QMessageBox::Icon icon) {
@@ -193,20 +202,20 @@ void YmlSceneManager::info(QString s) {
 }
 
 void YmlSceneManager::clearData(bool clearRepo) {
+    m_pScene->clear();
 	// clear old (sections graph)
-	sectionGraph.clear();
-	startSections.clear();
-	wasDrawn.clear();
-	itemBySectionName.clear();
-	sectionsByDepth.clear();
-	for (auto item : unusedItems) {
-		delete item;
-	}
-	unusedItems.clear();
+    deletePointersFromContainer( m_pSectionLinkBySectionName );
+    m_pSectionLinkBySectionName.clear();
+    m_startSections.clear();
+    m_wasDrawn.clear();
+    m_pItemBySectionName.clear();
+    m_sectionNamesByDepth.clear();
 
 	// clear old (dialogscript + storyboard shots)
-    m_dialogLinkBySectionName.clear();
-	dgActors.clear();
+    // deleted by scene -> deletePointersFromContainer( m_pItemBySectionName );
+    deletePointersFromContainer( m_pDialogLinkBySectionName );
+    m_pDialogLinkBySectionName.clear();
+    dgActors.clear();
 	dgProps.clear();
 
 	// clear old (repository + production, except stuff from repo.scenes if clearRepo = false)
@@ -229,7 +238,7 @@ void YmlSceneManager::clearData(bool clearRepo) {
 	SG.defaultMimic.clear();
 	SG.defaultPlacement.clear();
 	if (clearRepo) {
-		SG.removeType(SSOUNDBANKS);
+        SG.removeType(CONSTANTS::SSOUNDBANKS);
 		SG.removeType("availableSoundEvents");
 	}
 }
@@ -237,8 +246,8 @@ bool YmlSceneManager::loadYmlRepo(QString path) {
 	readingYmlRepo = true;
 	// load yml
 	try {
-		root.reset();
-		root = YAML::LoadFile(path.toStdString());
+        m_root.reset();
+        m_root = YAML::LoadFile(path.toStdString());
 		info("Yml loaded: OK! " + path);
 	} catch (const YAML::BadFile& e) {
 		showError(to_qstr("Error: (BadFile) ") + e.what());
@@ -262,13 +271,13 @@ bool YmlSceneManager::loadYmlRepo(QString path) {
 	return true;
 }
 bool YmlSceneManager::loadYmlFile(QString path) {
-    filePath = path;
+    m_filePath = path;
 	qi << "Parsing " + path + "...";
 
     // load yml
     try {
-        root.reset();
-        root = YAML::LoadFile(path.toStdString());
+        m_root.reset();
+        m_root = YAML::LoadFile(path.toStdString());
 		info("Yml loaded: OK! " + path);
     } catch (const YAML::BadFile& e) {
 		showError(to_qstr("Error: (BadFile) ") + e.what());
@@ -307,10 +316,10 @@ bool YmlSceneManager::loadYmlFile(QString path) {
     return true;
 }
 bool YmlSceneManager::saveYmlFile() {
-    QFile ymlFile(filePath);
+    QFile ymlFile(m_filePath);
 
     if (ymlFile.exists())
-        ymlFile.copy(filePath + ".backup");
+        ymlFile.copy(m_filePath + ".backup");
     else
         return false;
     ymlFile.close();
@@ -326,7 +335,7 @@ bool YmlSceneManager::saveYmlFile() {
 		return false;
 	}
     for (auto name : m_sectionNames) {
-		if ( itemBySectionName[name]->state == GraphicsSectionItem::incomplete ) {
+        if ( m_pItemBySectionName[name]->state == GraphicsSectionItem::incomplete ) {
 			QMessageBox msgBox;
 			msgBox.setText("Save is not allowed: section [" + name + "] is incomplete!");
 			msgBox.setInformativeText("Make double click on it to edit settings.");
@@ -338,11 +347,11 @@ bool YmlSceneManager::saveYmlFile() {
 		}
 	}
 
-	std::ofstream out(filePath.toStdString());
+    std::ofstream out(m_filePath.toStdString());
 	out.clear();
 
     if (out.good())
-        out << root;
+        out << m_root;
     else
         return false;
 
@@ -363,14 +372,14 @@ bool YmlSceneManager::requestSave() {
 }
 
 bool YmlSceneManager::loadSectionsInfo() {
-    if (root["dialogscript"]) {
-        for(YAML::const_iterator it = root["dialogscript"].begin(); it != root["dialogscript"].end(); ++it) {
+    if (m_root["dialogscript"]) {
+        for(YAML::const_iterator it = m_root["dialogscript"].begin(); it != m_root["dialogscript"].end(); ++it) {
             QString sectionName = it->XKey.as<QString>().toLower(); // make all names toLower!
 			qDebug() << "sectionName: " << sectionName;
 
                // section
             if ( sectionName.startsWith("section_") || sectionName.startsWith("script_") ) {
-                if (sectionGraph.contains(sectionName)) {
+                if (m_pSectionLinkBySectionName.contains(sectionName)) {
 					showError("Error: duplicated section name: " + sectionName);
                     return false;
                 }
@@ -384,8 +393,7 @@ bool YmlSceneManager::loadSectionsInfo() {
 
                   // CHECK: only last element?
                 YAML::Node lastSectionNode(sectionNode[sectionNode.size() - 1]);
-                sectionLink* tmpLink = new sectionLink;
-                tmpLink->sectionName = sectionName;
+                sectionLink* tmpLink = new sectionLink(sectionName);
 
                    // NEXT, (RANDOM, CHOICE)
                 if (lastSectionNode.IsMap()) {
@@ -515,12 +523,12 @@ bool YmlSceneManager::loadSectionsInfo() {
                 }
 
                 if ( sectionName.startsWith("section_start") ) {
-                    startSections.push_back( sectionName );
+                    m_startSections.push_back( sectionName );
                 }
 
                 // all is fine, add to graph
                 m_sectionNames.append(sectionName);
-                sectionGraph.insert(sectionName, tmpLink);
+                m_pSectionLinkBySectionName.insert(sectionName, tmpLink);
 				qd << "ADD: " << sectionName;
 			} else if ( sectionName == "actors" ) {
                 YAML::Node actorsNode(it->YValue);
@@ -547,7 +555,7 @@ bool YmlSceneManager::loadSectionsInfo() {
         return false;
     }
 
-	info("Loaded " + qn(sectionGraph.size()) + " sections");
+    info("Loaded " + qn(m_pSectionLinkBySectionName.size()) + " sections");
     return true;
 }
 
@@ -576,11 +584,11 @@ bool YmlSceneManager::loadShotActions(const YAML::Node actsNode, shot& sh) {
             newAction.start = paramNode[0].as<double>();
 
 			name = paramNode[1].as<QString>();
-			if ( !SG.hasName(SCAMERAS, name) ) {
+            if ( !SG.hasName(CONSTANTS::SASSETS, name) ) {
 				error("loadShotActions: shot " + sh.shotName + ", camera " + name + " not found in repo!");
 				continue;
 			}
-            newAction.values["cam_name"] = SG.getID(SCAMERAS, name);
+            newAction.values["cam_name"] = SG.getID(CONSTANTS::SASSETS, name);
 
 			// rapid, smooth
 			if ( keys.size() > 2 && (keys[2] == "start" || keys[2] == "end") && paramNode.size() > 2 ) {
@@ -592,19 +600,19 @@ bool YmlSceneManager::loadShotActions(const YAML::Node actsNode, shot& sh) {
 				if (isExtended) {
                     newAction.start = paramNode[".@pos"][0].as<double>();
 					name = paramNode[".@pos"][1].as<QString>();
-					if (!SG.hasName(SANIMS, name)) {
+                    if (!SG.hasName(CONSTANTS::SANIMS, name)) {
 						error("loadShotActions: shot " + sh.shotName + ", animation " + name + " not found in repo!");
 						continue;
 					}
-                    newAction.values["animation"] = SG.getID(SANIMS, name);
+                    newAction.values["animation"] = SG.getID(CONSTANTS::SANIMS, name);
 
 					if (paramNode["actor"]) {
 						name = paramNode["actor"].as<QString>();
-                        if ( !SG.hasName(SASSETS, name) ) {
+                        if ( !SG.hasName(CONSTANTS::SASSETS, name) ) {
 							error("loadShotActions: shot " + sh.shotName + ", actor " + name + " not found in repo!");
 							continue;
 						}
-                        newAction.values["actor"] = SG.getID(SASSETS, name);
+                        newAction.values["actor"] = SG.getID(CONSTANTS::SASSETS, name);
 					}
 
 					if (paramNode["blendin"])
@@ -627,11 +635,11 @@ bool YmlSceneManager::loadShotActions(const YAML::Node actsNode, shot& sh) {
 				} else {
                     newAction.start = paramNode[0].as<double>();
 					name = paramNode[1].as<QString>();
-					if (!SG.hasName(SANIMS, name)) {
+                    if (!SG.hasName(CONSTANTS::SANIMS, name)) {
 						error("loadShotActions: shot " + sh.shotName + ", animation " + name + " not found in repo!");
 						continue;
 					}
-                    newAction.values["animation"] = SG.getID(SANIMS, name);
+                    newAction.values["animation"] = SG.getID(CONSTANTS::SANIMS, name);
 				}
 			}
 			else if ( keys[1] == "mimic" )
@@ -639,19 +647,19 @@ bool YmlSceneManager::loadShotActions(const YAML::Node actsNode, shot& sh) {
 				if (isExtended) {
                     newAction.start = paramNode[".@pos"][0].as<double>();
 					name = paramNode[".@pos"][1].as<QString>();
-					if (!SG.hasName(SMIMICPOSES, name)) {
+                    if (!SG.hasName(CONSTANTS::SMIMICPOSES, name)) {
 						error("loadShotActions: shot " + sh.shotName + ", mimic " + name + " not found in repo!");
 						continue;
 					}
-                    newAction.values["mimic"] = SG.getID(SMIMICPOSES, name);
+                    newAction.values["mimic"] = SG.getID(CONSTANTS::SMIMICPOSES, name);
 
 					if (paramNode["actor"]) {
 						name = paramNode["actor"].as<QString>();
-                        if (!SG.hasName(SASSETS, name)) {
+                        if (!SG.hasName(CONSTANTS::SASSETS, name)) {
 							error("loadShotActions: shot " + sh.shotName + ", actor " + name + " not found in repo!");
 							continue;
 						}
-                        newAction.values["actor"] = SG.getID(SASSETS, name);
+                        newAction.values["actor"] = SG.getID(CONSTANTS::SASSETS, name);
 					}
 
 					if (paramNode["emotional_state"])
@@ -674,11 +682,11 @@ bool YmlSceneManager::loadShotActions(const YAML::Node actsNode, shot& sh) {
 				} else {
                     newAction.start = paramNode[0].as<double>();
 					name = paramNode[1].as<QString>();
-					if (!SG.hasName(SMIMICPOSES, name)) {
+                    if (!SG.hasName(CONSTANTS::SMIMICPOSES, name)) {
 						error("loadShotActions: shot " + sh.shotName + ", mimic " + name + " not found in repo!");
 						continue;
 					}
-                    newAction.values["mimic"] = SG.getID(SMIMICPOSES, name);
+                    newAction.values["mimic"] = SG.getID(CONSTANTS::SMIMICPOSES, name);
 				}
 			}
 			else if ( keys[1] == "gamestate" )
@@ -686,11 +694,11 @@ bool YmlSceneManager::loadShotActions(const YAML::Node actsNode, shot& sh) {
 				if (isExtended) {
                     newAction.start = paramNode[".@pos"][0].as<double>();
 					name = paramNode[".@pos"][1].as<QString>();
-                    if (!SG.hasName(SASSETS, name)) {
+                    if (!SG.hasName(CONSTANTS::SASSETS, name)) {
 						error("loadShotActions: shot " + sh.shotName + ", actor " + name + " not found in repo!");
 						continue;
 					}
-                    newAction.values["actor"] = SG.getID(SASSETS, name);
+                    newAction.values["actor"] = SG.getID(CONSTANTS::SASSETS, name);
 
 					if (paramNode["action"])
                         newAction.values["action"] = paramNode["action"].as<QString>();
@@ -699,22 +707,22 @@ bool YmlSceneManager::loadShotActions(const YAML::Node actsNode, shot& sh) {
 				} else {
                     newAction.start = paramNode[0].as<double>();
 					name = paramNode[1].as<QString>();
-                    if (!SG.hasName(SASSETS, name)) {
+                    if (!SG.hasName(CONSTANTS::SASSETS, name)) {
 						error("loadShotActions: shot " + sh.shotName + ", actor " + name + " not found in repo!");
 						continue;
 					}
-                    newAction.values["actor"] = SG.getID(SASSETS, name);
+                    newAction.values["actor"] = SG.getID(CONSTANTS::SASSETS, name);
 				}
 			}
 			else if ( keys[1] == "placement" )
 			{
                 newAction.start = paramNode[0].as<double>();
 				name = paramNode[1].as<QString>();
-                if (!SG.hasName(SASSETS, name)) {
+                if (!SG.hasName(CONSTANTS::SASSETS, name)) {
 					error("loadShotActions: shot " + sh.shotName + ", actor " + name + " not found in repo!");
 					continue;
 				}
-                newAction.values["actor"] = SG.getID(SASSETS, name);
+                newAction.values["actor"] = SG.getID(CONSTANTS::SASSETS, name);
                 newAction.values["pos"] = paramNode[2].as<QVector3D>();
                 newAction.values["rot"] = paramNode[3].as<QVector3D>();
 
@@ -726,22 +734,22 @@ bool YmlSceneManager::loadShotActions(const YAML::Node actsNode, shot& sh) {
 			{
                 newAction.start = paramNode[0].as<double>();
 				name = paramNode[1].as<QString>();
-				if (!SG.hasName(SANIMPOSES, name)) {
+                if (!SG.hasName(CONSTANTS::SANIMPOSES, name)) {
 					error("loadShotActions: shot " + sh.shotName + ", actor.pose " + name + " not found in repo!");
 					continue;
 				}
-                newAction.values["pose"] = SG.getID(SANIMPOSES, name);
+                newAction.values["pose"] = SG.getID(CONSTANTS::SANIMPOSES, name);
 			}
 			else if ( keys[1] == "lookat" )
 			{
 				if (isExtended) {
                     newAction.start = paramNode[".@pos"][0].as<double>();
                     name = paramNode[".@pos"][1].as<QString>();
-                    if (!SG.hasName(SASSETS, name)) {
+                    if (!SG.hasName(CONSTANTS::SASSETS, name)) {
                         error("loadShotActions: shot " + sh.shotName + ", actor " + name + " not found in repo!");
                         continue;
                     }
-                    newAction.values["actor"] = SG.getID(SASSETS, name);
+                    newAction.values["actor"] = SG.getID(CONSTANTS::SASSETS, name);
 					if (paramNode[".@pos"][2].IsSequence()) {
                         newAction.values["lookat_pos"] = paramNode[".@pos"][2].as<QVector3D>();
 					} else {
@@ -756,20 +764,20 @@ bool YmlSceneManager::loadShotActions(const YAML::Node actsNode, shot& sh) {
 				} else {
                     newAction.start = paramNode[0].as<double>();
 					name = paramNode[1].as<QString>();
-                    if (!SG.hasName(SASSETS, name)) {
+                    if (!SG.hasName(CONSTANTS::SASSETS, name)) {
 						error("loadShotActions: shot " + sh.shotName + ", actor " + name + " not found in repo!");
 						continue;
 					}
-                    newAction.values["actor"] = SG.getID(SASSETS, name);
+                    newAction.values["actor"] = SG.getID(CONSTANTS::SASSETS, name);
 					if (paramNode[2].IsSequence()) {
                         newAction.values["lookat_pos"] = paramNode[2].as<QVector3D>();
 					} else {
 						name = paramNode[2].as<QString>();
-                        if (!SG.hasName(SASSETS, name)) {
+                        if (!SG.hasName(CONSTANTS::SASSETS, name)) {
 							error("loadShotActions: shot " + sh.shotName + ", actor " + name + " not found in repo!");
 							continue;
 						}
-                        newAction.values["lookat_actor"] = SG.getID(SASSETS, name);
+                        newAction.values["lookat_actor"] = SG.getID(CONSTANTS::SASSETS, name);
 					}
 				}
 			}
@@ -777,54 +785,54 @@ bool YmlSceneManager::loadShotActions(const YAML::Node actsNode, shot& sh) {
 			{
                 newAction.start = paramNode[0].as<double>();
 				name = paramNode[1].as<QString>();
-                if (!SG.hasName(SASSETS, name)) {
+                if (!SG.hasName(CONSTANTS::SASSETS, name)) {
 					error("loadShotActions: shot " + sh.shotName + ", actor " + name + " not found in repo!");
 					continue;
 				}
-                newAction.values["actor"] = SG.getID(SASSETS, name);
+                newAction.values["actor"] = SG.getID(CONSTANTS::SASSETS, name);
 			}
 			else if ( keys[1] == "effect" )
 			{
                 newAction.start = paramNode[0].as<double>();
 				name = paramNode[1].as<QString>();
-                if (!SG.hasName(SASSETS, name)) {
+                if (!SG.hasName(CONSTANTS::SASSETS, name)) {
 					error("loadShotActions: shot " + sh.shotName + ", actor " + name + " not found in repo!");
 					continue;
 				}
-                newAction.values["actor"] = SG.getID(SASSETS, name);
+                newAction.values["actor"] = SG.getID(CONSTANTS::SASSETS, name);
                 newAction.values["effect"] = paramNode[2].as<QString>();
 			}
 			else if ( keys[1] == "sound" )
 			{
                 newAction.start = paramNode[0].as<double>();
 				name = paramNode[1].as<QString>();
-                if (!SG.hasName(SASSETS, name)) {
+                if (!SG.hasName(CONSTANTS::SASSETS, name)) {
 					error("loadShotActions: shot " + sh.shotName + ", actor " + name + " not found in repo!");
 					continue;
 				}
-                newAction.values["actor"] = SG.getID(SASSETS, name);
+                newAction.values["actor"] = SG.getID(CONSTANTS::SASSETS, name);
                 newAction.values["effect"] = paramNode[2].as<QString>();
 			}
 			else if ( keys[1] == "appearance" )
 			{
                 newAction.start = paramNode[0].as<double>();
 				name = paramNode[1].as<QString>();
-                if (!SG.hasName(SASSETS, name)) {
+                if (!SG.hasName(CONSTANTS::SASSETS, name)) {
 					error("loadShotActions: shot " + sh.shotName + ", actor " + name + " not found in repo!");
 					continue;
 				}
-                newAction.values["actor"] = SG.getID(SASSETS, name);
+                newAction.values["actor"] = SG.getID(CONSTANTS::SASSETS, name);
                 newAction.values["appearance"] = paramNode[2].as<QString>();
 			}
 			else if ( keys[1] == "equip" )
 			{
                 newAction.start = paramNode[0].as<double>();
 				name = paramNode[1].as<QString>();
-                if (!SG.hasName(SASSETS, name)) {
+                if (!SG.hasName(CONSTANTS::SASSETS, name)) {
 					error("loadShotActions: shot " + sh.shotName + ", actor " + name + " not found in repo!");
 					continue;
 				}
-                newAction.values["actor"] = SG.getID(SASSETS, name);
+                newAction.values["actor"] = SG.getID(CONSTANTS::SASSETS, name);
                 newAction.values["item"] = paramNode[2].as<QString>();
 			}
 		} else if ( keys[0] == "world" ) {
@@ -894,24 +902,24 @@ bool YmlSceneManager::loadShotActions(const YAML::Node actsNode, shot& sh) {
 }
 
 bool YmlSceneManager::loadSceneRepository() {
-	if (!root["repository"])	{
+    if (!m_root["repository"])	{
 		warning("loadSceneRepository()>: No repository found!");
 		return true;
 	}
 
 	/* LOAD ACTORS FROM REPO */
-	if (root["repository"]["actors"]) {
-		qd << "loadSceneRepository()>: Loading " << root["repository"]["actors"].size() << " actors..";
+    if (m_root["repository"]["actors"]) {
+        qd << "loadSceneRepository()>: Loading " << m_root["repository"]["actors"].size() << " actors..";
 		int cnt_new = 0;
 
-		for (auto it = root["repository"]["actors"].begin(); it != root["repository"]["actors"].end(); ++it) {
-            QString mapName = it->XKey.as<QString>() + SREPO_TEMP;
-            if ( SG.hasName(SASSETS, mapName) )
+        for (auto it = m_root["repository"]["actors"].begin(); it != m_root["repository"]["actors"].end(); ++it) {
+            QString mapName = it->XKey.as<QString>() + CONSTANTS::SREPO_TEMP;
+            if ( SG.hasName(CONSTANTS::SASSETS, mapName) )
 			{
 				qw << ("loadSceneRepository()>: actor " + mapName + " already exist! Overwriting.");
 				//continue;
 			}
-            int nameID = SG.getID(SASSETS, mapName);
+            int nameID = SG.getID(CONSTANTS::SASSETS, mapName);
 
             if ( !it->YValue["template"] )
 			{
@@ -940,18 +948,18 @@ bool YmlSceneManager::loadSceneRepository() {
 	}
 
 	/* LOAD PROPS FROM REPO */
-	if (root["repository"]["props"]) {
-		qd << "loadSceneRepository()>: Loading " << root["repository"]["props"].size() << " props..";
+    if (m_root["repository"]["props"]) {
+        qd << "loadSceneRepository()>: Loading " << m_root["repository"]["props"].size() << " props..";
 		int cnt_new = 0;
 
-		for (auto it = root["repository"]["props"].begin(); it != root["repository"]["props"].end(); ++it) {
-            QString mapName = it->XKey.as<QString>() + SREPO_TEMP;
-            if ( SG.hasName(SASSETS, mapName) )
+        for (auto it = m_root["repository"]["props"].begin(); it != m_root["repository"]["props"].end(); ++it) {
+            QString mapName = it->XKey.as<QString>() + CONSTANTS::SREPO_TEMP;
+            if ( SG.hasName(CONSTANTS::SASSETS, mapName) )
 			{
 				qw << ("loadSceneRepository()>: prop " + mapName + " already exist! Overwriting.");
 				//continue;
 			}
-            int nameID = SG.getID(SASSETS, mapName);
+            int nameID = SG.getID(CONSTANTS::SASSETS, mapName);
 
             if ( !it->YValue["template"] )
 			{
@@ -973,18 +981,18 @@ bool YmlSceneManager::loadSceneRepository() {
 	}
 
 	/* LOAD CAMERAS FROM REPO */
-	if (root["repository"]["cameras"]) {
-		qd << "loadSceneRepository()>: Loading " << root["repository"]["cameras"].size() << " cameras..";
+    if (m_root["repository"]["cameras"]) {
+        qd << "loadSceneRepository()>: Loading " << m_root["repository"]["cameras"].size() << " cameras..";
 		int cnt_new = 0;
 
-		for (auto it = root["repository"]["cameras"].begin(); it != root["repository"]["cameras"].end(); ++it) {
+        for (auto it = m_root["repository"]["cameras"].begin(); it != m_root["repository"]["cameras"].end(); ++it) {
             QString mapName = it->XKey.as<QString>();
-			if ( SG.hasName(SCAMERAS, mapName) )
+            if ( SG.hasName(CONSTANTS::SASSETS, mapName) )
 			{
 				qw << ("loadSceneRepository()>: camera " + mapName + " already exist! Overwriting.");
 				//continue;
 			}
-			int nameID = SG.getID(SCAMERAS, mapName);
+            int nameID = SG.getID(CONSTANTS::SCAMERAS, mapName);
 
             if ( !it->YValue["fov"] || !it->YValue["transform"]["pos"] || !it->YValue["transform"]["rot"] ) {
 				warning("loadSceneRepository()>: Can't find fov/transform for cameras: " + mapName);
@@ -1029,18 +1037,18 @@ bool YmlSceneManager::loadSceneRepository() {
 	}
 
 	/* LOAD ANIMS FROM REPO */
-	if (root["repository"]["animations"]) {
-		qd << "loadSceneRepository()>: Loading " << root["repository"]["animations"].size() << " animations..";
+    if (m_root["repository"]["animations"]) {
+        qd << "loadSceneRepository()>: Loading " << m_root["repository"]["animations"].size() << " animations..";
 		int cnt_new = 0;
 
-		for (auto it = root["repository"]["animations"].begin(); it != root["repository"]["animations"].end(); ++it) {
+        for (auto it = m_root["repository"]["animations"].begin(); it != m_root["repository"]["animations"].end(); ++it) {
             QString mapName = it->XKey.as<QString>();
-			if ( SG.hasName(SANIMS, mapName) )
+            if ( SG.hasName(CONSTANTS::SANIMS, mapName) )
 			{
 				qw << ("loadSceneRepository()>: anim " + mapName + " already exist! Overwriting.");
 				//continue;
 			}
-			int nameID = SG.getID(SANIMS, mapName);
+            int nameID = SG.getID(CONSTANTS::SANIMS, mapName);
 
             if ( !it->YValue["animation"] || !it->YValue["frames"] ) {
 				warning("loadSceneRepository()>: Can't find animation/frames for anim " + mapName);
@@ -1074,18 +1082,18 @@ bool YmlSceneManager::loadSceneRepository() {
 	}
 
 	/* LOAD MIMIC ANIMS FROM REPO */
-	if (root["repository"]["animations.mimic"]) {
-		qd << "loadSceneRepository()>: Loading " << root["repository"]["animations.mimic"].size() << " mimic anims..";
+    if (m_root["repository"]["animations.mimic"]) {
+        qd << "loadSceneRepository()>: Loading " << m_root["repository"]["animations.mimic"].size() << " mimic anims..";
 		int cnt_new = 0;
 
-		for (auto it = root["repository"]["animations.mimic"].begin(); it != root["repository"]["animations.mimic"].end(); ++it) {
+        for (auto it = m_root["repository"]["animations.mimic"].begin(); it != m_root["repository"]["animations.mimic"].end(); ++it) {
             QString mapName = it->XKey.as<QString>();
-			if ( SG.hasName(SMIMICANIMS, mapName) )
+            if ( SG.hasName(CONSTANTS::SMIMICANIMS, mapName) )
 			{
                 qw << ("loadSceneRepository()>: mimic anim " + mapName + " already exist! Overwriting.");
 				//continue;
 			}
-            int nameID = SG.getID(SMIMICANIMS, mapName);
+            int nameID = SG.getID(CONSTANTS::SMIMICANIMS, mapName);
 
             if ( !it->YValue["animation"] || !it->YValue["frames"] ) {
 				warning("loadSceneRepository()>: Can't find animation/frames for mimic anim: " + mapName);
@@ -1119,18 +1127,18 @@ bool YmlSceneManager::loadSceneRepository() {
 	}
 
 	/* LOAD POSES FROM REPO */
-	if (root["repository"]["actor.poses"]) {
-		qd << "loadSceneRepository()>: Loading " << root["repository"]["actor.poses"].size() << " poses..";
+    if (m_root["repository"]["actor.poses"]) {
+        qd << "loadSceneRepository()>: Loading " << m_root["repository"]["actor.poses"].size() << " poses..";
 		int cnt_new = 0;
 
-		for (auto it = root["repository"]["actor.poses"].begin(); it != root["repository"]["actor.poses"].end(); ++it) {
+        for (auto it = m_root["repository"]["actor.poses"].begin(); it != m_root["repository"]["actor.poses"].end(); ++it) {
             QString mapName = it->XKey.as<QString>();
-			if ( SG.hasName(SANIMPOSES, mapName) )
+            if ( SG.hasName(CONSTANTS::SANIMPOSES, mapName) )
 			{
 				qw << ("loadSceneRepository()>: pose " + mapName + " already exist! Overwriting.");
 				//continue;
 			}
-			int nameID = SG.getID(SANIMPOSES, mapName);
+            int nameID = SG.getID(CONSTANTS::SANIMPOSES, mapName);
 
             if ( !it->YValue["idle_anim"] ) {
 				warning("loadSceneRepository()>: Can't find idle_anim for actor.pose: " + mapName);
@@ -1158,18 +1166,18 @@ bool YmlSceneManager::loadSceneRepository() {
 	}
 
 	/* LOAD MIMICS (MIMIC POSES) FROM REPO */
-	if (root["repository"]["mimics"]) {
-		qd << "loadSceneRepository()>: Loading " << root["repository"]["mimics"].size() << " mimics..";
+    if (m_root["repository"]["mimics"]) {
+        qd << "loadSceneRepository()>: Loading " << m_root["repository"]["mimics"].size() << " mimics..";
 		int cnt_new = 0;
 
-		for (auto it = root["repository"]["mimics"].begin(); it != root["repository"]["mimics"].end(); ++it) {
+        for (auto it = m_root["repository"]["mimics"].begin(); it != m_root["repository"]["mimics"].end(); ++it) {
             QString mapName = it->XKey.as<QString>();
-			if ( SG.hasName(SMIMICPOSES, mapName) )
+            if ( SG.hasName(CONSTANTS::SMIMICPOSES, mapName) )
 			{
                 qw << ("loadSceneRepository(): mimic pose " + mapName + " already exist! Overwriting.");
 				//continue;
 			}
-			int nameID = SG.getID(SMIMICPOSES, mapName);
+            int nameID = SG.getID(CONSTANTS::SMIMICPOSES, mapName);
 
             if ( !it->YValue["pose"] ) {
 				warning("loadSceneRepository()>: Can't find anim for mimic pose: " + mapName);
@@ -1201,18 +1209,18 @@ bool YmlSceneManager::loadSceneRepository() {
 	}
 
 	/* LOAD SOUNDBANKS EVENTS FROM REPO */
-	if (root["repository"]["soundbanks"]) {
-		qd << "loadSceneRepository()>: Loading " << root["repository"]["soundbanks"].size() << " soundbanks..";
+    if (m_root["repository"]["soundbanks"]) {
+        qd << "loadSceneRepository()>: Loading " << m_root["repository"]["soundbanks"].size() << " soundbanks..";
 		int cnt_new = 0;
 
-		for (auto it = root["repository"]["soundbanks"].begin(); it != root["repository"]["soundbanks"].end(); ++it) {
+        for (auto it = m_root["repository"]["soundbanks"].begin(); it != m_root["repository"]["soundbanks"].end(); ++it) {
             QString mapName = it->XKey.as<QString>();
-			if ( SG.hasName(SSOUNDBANKS, mapName) )
+            if ( SG.hasName(CONSTANTS::SSOUNDBANKS, mapName) )
 			{
 				qw << ("loadSceneRepository(): soundbank " + mapName + " already exists!");
 				//continue;
 			}
-			int nameID = SG.getID(SSOUNDBANKS, mapName);
+            int nameID = SG.getID(CONSTANTS::SSOUNDBANKS, mapName);
 
             if ( !it->YValue.IsSequence() ) {
 				warning("loadSceneRepository()>: soundbank " + mapName + ": expected sound events sequence!");
@@ -1243,10 +1251,10 @@ void YmlSceneManager::cleanupTempRepository() {
         int nameID = actorIDs[i];
         QString name = SG.getName(nameID);
         qd << "cleanupTempRepository(): " << name;
-        if ( name.endsWith(SREPO_TEMP) ) {
+        if ( name.endsWith(CONSTANTS::SREPO_TEMP) ) {
             qd << "cleanupTempRepository(): CLEANED";
             SG.actors.remove(nameID);
-            SG.removeName(SASSETS, name);
+            SG.removeName(CONSTANTS::SASSETS, name);
         }
     }
 
@@ -1255,26 +1263,26 @@ void YmlSceneManager::cleanupTempRepository() {
         int nameID = propIDs[i];
         QString name = SG.getName(nameID);
         qd << "cleanupTempRepository(): " << name;
-        if ( name.endsWith(SREPO_TEMP) ) {
+        if ( name.endsWith(CONSTANTS::SREPO_TEMP) ) {
             qd << "cleanupTempRepository(): CLEANED";
             SG.props.remove(nameID);
-            SG.removeName(SASSETS, name);
+            SG.removeName(CONSTANTS::SASSETS, name);
         }
     }
 }
 
 bool YmlSceneManager::loadSceneProduction() {
-	if (!root["production"]["assets"])	{
+    if (!m_root["production"]["assets"])	{
 		warning("loadSceneProduction()>: No production assets!");
 		return true;
 	}
 
 	/* LOAD ACTORS FROM PRODUCTION */
-	if (root["production"]["assets"]["actors"]) {
-		qd << "loadSceneProduction()>: Loading " << root["production"]["assets"]["actors"].size() << " actors..";
+    if (m_root["production"]["assets"]["actors"]) {
+        qd << "loadSceneProduction()>: Loading " << m_root["production"]["assets"]["actors"].size() << " actors..";
 		//QSet<QString> dontRemoveKeys; // for renamed (mapName -> repoName)
 
-		for (auto it = root["production"]["assets"]["actors"].begin(); it != root["production"]["assets"]["actors"].end(); ++it) {
+        for (auto it = m_root["production"]["assets"]["actors"].begin(); it != m_root["production"]["assets"]["actors"].end(); ++it) {
             QString mapName = it->XKey.as<QString>();
 
             if ( !it->YValue["repo"] ) {
@@ -1282,12 +1290,12 @@ bool YmlSceneManager::loadSceneProduction() {
 				continue;
 			}
             QString repoName = it->YValue["repo"].as<QString>();
-            if ( !SG.hasName(SASSETS, repoName + SREPO_TEMP) ) {
+            if ( !SG.hasName(CONSTANTS::SASSETS, repoName + CONSTANTS::SREPO_TEMP) ) {
 				error("loadSceneProduction()>: Actor " + repoName + " not found in repository!");
 				continue;
 			}
-            int repoID = SG.getID(SASSETS, repoName + SREPO_TEMP);
-            int prodID = SG.getID(SASSETS, mapName);
+            int repoID = SG.getID(CONSTANTS::SASSETS, repoName + CONSTANTS::SREPO_TEMP);
+            int prodID = SG.getID(CONSTANTS::SASSETS, mapName);
 
 			asset prodActor = SG.actors[repoID];
 			prodActor.nameID = prodID;
@@ -1323,10 +1331,10 @@ bool YmlSceneManager::loadSceneProduction() {
 	}
 
 	/* LOAD PROPS FROM PRODUCTION */
-	if (root["production"]["assets"]["props"]) {
-		qd << "loadSceneProduction()>: Loading " << root["production"]["assets"]["props"].size() << " props..";
+    if (m_root["production"]["assets"]["props"]) {
+        qd << "loadSceneProduction()>: Loading " << m_root["production"]["assets"]["props"].size() << " props..";
 
-		for (auto it = root["production"]["assets"]["props"].begin(); it != root["production"]["assets"]["props"].end(); ++it) {
+        for (auto it = m_root["production"]["assets"]["props"].begin(); it != m_root["production"]["assets"]["props"].end(); ++it) {
             QString mapName = it->XKey.as<QString>();
 
             if ( !it->YValue["repo"] ) {
@@ -1334,13 +1342,13 @@ bool YmlSceneManager::loadSceneProduction() {
 				continue;
 			}
             QString repoName = it->YValue["repo"].as<QString>();
-            if ( !SG.hasName(SASSETS, repoName + SREPO_TEMP) ) {
+            if ( !SG.hasName(CONSTANTS::SASSETS, repoName + CONSTANTS::SREPO_TEMP) ) {
 				error("loadSceneProduction()>: Prop " + repoName + " not found in repository!");
 				continue;
 			}
 
-            int repoID = SG.getID(SASSETS, repoName + SREPO_TEMP);
-            int prodID = SG.getID(SASSETS, mapName);
+            int repoID = SG.getID(CONSTANTS::SASSETS, repoName + CONSTANTS::SREPO_TEMP);
+            int prodID = SG.getID(CONSTANTS::SASSETS, mapName);
 
 			asset prodProp = SG.props[repoID];
             prodProp.is_prop = true;
@@ -1353,11 +1361,11 @@ bool YmlSceneManager::loadSceneProduction() {
 	}
 
 	/* LOAD CAMERAS FROM PRODUCTION */
-	if (root["production"]["assets"]["cameras"]) {
-		qd << "loadSceneProduction()>: Loading " << root["production"]["assets"]["cameras"].size() << " cameras..";
+    if (m_root["production"]["assets"]["cameras"]) {
+        qd << "loadSceneProduction()>: Loading " << m_root["production"]["assets"]["cameras"].size() << " cameras..";
 		//QSet<QString> dontRemoveKeys; // for renamed (mapName -> repoName)
 
-		for (auto it = root["production"]["assets"]["cameras"].begin(); it != root["production"]["assets"]["cameras"].end(); ++it) {
+        for (auto it = m_root["production"]["assets"]["cameras"].begin(); it != m_root["production"]["assets"]["cameras"].end(); ++it) {
             QString mapName = it->XKey.as<QString>();
 
             if ( !it->YValue["repo"] ) {
@@ -1365,13 +1373,13 @@ bool YmlSceneManager::loadSceneProduction() {
 				continue;
 			}
             QString repoName = it->YValue["repo"].as<QString>();
-			if ( !SG.hasName(SCAMERAS, repoName) ) {
+            if ( !SG.hasName(CONSTANTS::SCAMERAS, repoName) ) {
 				error("loadSceneProduction()>: Camera " + repoName + " not found in repository!");
 				continue;
 			}
 
-			int repoID = SG.getID(SCAMERAS, repoName);
-			int prodID = SG.getID(SCAMERAS, mapName);
+            int repoID = SG.getID(CONSTANTS::SCAMERAS, repoName);
+            int prodID = SG.getID(CONSTANTS::SCAMERAS, mapName);
 
 			camera prodCamera = SG.cameras[repoID];
 			prodCamera.nameID = prodID;
@@ -1389,10 +1397,10 @@ bool YmlSceneManager::loadSceneProduction() {
 	}
 
 	/* LOAD ANIMS FROM PRODUCTION */
-	if (root["production"]["assets"]["animations"]) {
-		qd << "loadSceneProduction()>: Loading " << root["production"]["assets"]["animations"].size() << " animations..";
+    if (m_root["production"]["assets"]["animations"]) {
+        qd << "loadSceneProduction()>: Loading " << m_root["production"]["assets"]["animations"].size() << " animations..";
 
-		for (auto it = root["production"]["assets"]["animations"].begin(); it != root["production"]["assets"]["animations"].end(); ++it) {
+        for (auto it = m_root["production"]["assets"]["animations"].begin(); it != m_root["production"]["assets"]["animations"].end(); ++it) {
             QString mapName = it->XKey.as<QString>();
 
             if ( !it->YValue["repo"] ) {
@@ -1400,23 +1408,23 @@ bool YmlSceneManager::loadSceneProduction() {
 				continue;
 			}
             QString repoName = it->YValue["repo"].as<QString>();
-			if ( !SG.hasName(SANIMS, repoName) ) {
+            if ( !SG.hasName(CONSTANTS::SANIMS, repoName) ) {
 				error("loadSceneProduction()>: Animation " + repoName + " not found in repository!");
 				continue;
 			}
 
-			int repoID = SG.getID(SANIMS, repoName);
-			int prodID = SG.getID(SANIMS, mapName);
+            int repoID = SG.getID(CONSTANTS::SANIMS, repoName);
+            int prodID = SG.getID(CONSTANTS::SANIMS, mapName);
 
 			animation prodAnim = SG.anims[repoID];
 			prodAnim.nameID = prodID;
 
             if ( it->YValue["actor"] ) {
                 QString actorName = it->YValue["actor"].as<QString>();
-                if (!SG.hasName(SASSETS, actorName)) {
+                if (!SG.hasName(CONSTANTS::SASSETS, actorName)) {
 					error("loadSceneProduction()>: Animation actor " + actorName + " not found in repository!");
 				} else {
-                    int actorID = SG.getID(SASSETS, actorName);
+                    int actorID = SG.getID(CONSTANTS::SASSETS, actorName);
 					prodAnim.actorID = actorID;
 				}
 			}
@@ -1440,10 +1448,10 @@ bool YmlSceneManager::loadSceneProduction() {
 	}
 
 	/* LOAD MIMIC ANIMS FROM PRODUCTION */
-	if (root["production"]["assets"]["animations.mimic"]) {
-		qd << "loadSceneProduction()>: Loading " << root["production"]["assets"]["animations.mimic"].size() << " mimic anims..";
+    if (m_root["production"]["assets"]["animations.mimic"]) {
+        qd << "loadSceneProduction()>: Loading " << m_root["production"]["assets"]["animations.mimic"].size() << " mimic anims..";
 
-		for (auto it = root["production"]["assets"]["animations.mimic"].begin(); it != root["production"]["assets"]["animations.mimic"].end(); ++it) {
+        for (auto it = m_root["production"]["assets"]["animations.mimic"].begin(); it != m_root["production"]["assets"]["animations.mimic"].end(); ++it) {
             QString mapName = it->XKey.as<QString>();
 
             if ( !it->YValue["repo"] ) {
@@ -1451,23 +1459,23 @@ bool YmlSceneManager::loadSceneProduction() {
 				continue;
 			}
             QString repoName = it->YValue["repo"].as<QString>();
-			if ( !SG.hasName(SMIMICANIMS, repoName) ) {
+            if ( !SG.hasName(CONSTANTS::SMIMICANIMS, repoName) ) {
 				error("loadSceneProduction()>: Mimic animation " + repoName + " not found in repository!");
 				continue;
 			}
 
-			int repoID = SG.getID(SMIMICANIMS, repoName);
-			int prodID = SG.getID(SMIMICANIMS, mapName);
+            int repoID = SG.getID(CONSTANTS::SMIMICANIMS, repoName);
+            int prodID = SG.getID(CONSTANTS::SMIMICANIMS, mapName);
 
 			animation prodMimicAnim = SG.mimics[repoID];
 			prodMimicAnim.nameID = prodID;
 
             if ( it->YValue["actor"] ) {
                 QString actorName = it->YValue["actor"].as<QString>();
-                if (!SG.hasName(SASSETS, actorName)) {
+                if (!SG.hasName(CONSTANTS::SASSETS, actorName)) {
 					error("loadSceneProduction()>: Animation Mimic actor " + actorName + " not found in repository!");
 				} else {
-                    int actorID = SG.getID(SASSETS, actorName);
+                    int actorID = SG.getID(CONSTANTS::SASSETS, actorName);
 					prodMimicAnim.actorID = actorID;
 				}
 			}
@@ -1491,10 +1499,10 @@ bool YmlSceneManager::loadSceneProduction() {
 	}
 
 	/* LOAD POSES FROM PRODUCTION */
-	if (root["production"]["assets"]["actor.poses"]) {
-		qd << "loadSceneProduction()>: Loading " << root["production"]["assets"]["actor.poses"].size() << " mimic anims..";
+    if (m_root["production"]["assets"]["actor.poses"]) {
+        qd << "loadSceneProduction()>: Loading " << m_root["production"]["assets"]["actor.poses"].size() << " mimic anims..";
 
-		for (auto it = root["production"]["assets"]["actor.poses"].begin(); it != root["production"]["assets"]["actor.poses"].end(); ++it) {
+        for (auto it = m_root["production"]["assets"]["actor.poses"].begin(); it != m_root["production"]["assets"]["actor.poses"].end(); ++it) {
             QString mapName = it->XKey.as<QString>();
 
             if ( !it->YValue["repo"] ) {
@@ -1502,23 +1510,23 @@ bool YmlSceneManager::loadSceneProduction() {
 				continue;
 			}
             QString repoName = it->YValue["repo"].as<QString>();
-			if ( !SG.hasName(SANIMPOSES, repoName) ) {
+            if ( !SG.hasName(CONSTANTS::SANIMPOSES, repoName) ) {
 				error("loadSceneProduction()>: Actor.pose " + repoName + " not found in repository!");
 				continue;
 			}
 
-			int repoID = SG.getID(SANIMPOSES, repoName);
-			int prodID = SG.getID(SANIMPOSES, mapName);
+            int repoID = SG.getID(CONSTANTS::SANIMPOSES, repoName);
+            int prodID = SG.getID(CONSTANTS::SANIMPOSES, mapName);
 
 			anim_pose prodPose = SG.poses[repoID];
 			prodPose.nameID = prodID;
 
             if ( it->YValue["actor"] ) {
                 QString actorName = it->YValue["actor"].as<QString>();
-                if (!SG.hasName(SASSETS, actorName)) {
+                if (!SG.hasName(CONSTANTS::SASSETS, actorName)) {
 					error("loadSceneProduction()>: Pose actor " + actorName + " not found in repository!");
 				} else {
-                    int actorID = SG.getID(SASSETS, actorName);
+                    int actorID = SG.getID(CONSTANTS::SASSETS, actorName);
 					prodPose.actorID = actorID;
 				}
 			}
@@ -1530,10 +1538,10 @@ bool YmlSceneManager::loadSceneProduction() {
 	}
 
 	/* LOAD MIMICS (MIMIC POSES) FROM PRODUCTION */
-	if (root["production"]["assets"]["mimics"]) {
-		qd << "loadSceneProduction()>: Loading " << root["production"]["assets"]["mimics"].size() << " mimics (mimic poses)..";
+    if (m_root["production"]["assets"]["mimics"]) {
+        qd << "loadSceneProduction()>: Loading " << m_root["production"]["assets"]["mimics"].size() << " mimics (mimic poses)..";
 
-		for (auto it = root["production"]["assets"]["mimics"].begin(); it != root["production"]["assets"]["mimics"].end(); ++it) {
+        for (auto it = m_root["production"]["assets"]["mimics"].begin(); it != m_root["production"]["assets"]["mimics"].end(); ++it) {
             QString mapName = it->XKey.as<QString>();
 
             if ( !it->YValue["repo"] ) {
@@ -1541,23 +1549,23 @@ bool YmlSceneManager::loadSceneProduction() {
 				continue;
 			}
             QString repoName = it->YValue["repo"].as<QString>();
-			if ( !SG.hasName(SMIMICPOSES, repoName) ) {
+            if ( !SG.hasName(CONSTANTS::SMIMICPOSES, repoName) ) {
 				error("loadSceneProduction()>: Mimics (mimic pose) " + repoName + " not found in repository!");
 				continue;
 			}
 
-			int repoID = SG.getID(SMIMICPOSES, repoName);
-			int prodID = SG.getID(SMIMICPOSES, mapName);
+            int repoID = SG.getID(CONSTANTS::SMIMICPOSES, repoName);
+            int prodID = SG.getID(CONSTANTS::SMIMICPOSES, mapName);
 
 			mimic_pose prodMimicPose = SG.mimic_poses[repoID];
 			prodMimicPose.nameID = prodID;
 
             if ( it->YValue["actor"] ) {
                 QString actorName = it->YValue["actor"].as<QString>();
-                if (!SG.hasName(SASSETS, actorName)) {
+                if (!SG.hasName(CONSTANTS::SASSETS, actorName)) {
 					error("loadSceneProduction()>: Mimic Pose actor " + actorName + " not found in repository!");
 				} else {
-                    int actorID = SG.getID(SASSETS, actorName);
+                    int actorID = SG.getID(CONSTANTS::SASSETS, actorName);
 					prodMimicPose.actorID = actorID;
 				}
 			}
@@ -1579,16 +1587,16 @@ bool YmlSceneManager::loadSceneProduction() {
 	}
 
 	/* LOAD SOUNDBANKS FROM PRODUCTION */
-	if (root["production"]["assets"]["soundbanks"]) {
-		qd << "loadSceneProduction()>: Loading " << root["production"]["assets"]["soundbanks"].size() << " soundbanks..";
+    if (m_root["production"]["assets"]["soundbanks"]) {
+        qd << "loadSceneProduction()>: Loading " << m_root["production"]["assets"]["soundbanks"].size() << " soundbanks..";
 
-		upn(j, 0, root["production"]["assets"]["soundbanks"].size() - 1) {
-			QString bankName = root["production"]["assets"]["soundbanks"][j].as<QString>();
-			if ( !SG.hasName(SSOUNDBANKS, bankName) ) {
+        upn(j, 0, m_root["production"]["assets"]["soundbanks"].size() - 1) {
+            QString bankName = m_root["production"]["assets"]["soundbanks"][j].as<QString>();
+            if ( !SG.hasName(CONSTANTS::SSOUNDBANKS, bankName) ) {
 				error("loadSceneProduction()>: Soundbank " + bankName + " not found in repository!");
 				continue;
 			}
-			int bankID = SG.getID(SSOUNDBANKS, bankName);
+            int bankID = SG.getID(CONSTANTS::SSOUNDBANKS, bankName);
 
 			/*for (auto jt : SG.soundbanks[bankID]) {
 				SG.addNameFor("availableSoundEvents", jt);
@@ -1600,8 +1608,8 @@ bool YmlSceneManager::loadSceneProduction() {
 
 bool YmlSceneManager::loadSceneDefaults() {
 	/* general settings */
-	if (root["production"]["settings"]) {
-		YAML::Node settingsNode = root["production"]["settings"];
+    if (m_root["production"]["settings"]) {
+        YAML::Node settingsNode = m_root["production"]["settings"];
 		if (settingsNode["sceneid"])
 			SG.sceneid = settingsNode["sceneid"].as<int>();
 		if (settingsNode["strings-idstart"])
@@ -1609,16 +1617,16 @@ bool YmlSceneManager::loadSceneDefaults() {
 		if (settingsNode["strings-idspace"])
 			SG.idspace = settingsNode["strings-idspace"].as<QString>();
 	}
-	if (root["production"]["placement"])
-		SG.placementTag = root["production"]["placement"].as<QString>();
-	if (root["production"]["gameplay"])
-		SG.gameplay = root["production"]["gameplay"].as<bool>();
-	if (root["production"]["cinematic_subtitles"])
-		SG.cinematic_subtitles = root["production"]["cinematic_subtitles"].as<bool>();
+    if (m_root["production"]["placement"])
+        SG.placementTag = m_root["production"]["placement"].as<QString>();
+    if (m_root["production"]["gameplay"])
+        SG.gameplay = m_root["production"]["gameplay"].as<bool>();
+    if (m_root["production"]["cinematic_subtitles"])
+        SG.cinematic_subtitles = m_root["production"]["cinematic_subtitles"].as<bool>();
 
 	/* actors defaults */
-	YAML::Node placeNode = root["storyboard"]["defaults"]["placement"];
-	YAML::Node poseNode = root["storyboard"]["defaults"]["actor.pose"];
+    YAML::Node placeNode = m_root["storyboard"]["defaults"]["placement"];
+    YAML::Node poseNode = m_root["storyboard"]["defaults"]["actor.pose"];
 	for (auto actorID : SG.actors.keys()) {
 		QString actorName = SG.getName(actorID);
 		// placement
@@ -1629,10 +1637,10 @@ bool YmlSceneManager::loadSceneDefaults() {
 		// poses
 		if (poseNode[actorName] && poseNode[actorName].IsScalar()) {
 			QString poseName = poseNode[actorName].as<QString>();
-			if ( !SG.hasName(SANIMPOSES, poseName) ) {
+            if ( !SG.hasName(CONSTANTS::SANIMPOSES, poseName) ) {
 				error("loadSceneDefaults(): Default pose " + poseName + " was not defined in repo/production (actor: " + actorName + ")");
 			} else {
-				int poseID = SG.getID(SANIMPOSES, poseName);
+                int poseID = SG.getID(CONSTANTS::SANIMPOSES, poseName);
 				SG.defaultPose[actorID] = poseID;
 				qd << "loadSceneDefaults(): Set def pose for " << actorName << ": " << poseName;
 			}
@@ -1640,9 +1648,9 @@ bool YmlSceneManager::loadSceneDefaults() {
 		// mimic (special case - defined in actor map in: (1) repo, (2) production)
 		mimic_pose defMimic;
 		// from repository (barely)
-		YAML::Node mimicRNode = root["repository"]["actors"][actorName]["mimic"];
+        YAML::Node mimicRNode = m_root["repository"]["actors"][actorName]["mimic"];
 		if (mimicRNode && mimicRNode.IsMap()) {
-			defMimic.nameID = SG.getID(SMIMICPOSES, actorName + "_default_mimic"); // not really needed
+            defMimic.nameID = SG.getID(CONSTANTS::SMIMICPOSES, actorName + "_default_mimic"); // not really needed
 			if ( mimicRNode["emotional_state"] )
 				defMimic.emotional_state = mimicRNode["emotional_state"].as<QString>();
 			if ( mimicRNode["eyes"] )
@@ -1655,17 +1663,17 @@ bool YmlSceneManager::loadSceneDefaults() {
 				defMimic.duration = mimicRNode["duration"].as<float>();
 		}
 		// from production (probably)
-		YAML::Node mimicPNode = root["production"]["assets"]["actors"][actorName]["mimic"];
+        YAML::Node mimicPNode = m_root["production"]["assets"]["actors"][actorName]["mimic"];
 		if (mimicPNode && mimicPNode.IsMap()) {
-			defMimic.nameID = SG.getID(SMIMICPOSES, actorName + "_default_mimic"); // not really needed
+            defMimic.nameID = SG.getID(CONSTANTS::SMIMICPOSES, actorName + "_default_mimic"); // not really needed
 
 			if ( mimicPNode["repo"] ) {
 				QString mimicPNodeRepo = mimicPNode["repo"].as<QString>();
-				if ( !SG.hasName(SMIMICPOSES, mimicPNodeRepo) ) {
+                if ( !SG.hasName(CONSTANTS::SMIMICPOSES, mimicPNodeRepo) ) {
 					warning("loadSceneDefaults()>: Mimics (mimic pose) " + mimicPNodeRepo + " for actor " + actorName + " not found in repository!");
 				} else {
 					// load repo params first
-					defMimic = SG.mimic_poses[ SG.getID(SMIMICPOSES, mimicPNodeRepo) ];
+                    defMimic = SG.mimic_poses[ SG.getID(CONSTANTS::SMIMICPOSES, mimicPNodeRepo) ];
 				}
 			}
 			if ( mimicPNode["emotional_state"] )
@@ -1706,14 +1714,14 @@ bool YmlSceneManager::loadShotsInfo() {
 	cueKeys = { "CUE", "HINT", "REFERENCE" };
 
     for (auto sectionName : m_sectionNames) {
-		if (!root["dialogscript"][sectionName])	{
+        if (!m_root["dialogscript"][sectionName])	{
 			qDebug() << "Exception0: no dialogscript found for section [" << sectionName << "]";
 			continue;
 		}
 
-		YAML::Node sNode = root["dialogscript"][sectionName];
+        YAML::Node sNode = m_root["dialogscript"][sectionName];
 
-		dialogLink newDgLink;
+        dialogLink *newDgLink = new dialogLink();
 		QString prevShotName = QString();
 		qInfo() << "--- Loading dialog for section [" << sectionName << "]";
 
@@ -1744,32 +1752,32 @@ bool YmlSceneManager::loadShotsInfo() {
 
 			} else if ( key.toUpper() == "PAUSE" || key.toUpper() == "CHOICE" ) {
 				//qDebug() << "CHOICE/PAUSE key";
-				newDgLink.lines.pb( key.toUpper() );
-                int actorID = SG.getID(SASSETS, key.toUpper());
-				newDgLink.speakers.pb( actorID );
+                newDgLink->lines.pb( key.toUpper() );
+                int actorID = SG.getID(CONSTANTS::SASSETS, key.toUpper());
+                newDgLink->speakers.pb( actorID );
 				double dur = -1.0;
 				if (key.toUpper() == "PAUSE") {
                     dur = it->begin()->YValue.as<double>();
 				} else {
-					dur = sectionGraph[sectionName]->timeLimit;
+                    dur = m_pSectionLinkBySectionName[sectionName]->timeLimit;
                     if (dur < 0.0)
                         dur = 10.0;
 				}
 
-				newDgLink.durations.pb( dur );
+                newDgLink->durations.pb( dur );
 
 				shot newShot;
 				if ( prevShotName.isEmpty() ) {
 					prevShotName = key.toUpper() + "_";
 					int idx = 1;
-                    while ( newDgLink.shotNames.contains( prevShotName + qn(idx) ) ) {
+                    while ( newDgLink->shotNames.contains( prevShotName + qn(idx) ) ) {
 						++idx;
 					}
 					prevShotName += qn(idx);
 				}
 				newShot.shotName = prevShotName;
-                newDgLink.shotNames.insert(prevShotName);
-				newDgLink.shots.pb( newShot );
+                newDgLink->shotNames.insert(prevShotName);
+                newDgLink->shots.pb( newShot );
 
 				prevShotName = QString();
 
@@ -1780,27 +1788,27 @@ bool YmlSceneManager::loadShotsInfo() {
 				}
 				//qDebug() << "ACTOR key";
                 QString line = it->begin()->YValue.as<QString>();
-				newDgLink.lines.pb( line );
-                if ( !SG.hasName(SASSETS, key) ) {
+                newDgLink->lines.pb( line );
+                if ( !SG.hasName(CONSTANTS::SASSETS, key) ) {
 					error(QString(Q_FUNC_INFO) + ": section " + sectionName + ": actor " + key + " not found in repository!");
 				}
-                int actorID = SG.getID(SASSETS, key);
+                int actorID = SG.getID(CONSTANTS::SASSETS, key);
 				warning("TEST actor: " + SG.getName(actorID));
-				newDgLink.speakers.pb( actorID );
-				newDgLink.durations.pb( getTextDuration(line) ); // TODO: try extract duration
+                newDgLink->speakers.pb( actorID );
+                newDgLink->durations.pb( getTextDuration(line) ); // TODO: try extract duration
 
 				shot newShot;
 				if ( prevShotName.isEmpty() ) {
 					prevShotName = key;
 					int idx = 1;
-                    while ( newDgLink.shotNames.contains( prevShotName + qn(idx) ) ) {
+                    while ( newDgLink->shotNames.contains( prevShotName + qn(idx) ) ) {
 						++idx;
 					}
 					prevShotName += qn(idx);
 				}
 				newShot.shotName = prevShotName;
-                newDgLink.shotNames.insert(prevShotName);
-				newDgLink.shots.pb( newShot );
+                newDgLink->shotNames.insert(prevShotName);
+                newDgLink->shots.pb( newShot );
 
 				prevShotName = QString();
 
@@ -1814,12 +1822,12 @@ bool YmlSceneManager::loadShotsInfo() {
 			qDebug() << "Speaker: [" << newDgLink.speakers[i] << "], line: [" << newDgLink.lines[i] << "], shot alias: ["
 					 << newDgLink.shots[i].shotName << "], duration: [" << newDgLink.durations[i] << "]";
 		}*/
-		newDgLink.calculateTotalDuration();
-        m_dialogLinkBySectionName[sectionName]= newDgLink;
+        newDgLink->calculateTotalDuration();
+        m_pDialogLinkBySectionName[sectionName]= newDgLink;
 	}
 
-	if (root["storyboard"]) {
-		for (auto it = root["storyboard"].begin(); it != root["storyboard"].end(); ++it) {
+    if (m_root["storyboard"]) {
+        for (auto it = m_root["storyboard"].begin(); it != m_root["storyboard"].end(); ++it) {
             QString sectionName = it->XKey.as<QString>();
 			qInfo() << "loadShotsInfo()>: Loading storyboard for section: [" << sectionName << "]";
 
@@ -1840,13 +1848,13 @@ bool YmlSceneManager::loadShotsInfo() {
 					qCritical() << "loadShotsInfo()>: Exception5: shot actions are not a list!";
 					continue;
 				}
-                int shotIdx = m_dialogLinkBySectionName[sectionName].shotNumByName(shotName);
+                int shotIdx = m_pDialogLinkBySectionName[sectionName]->shotNumByName(shotName);
 				if (shotIdx == -1) {
 					qCritical() << "loadShotsInfo()>: Exception6: shot was not found in dialogscript!";
 					continue;
 				}
 
-                if ( !loadShotActions(jt->YValue, m_dialogLinkBySectionName[sectionName].shots[shotIdx]) ) {
+                if ( !loadShotActions(jt->YValue, m_pDialogLinkBySectionName[sectionName]->shots[shotIdx]) ) {
 					error("loadShotsInfo()>: error loading shot: " + shotName + " (section " + sectionName + ")");
 					return false;
 				}
@@ -1861,26 +1869,26 @@ bool YmlSceneManager::loadShotsInfo() {
 }
 
 bool YmlSceneManager::drawSectionsGraph() {
-    for (auto s : startSections) {
+    for (auto s : m_startSections) {
         if ( !dfsPrepareGraph(s, 0) )
             return false;
     }
 
     qreal x = 50;
-	qreal x_offset = qMin( WIDTH * 2.5, (SCENE_WIDTH * 0.95) / sectionsByDepth.size() );
-	qreal y_max = -1, y_min = SCENE_HEIGHT + 1;
-    for (int i = 0; i < sectionsByDepth.size(); ++i) {
+    qreal x_offset = qMin( CONSTANTS::WIDTH * 2.5, (CONSTANTS::SCENE_WIDTH * 0.95) / m_sectionNamesByDepth.size() );
+    qreal y_max = -1, y_min = CONSTANTS::SCENE_HEIGHT + 1;
+    for (int i = 0; i < m_sectionNamesByDepth.size(); ++i) {
 		qreal y = 0;
-		qreal y_offset = (SCENE_HEIGHT * 0.95) / (sectionsByDepth[i].size() + 1);
+        qreal y_offset = (CONSTANTS::SCENE_HEIGHT * 0.95) / (m_sectionNamesByDepth[i].size() + 1);
 
 		bool wasStep = true;
 		qreal x_offset2 = 0;
-		if (y_offset < HEIGHT) {
-			x_offset2 = WIDTH / 1.25;
+        if (y_offset < CONSTANTS::HEIGHT) {
+            x_offset2 = CONSTANTS::WIDTH / 1.25;
 		}
-        for (int j = 0; j < sectionsByDepth[i].size(); ++j) {
+        for (int j = 0; j < m_sectionNamesByDepth[i].size(); ++j) {
 			y += y_offset;
-			GraphicsSectionItem* pItem = itemBySectionName[sectionsByDepth[i][j]];
+            GraphicsSectionItem* pItem = m_pItemBySectionName[m_sectionNamesByDepth[i][j]];
 			if (wasStep) {
 				pItem->setPos(x, y);
 				wasStep = false;
@@ -1894,19 +1902,19 @@ bool YmlSceneManager::drawSectionsGraph() {
         x += x_offset;
     }
 
-    wasDrawn.clear();
-    for (auto s : startSections) {
+    m_wasDrawn.clear();
+    for (auto s : m_startSections) {
         if ( !dfsDrawGraph(s) ) {
             return false;
         }
     }
 
     // fill sockets
-	for (auto it : itemBySectionName) {
+    for (auto it : m_pItemBySectionName) {
         it->fillCleanSockets();
         it->updateState();
     }
-	pScene->views().first()->fitInView(0, y_min, x, y_max, Qt::KeepAspectRatio);
+    m_pScene->views().first()->fitInView(0, y_min, x, y_max, Qt::KeepAspectRatio);
 
 	hasChanges = false;
     return true;
@@ -1914,20 +1922,20 @@ bool YmlSceneManager::drawSectionsGraph() {
 }
 
 bool YmlSceneManager::dfsPrepareGraph(QString sectionName, int depth) {
-    if ( depth > 0 && startSections.contains(sectionName) ) {
+    if ( depth > 0 && m_startSections.contains(sectionName) ) {
         // TRYING TO ADD section_start as NEXT, incorrect yml!
         return false;
     }
-	if ( !sectionGraph.contains(sectionName) ) {
+    if ( !m_pSectionLinkBySectionName.contains(sectionName) ) {
 		qDebug() << "Non-existing section: " << sectionName;
 		return false;
 	}
 
-    if ( wasDrawn.contains(sectionName) ) {
+    if ( m_wasDrawn.contains(sectionName) ) {
         return true;
     }
 
-    wasDrawn.insert(sectionName);
+    m_wasDrawn.insert(sectionName);
 	GraphicsSectionItem* newSect = new GraphicsSectionItem;
 	/*? if ( unusedItems.isEmpty() ) {
 		newSect = new GraphicsSectionItem;
@@ -1939,15 +1947,15 @@ bool YmlSceneManager::dfsPrepareGraph(QString sectionName, int depth) {
     newSect->setLabel(sectionName);
     newSect->setSectionLink(getSectionLink(sectionName));
     newSect->setYmlManager(this);
-    pScene->addItem( newSect );
-	itemBySectionName[sectionName] = newSect;
+    m_pScene->addItem( newSect );
+    m_pItemBySectionName[sectionName] = newSect;
 
-    if ( sectionsByDepth.size() < depth + 1) {
-        sectionsByDepth.push_back(QVector<QString>());
+    if ( m_sectionNamesByDepth.size() < depth + 1) {
+        m_sectionNamesByDepth.push_back(QVector<QString>());
     }
-    sectionsByDepth[depth].push_back(sectionName);
+    m_sectionNamesByDepth[depth].push_back(sectionName);
 
-    for (auto next : sectionGraph[sectionName]->names) {
+    for (auto next : m_pSectionLinkBySectionName[sectionName]->names) {
         if ( !dfsPrepareGraph(next, depth + 1) ) {
             return false;
         }
@@ -1957,19 +1965,19 @@ bool YmlSceneManager::dfsPrepareGraph(QString sectionName, int depth) {
 }
 
 bool YmlSceneManager::dfsDrawGraph(QString sectionName) {
-    if ( wasDrawn.contains(sectionName) ) {
+    if ( m_wasDrawn.contains(sectionName) ) {
         return true;
     }
 
-    wasDrawn.insert(sectionName);
-	GraphicsSectionItem* pSect = itemBySectionName[sectionName];
+    m_wasDrawn.insert(sectionName);
+    GraphicsSectionItem* pSect = m_pItemBySectionName[sectionName];
 
-    for (auto next : sectionGraph[sectionName]->names) {
+    for (auto next : m_pSectionLinkBySectionName[sectionName]->names) {
         if ( !dfsDrawGraph(next) ) {
             return false;
         }
         //qDebug() << "Dfs draw graph: [" << sectionName << "]->[" << next << "]";
-		if ( !pSect->addOutputEdge(itemBySectionName[next]) ) {
+        if ( !pSect->addOutputEdge(m_pItemBySectionName[next]) ) {
 			qc << "FAILED to add new socket, incorrect yml!";
             return false;
         }
@@ -1985,55 +1993,63 @@ void YmlSceneManager::addSectionLink(QPointF pos) {
 	}
 	sectionName = sectionName + qn(j);
     m_sectionNames.append(sectionName);
-	sectionLink* tmpLink = new sectionLink;
-	tmpLink->type = nextS;
-	tmpLink->sectionName = sectionName;
-	sectionGraph.insert(sectionName, tmpLink);
+    sectionLink* tmpLink = new sectionLink(sectionName, nextS);
+    m_pSectionLinkBySectionName.insert(sectionName, tmpLink);
+
+    m_pDialogLinkBySectionName[sectionName] = new dialogLink();
 
 	GraphicsSectionItem* newSect = new GraphicsSectionItem;
 	newSect->setLabel(sectionName);
 	newSect->setSectionLink(tmpLink);
 	newSect->setYmlManager(this);
 	newSect->setPos(pos);
-	pScene->addItem( newSect );
+    m_pScene->addItem( newSect );
 	newSect->fillCleanSockets();
 
-	itemBySectionName[sectionName] = newSect;
+    m_pItemBySectionName[sectionName] = newSect;
 
-	root["dialogscript"][sectionName] = YAML::Load("- NEXT: invalid_link");
+    m_root["dialogscript"][sectionName] = YAML::Load("- NEXT: invalid_link");
 
 	qInfo() << "ADD: " << sectionName;
 }
 
 void YmlSceneManager::renameSectionLink(QString sectionName, QString oldName) {
-	sectionLink* link = sectionGraph[oldName];
-	GraphicsSectionItem* item = itemBySectionName[oldName];
-
 	// rename all entries!
 	if (oldName != sectionName) {
-		sectionGraph.remove(oldName);
-		sectionGraph[sectionName] = link;
-		itemBySectionName.remove(oldName);
-		itemBySectionName[sectionName] = item;
-        m_sectionNames.removeAll(oldName);
-        m_sectionNames << sectionName;
+        m_pSectionLinkBySectionName[sectionName] = m_pSectionLinkBySectionName[oldName];
+        m_pSectionLinkBySectionName.remove(oldName);
+        m_pItemBySectionName[sectionName] = m_pItemBySectionName[oldName];
+        m_pItemBySectionName.remove(oldName);
+        m_sectionNames.removeOne(oldName);
+        m_sectionNames.append(sectionName);
+        m_pDialogLinkBySectionName[sectionName] = m_pDialogLinkBySectionName[oldName];
+        m_pDialogLinkBySectionName.remove(oldName);
 
-		YAML::Node tempNode = root["dialogscript"];
+        YAML::Node tempNode = m_root["dialogscript"];
 		for (auto it = tempNode.begin(); it != tempNode.end(); ++it) {
 			if (it->first.as<QString>() == oldName) {
 				it->first = sectionName;
 				break;
 			}
 		}
+
+        if (m_root["dialogscript"][oldName]) {
+            m_root["dialogscript"][sectionName] = YAML::Clone(m_root["dialogscript"][oldName]);
+            m_root["dialogscript"].remove(oldName);
+        } else if (m_root["storyboard"][oldName]) {
+            m_root["storyboard"][sectionName] = YAML::Clone(m_root["storyboard"][oldName]);
+            m_root["storyboard"].remove(oldName);
+        }
+
         emit sectionNameChanged(oldName, sectionName);
 	}
 }
 
 void YmlSceneManager::updateSectionLink(QString sectionName) {
-    sectionLink* pLink = sectionGraph[sectionName];
+    sectionLink* pLink = m_pSectionLinkBySectionName[sectionName];
 
-    if (root["dialogscript"][sectionName]) {
-        YAML::Node sNode = root["dialogscript"][sectionName];
+    if (m_root["dialogscript"][sectionName]) {
+        YAML::Node sNode = m_root["dialogscript"][sectionName];
         YAML::Node sNode2;
         switch ( pLink->type ) {
 			case exitS: {
@@ -2124,34 +2140,37 @@ void YmlSceneManager::updateSectionLink(QString sectionName) {
 }
 
 void YmlSceneManager::deleteSection(QString sectionName) {
-    delete sectionGraph[sectionName];
-    sectionGraph.remove( sectionName );
-    m_sectionNames.removeAll( sectionName );
+    delete m_pSectionLinkBySectionName[sectionName];
+    m_pSectionLinkBySectionName.remove( sectionName );
+    m_sectionNames.removeOne( sectionName );
 
-	GraphicsSectionItem* pItem = itemBySectionName[sectionName];
-	pScene->removeItem( pItem );
-	itemBySectionName.remove( sectionName );
-	unusedItems.push_back( pItem ); // instead of unsafe(?) deleting from heap
+    delete m_pDialogLinkBySectionName[sectionName];
+    m_pDialogLinkBySectionName.remove(sectionName);
 
-	if (root["dialogscript"][sectionName]) {
-		root["dialogscript"].remove( sectionName );
+    GraphicsSectionItem* pItem = m_pItemBySectionName[sectionName];
+    m_pScene->removeItem( pItem );
+    m_pItemBySectionName.remove( sectionName );
+    pItem->deleteLater();
+
+    if (m_root["dialogscript"][sectionName]) {
+        m_root["dialogscript"].remove( sectionName );
 	}
-	if (root["storyboard"][sectionName]) {
-		root["storyboard"].remove( sectionName );
+    if (m_root["storyboard"][sectionName]) {
+        m_root["storyboard"].remove( sectionName );
 	}
     emit sectionDeleted(sectionName);
 }
 
 sectionLink* YmlSceneManager::getSectionLink(QString sectionName) {
-	if ( sectionGraph.contains(sectionName) )
-		return sectionGraph[sectionName];
+    if ( m_pSectionLinkBySectionName.contains(sectionName) )
+        return m_pSectionLinkBySectionName[sectionName];
 	else
 		return nullptr;
 }
 
 GraphicsSectionItem* YmlSceneManager::getSectionItem(QString sectionName) {
-	if ( itemBySectionName.contains(sectionName) )
-		return itemBySectionName[sectionName];
+    if ( m_pItemBySectionName.contains(sectionName) )
+        return m_pItemBySectionName[sectionName];
 	else
 		return nullptr;
 }
@@ -2264,11 +2283,11 @@ void YmlSceneManager::updateStoryboardSection(QString sectionName)
 
 void YmlSceneManager::updateDialogscriptSection(QString sectionName)
 {
-    if (root["dialogscript"][sectionName]) {
+    if (m_root["dialogscript"][sectionName]) {
         YAML::Node sectionSeq = YAML::Node(YAML::NodeType::Sequence);
 
-        upn(i, 0, m_dialogLinkBySectionName[sectionName].lines.count() - 1) {
-            dialogLink* pDialogLink = &m_dialogLinkBySectionName[sectionName];
+        upn(i, 0, m_pDialogLinkBySectionName[sectionName]->lines.count() - 1) {
+            dialogLink* pDialogLink = m_pDialogLinkBySectionName[sectionName];
             // handled as section link, shot cue is never defined directly (always called CHOICE_1)
             if (pDialogLink->lines[i] == "CHOICE") {
                 break;
@@ -2285,8 +2304,8 @@ void YmlSceneManager::updateDialogscriptSection(QString sectionName)
                     sectionSeq.push_back( singleMapNode(actorName, pDialogLink->lines[i]) );
             }
         }
-        sectionSeq.push_back( lastCloned(root["dialogscript"][sectionName]) );
-        root["dialogscript"][sectionName] = sectionSeq;
+        sectionSeq.push_back( lastCloned(m_root["dialogscript"][sectionName]) );
+        m_root["dialogscript"][sectionName] = sectionSeq;
     } else {
         error("ERROR: section [" + sectionName + "] not found for updateDialogscriptSection!");
     }
@@ -2502,20 +2521,20 @@ YAML::Node YmlSceneManager::shotActionToNode(shotAction *sa)
 
 void YmlSceneManager::updateShot(QString sectionName, QString shotName)
 {
-    int shotNum = m_dialogLinkBySectionName[sectionName].shotNumByName(shotName);
+    int shotNum = m_pDialogLinkBySectionName[sectionName]->shotNumByName(shotName);
     updateShot(sectionName, shotNum);
 }
 
 void YmlSceneManager::updateShot(QString sectionName, int shotNum)
 {
-    QString shotName = m_dialogLinkBySectionName[sectionName].shots[shotNum].shotName;
-    int actionsCount = m_dialogLinkBySectionName[sectionName].shots[shotNum].actions.count();
+    QString shotName = m_pDialogLinkBySectionName[sectionName]->shots[shotNum].shotName;
+    int actionsCount = m_pDialogLinkBySectionName[sectionName]->shots[shotNum].actions.count();
 
     // remove shot if no actions, remove sb section if no shots
-    if (actionsCount == 0 && root["storyboard"][sectionName][shotName]) {
-        root["storyboard"][sectionName].remove(shotName);
-        if (root["storyboard"][sectionName].size() == 0) {
-            root["storyboard"].remove(sectionName);
+    if (actionsCount == 0 && m_root["storyboard"][sectionName][shotName]) {
+        m_root["storyboard"][sectionName].remove(shotName);
+        if (m_root["storyboard"][sectionName].size() == 0) {
+            m_root["storyboard"].remove(sectionName);
         }
         // update dg section to remove CUE for empty shots
         updateDialogscriptSection(sectionName);
@@ -2524,41 +2543,41 @@ void YmlSceneManager::updateShot(QString sectionName, int shotNum)
     // create shot if actions are added
     if (actionsCount > 0) {
         // create sb section if shot is going to be added
-        if (!root["storyboard"][sectionName]) {
-            root["storyboard"][sectionName] = YAML::Node(YAML::NodeType::Map);
+        if (!m_root["storyboard"][sectionName]) {
+            m_root["storyboard"][sectionName] = YAML::Node(YAML::NodeType::Map);
         }
         // create sb shot if actions are added
-        if (!root["storyboard"][sectionName][shotName]) {
-            root["storyboard"][sectionName][shotName] = YAML::Node(YAML::NodeType::Map);
+        if (!m_root["storyboard"][sectionName][shotName]) {
+            m_root["storyboard"][sectionName][shotName] = YAML::Node(YAML::NodeType::Map);
             // update dg section to add CUE for shot
             updateDialogscriptSection(sectionName);
         }
         YAML::Node shotSeq(YAML::NodeType::Sequence);
         shotSeq.SetStyle(YAML::EmitterStyle::Block);
         upn(i, 0, actionsCount - 1) {
-            shotAction* sa = &m_dialogLinkBySectionName[sectionName].shots[shotNum].actions[i];
+            shotAction* sa = &m_pDialogLinkBySectionName[sectionName]->shots[shotNum].actions[i];
             shotSeq.push_back( shotActionToNode(sa) );
         }
-        root["storyboard"][sectionName][shotName] = shotSeq;
+        m_root["storyboard"][sectionName][shotName] = shotSeq;
     }
 }
 
 void YmlSceneManager::removeShot(QString sectionName, QString shotName)
 {
-    int shotNum = m_dialogLinkBySectionName[sectionName].shotNumByName(shotName);
+    int shotNum = m_pDialogLinkBySectionName[sectionName]->shotNumByName(shotName);
 
     // remove dialog info
-    m_dialogLinkBySectionName[sectionName].shots.removeAt(shotNum);
-    m_dialogLinkBySectionName[sectionName].durations.removeAt(shotNum);
-    m_dialogLinkBySectionName[sectionName].lines.removeAt(shotNum);
-    m_dialogLinkBySectionName[sectionName].speakers.removeAt(shotNum);
+    m_pDialogLinkBySectionName[sectionName]->shots.removeAt(shotNum);
+    m_pDialogLinkBySectionName[sectionName]->durations.removeAt(shotNum);
+    m_pDialogLinkBySectionName[sectionName]->lines.removeAt(shotNum);
+    m_pDialogLinkBySectionName[sectionName]->speakers.removeAt(shotNum);
 
     // remove shot from storyboard section
-    if (root["storyboard"][sectionName][shotName]) {
-        root["storyboard"][sectionName].remove(shotName);
+    if (m_root["storyboard"][sectionName][shotName]) {
+        m_root["storyboard"][sectionName].remove(shotName);
         // remove section if empty
-        if (root["storyboard"][sectionName].size() == 0) {
-            root["storyboard"].remove(sectionName);
+        if (m_root["storyboard"][sectionName].size() == 0) {
+            m_root["storyboard"].remove(sectionName);
         }
     }
 
@@ -2568,7 +2587,7 @@ void YmlSceneManager::removeShot(QString sectionName, QString shotName)
 
 void YmlSceneManager::addShot(QString sectionName, int shotNum)
 {
-    dialogLink* pDialogLink = &m_dialogLinkBySectionName[sectionName];
+    dialogLink* pDialogLink = m_pDialogLinkBySectionName[sectionName];
 
     info( QString("onShotAdd: in %1, at [%2]").arg(sectionName).arg(shotNum) );
     int shotNameNumber = 0;
@@ -2581,7 +2600,7 @@ void YmlSceneManager::addShot(QString sectionName, int shotNum)
 
     pDialogLink->durations.insert( shotNum, 5.0 );
     pDialogLink->lines.insert( shotNum, "PAUSE" );
-    pDialogLink->speakers.insert( shotNum, sceneGlobals()->getID(SASSETS, "PAUSE") );
+    pDialogLink->speakers.insert( shotNum, sceneGlobals()->getID(CONSTANTS::SASSETS, "PAUSE") );
     pDialogLink->shots.insert( shotNum, shot(shotName) );
     pDialogLink->calculateTotalDuration();
 
@@ -2617,4 +2636,13 @@ YAML::Node YmlSceneManager::singleMapNode(const QString &key, const T &value)
     YAML::Node node(YAML::NodeType::Map);
     node[key] = value;
     return node;
+}
+
+template<typename Container>
+void YmlSceneManager::deletePointersFromContainer(Container& container)
+{
+    for (auto it : container) {
+        qDebug() << "deletePointersFromContainer: " << typeid(it).name();
+        delete it;
+    }
 }

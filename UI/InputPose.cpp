@@ -6,7 +6,7 @@ InputPose::InputPose(QWidget *parent) :
 	ui(new Ui::InputPose)
 {
 	ui->setupUi(this);
-	ui->comboState->addItems(MIMICS_LIST);
+    ui->comboState->addItems(CONSTANTS::MIMICS_LIST);
 	ui->comboStatus->addItems({"Low", "High"});
 
 	connect(ui->lineName, SIGNAL(textEdited(QString)), this, SLOT(signalChangeName()));

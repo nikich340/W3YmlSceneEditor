@@ -6,10 +6,10 @@ InputMimicPose::InputMimicPose(QWidget *parent) :
 	ui(new Ui::InputMimicPose)
 {
 	ui->setupUi(this);
-	ui->comboAnim->addItems(MIMICS_LIST);
-	ui->comboEyes->addItems(MIMICS_LIST);
-	ui->comboPose->addItems(MIMICS_LIST);
-	ui->comboState->addItems(MIMICS_LIST);
+    ui->comboAnim->addItems(CONSTANTS::MIMICS_LIST);
+    ui->comboEyes->addItems(CONSTANTS::MIMICS_LIST);
+    ui->comboPose->addItems(CONSTANTS::MIMICS_LIST);
+    ui->comboState->addItems(CONSTANTS::MIMICS_LIST);
 
 	connect(ui->lineName, SIGNAL(textEdited(QString)), this, SLOT(signalChangeName()));
 

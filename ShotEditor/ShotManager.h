@@ -34,7 +34,7 @@ struct ShotAsset {
     void repaintNavigationLine() {
         if (pNavigationLine == nullptr) {
             pNavigationLine = new QGraphicsLineItem;
-            pNavigationLine->setData(IsNavigationLine, true);
+            pNavigationLine->setData(CONSTANTS::IsNavigationLine, true);
             pNavigationLine->setZValue(1.0);
             pNavigationLine->setPen( QPen(Qt::red) );
             pNavigationLine->setPos(0, 0);
@@ -95,7 +95,7 @@ private:
 
     QLinearGradient createGradient(QColor startColor, QColor endColor, double W, double H);
     double sceneWidth() {
-        return (m_pDialogLink->totalDuration + 30.0) * SHOT_SECOND;
+        return (m_pDialogLink->totalDuration + 30.0) * CONSTANTS::SHOT_SECOND;
     }
     double sceneHeight() {
         return (2 + m_pYmlManager->sceneGlobals()->actors.count() * m_groupsActorNumMax + m_pYmlManager->sceneGlobals()->props.count() * m_groupsPropNumMax);
@@ -104,6 +104,7 @@ private:
 
 public:
     explicit ShotManager(YmlSceneManager* newYmlManager, QObject *parent = nullptr);
+    ~ShotManager();
     void setWidgets(QGraphicsScene* newDialogScene, QScrollArea* newShotLabelArea, ShotScrollArea* newShotArea);
     //bool eventFilter(QObject *obj, QEvent *event) override;
 
@@ -112,13 +113,13 @@ public:
     void updateDialogCueText(QString shotname);
     double getDurationForAction(shotAction* sa);
     double X_TO_SEC(double x) {
-        return x / SHOT_SECOND;
+        return x / CONSTANTS::SHOT_SECOND;
     }
     double SEC_TO_X(double x) {
-        return x * SHOT_SECOND;
+        return x * CONSTANTS::SHOT_SECOND;
     }
     int Y_TO_GroupNum(double y) {
-        return y / SHOT_LABEL_HEIGHT;
+        return y / CONSTANTS::SHOT_LABEL_HEIGHT;
     }
     int X_TO_ShotNum(double x);
     double X_TO_ShotPoint(double x);  // [0.0 - 1.0)

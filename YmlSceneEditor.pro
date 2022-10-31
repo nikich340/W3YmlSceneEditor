@@ -138,6 +138,7 @@ SOURCES += \
     UI/RepoActorsDialog.cpp \
     UI/SocketSettingsForm.cpp \
     YmlSceneManager.cpp \
+    constants.cpp \
     main.cpp \
     yaml-cpp/src/binary.cpp \
     yaml-cpp/src/contrib/graphbuilder.cpp \

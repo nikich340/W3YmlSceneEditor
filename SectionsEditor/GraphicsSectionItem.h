@@ -1,24 +1,30 @@
-#pragma once
 #ifndef GRAPHICSSECTIONITEM_H
 #define GRAPHICSSECTIONITEM_H
-#include <QtWidgets>
+#include <QObject>
+#include <QGraphicsRectItem>
+#include <QGraphicsSceneMouseEvent>
+#include <QGraphicsSceneContextMenuEvent>
 #include "SocketItem.h"
 #include "YmlSceneManager.h"
 
-class GraphicsSectionItem : public QGraphicsRectItem
+class GraphicsSectionItem : public QObject, public QGraphicsRectItem
 {
+    Q_OBJECT
+    using super = QGraphicsRectItem;
 private:
     YmlSceneManager* ymlManager; // <- here
     sectionLink* sLink; // PUSH UPDATE TO YML ON EVERY CHANGE!
     bool hasCleanOutput = false;
 	bool isUpdating = false;
 public:
+    GraphicsSectionItem(QGraphicsItem *parent = nullptr);
+    ~GraphicsSectionItem();
+
 	enum SectionState { normal, incomplete };
     SectionState state;
 
 	const QString sName() { return sLink->sectionName; }
     void updateState();
-    GraphicsSectionItem(QGraphicsItem *parent = nullptr);
     void setSectionLink(sectionLink* link);
     void setYmlManager(YmlSceneManager* newManager);
     void setDefaults();
@@ -45,10 +51,10 @@ public:
 
 private:
     QGraphicsTextItem* label = nullptr;
-    SocketItem* input = nullptr;
+    SocketItem* m_inputSocket = nullptr;
     //QVector< EdgeItem* > inputEdges; // multiple node->line-> for [input]
 
-    QVector<SocketItem*> outputs;
+    QVector<SocketItem*> m_outputSockets;
     //QVector< EdgeItem* > outputEdges; // one node->line-> for [output]
 
 protected:

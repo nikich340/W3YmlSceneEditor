@@ -17,19 +17,24 @@ private:
     template<typename HashContainer>
     void removeAssetsFromSG(HashContainer& container, bool clearRepo);
 
-	QVector<GraphicsSectionItem*> unusedItems;
-	QGraphicsScene* pScene = nullptr;
-    QString filePath;
+    template<typename Container>
+    void deletePointersFromContainer(Container& container);
+
+    QGraphicsScene* m_pScene = nullptr;
+    QString m_filePath;
     QStringList m_sectionNames;
 
-    YAML::Node root;
-    QHash<QString, sectionLink*> sectionGraph;
-    QVector<QString> startSections;              // for init drawing
-    QVector< QVector<QString> > sectionsByDepth; // for init drawing
-    QHash<QString, GraphicsSectionItem*> itemBySectionName;
-    QSet<QString> wasDrawn;                      // for init drawing
+    YAML::Node m_root;
+    QHash<QString, sectionLink*> m_pSectionLinkBySectionName;
+    QVector<QString> m_startSections;              // for init drawing
+    QVector< QVector<QString> > m_sectionNamesByDepth; // for init drawing
+    QHash<QString, GraphicsSectionItem*> m_pItemBySectionName;
+    QSet<QString> m_wasDrawn;                      // for init drawing
 
 public:
+    YmlSceneManager(QObject *parent = nullptr, QGraphicsScene* gScene = nullptr);
+    ~YmlSceneManager();
+
 	/* scene general */
     QStringList nodeKeys(const YAML::Node& node);
     YAML::Node firstCloned(const YAML::Node& node);
@@ -42,7 +47,7 @@ public:
 	bool hasChanges = false;
 	bool hasShotChanges = false;
 	bool readingYmlRepo = false;
-    YmlSceneManager(QObject *parent = nullptr, QGraphicsScene* gScene = nullptr);
+
 	bool loadYmlRepo(QString path);
 	bool loadYmlFile(QString path);
     bool saveYmlFile();
@@ -83,7 +88,7 @@ public:
     void addShot(QString sectionName, int shotNum);
     YAML::Node shotActionToNode(shotAction* sa);
     QHash<QString, dialogLine> lineById;
-    QHash<QString, dialogLink> m_dialogLinkBySectionName;
+    QHash<QString, dialogLink*> m_pDialogLinkBySectionName;
     QSet<QString> dgActors, dgProps;
 
 	QString getCleanLine(QString text);
