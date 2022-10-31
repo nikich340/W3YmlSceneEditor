@@ -3,6 +3,23 @@
 
 #include <QObject>
 #include <QColor>
+
+#define XKey first
+#define YValue second
+#define upn(x, init, n) for (int x = init; x <= n; ++x)
+#define ups(x, init, n) for (size_t x = init; x <= n; ++x)
+#define upiter(x, container) for (auto x = container.begin(); x != container.end(); ++x)
+#define dn(x, init, n) for(int x = init; x >= n; --x)
+#define diter(x, container) for (auto x = container.rbegin(); x != container.rend(); ++x)
+#define pb push_back
+#define to_qstr(x) QString::fromStdString(x)
+#define qn(x) QString::number(x)
+#define qd qDebug()
+#define qi qInfo()
+#define qw qWarning()
+#define qc qCritical()
+
+const double FPS = 30.0;
 #define QSvg QColorConstants::Svg
 
 struct CONSTANTS {
