@@ -35,6 +35,7 @@ HEADERS += \
     ShotEditor/ShotActionTypes.h \
     ShotEditor/ShotManager.h \
     ShotEditor/ShotScrollArea.h \
+    SimpleTrie.h \
     UI/CustomRectItem.h \
     UI/DialogChangeSection.h \
     UI/InputDialogshot.h \

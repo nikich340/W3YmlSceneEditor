@@ -6,6 +6,7 @@
 #include <QDebug>
 #include <fstream>
 #include <QFile>
+#include <QDir>
 #include <QTextStream>
 
 namespace YAML {
@@ -135,33 +136,61 @@ YmlSceneManager::YmlSceneManager(QObject *parent, QGraphicsScene* gScene) : QObj
     //SG.getID(SACTORS, "CHOICE");
 
 	/* read vanilla lines info */
-    QFile w3LinesFile(":/lines.en.csv");
-    if (w3LinesFile.open(QIODevice::ReadOnly | QIODevice::Text))
-	{
-       QTextStream in(&w3LinesFile);
-	   dialogLine newLine;
-	   QStringList lst;
-	   int cnt = 0;
+    QDir w3dataDir(QCoreApplication::applicationDirPath() + "/w3.data");
+    qDebug() << w3dataDir.exists() << ", " << w3dataDir.path();
+    QStringList csvFilesList = w3dataDir.entryList({ "*.csv" }, QDir::Files | QDir::Readable);
+    for (const QString& w3LinesPath : csvFilesList) {
+        QFile w3LinesFile(w3dataDir.path() + "/" + w3LinesPath);
+        if (w3LinesFile.open(QIODevice::ReadOnly | QIODevice::Text))
+        {
+           QTextStream in(&w3LinesFile);
+           dialogLine newLine;
+           int cnt = 0;
 
-	   while (!in.atEnd())
-	   {
-		  lst = in.readLine().split("|");
-		  if (lst.size() < 4) {
-			  qWarning() << "Bad line: " << lst;
-			  continue;
-		  }
-		  ++cnt;
-		  newLine.id = lst[0];
-		  newLine.hex = lst[1];
-		  newLine.duration = lst[2].toDouble();
-		  newLine.text = lst[3];
+           while (!in.atEnd())
+           {
+              QString line = in.readLine();
+              if (line.startsWith(";"))
+                  continue;
+              QStringList lst = line.split("|");
+              if (lst.size() < 4) {
+                  warning(QString("Parse csv: Incorrect format in line #%1: %2").arg(cnt).arg(line));
+                  continue;
+              }
+              ++cnt;
+              bool convertOK = true;
+              newLine.id = lst[0].toInt(&convertOK, 10);
+              if (!convertOK) {
+                  error(QString("Parse csv: Incorrect id format in line #%1: %2").arg(cnt).arg(line));
+                  continue;
+              }
+              newLine.key_hex = lst[1].toInt(&convertOK, 16);
+              if (!convertOK) {
+                  warning(QString("Parse csv: Incorrect hex key format in line #%1: %2").arg(cnt).arg(line));
+                  newLine.key_hex = 0;
+              }
 
-		  lineById[newLine.id] = newLine;
-	   }
-       w3LinesFile.close();
-	   qInfo() << "Loaded {" << lineById.size() << "} dg lines of total {" << cnt << "}.";
-	} else {
-		qCritical() << "Failed to read lines.en.csv!";
+              newLine.duration = lst[2].toDouble(&convertOK);
+              if (!convertOK) {
+                  warning(QString("Parse csv: Incorrect duration format in line #%1: %2").arg(cnt).arg(line));
+                  newLine.duration = -1.0;
+              }
+              newLine.text = lst[3];
+              if (newLine.text.isEmpty()) {
+                  error(QString("Parse csv: Empty line #%1: %2").arg(cnt).arg(line));
+                  continue;
+              }
+
+              m_lineByID[newLine.id] = newLine;
+              m_linesTrie.add(newLine.text, newLine.id);
+           }
+           w3LinesFile.close();
+           qDebug() << QString("Loaded %1 dialog lines from csv: %2").arg(cnt).arg(w3LinesPath);
+           info(QString("Loaded %1 dialog lines from csv: %2").arg(cnt).arg(w3LinesPath));
+        } else {
+            qDebug() << QString("Failed to read csv: %1").arg(w3LinesPath);
+            error(QString("Failed to read csv: %1").arg(w3LinesPath));
+        }
     }
 }
 
@@ -1230,7 +1259,7 @@ bool YmlSceneManager::loadSceneRepository() {
             upn(j, 0, it->YValue.size() - 1) {
                 soundbankSet.insert( it->YValue[j].as<QString>() );
 			}
-			qd << "SOUNBANK ADD: " << mapName << " [" << qn(soundbankSet.size()) << "]";
+            //qd << "SOUNBANK ADD: " << mapName << " [" << qn(soundbankSet.size()) << "]";
 
 			SG.soundbanks[nameID] = soundbankSet;
 			++cnt_new;
@@ -2203,13 +2232,13 @@ double YmlSceneManager::getTextDuration(QString line) {
 	if (ok_dur && duration.toDouble() > 0.0)
 		return duration.toDouble();
 
-	QString id;
+    int id = -1;
 	cnt = 0;
 	bool ok_id = false;
 	upn(i, 0, line.length() - 1) {
 		QChar c = line[i];
 		if (c.isDigit()) {
-			id.pb(c);
+            id = id * 10 + c.digitValue();
 			++cnt;
 			if (cnt == 10 && i+1 < line.length() && line[i + 1] == '|') {
 				ok_id = true;
@@ -2217,11 +2246,11 @@ double YmlSceneManager::getTextDuration(QString line) {
 			}
 		} else {
 			cnt = 0;
-			id.clear();
+            id = -1;
 		}
 	}
-	if (ok_id && lineById.contains(id) && lineById[id].duration > 0.0) {
-		return lineById[id].duration;
+    if (ok_id && m_lineByID.contains(id) && m_lineByID[id].duration > 0.0) {
+        return m_lineByID[id].duration;
 	}
 
 	int text_pos = qMax( line.lastIndexOf(']'), line.lastIndexOf('|') );
@@ -2642,7 +2671,7 @@ template<typename Container>
 void YmlSceneManager::deletePointersFromContainer(Container& container)
 {
     for (auto it : container) {
-        qDebug() << "deletePointersFromContainer: " << typeid(it).name();
+        //qDebug() << "deletePointersFromContainer: " << typeid(it).name();
         delete it;
     }
 }

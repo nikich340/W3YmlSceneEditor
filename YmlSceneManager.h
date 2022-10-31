@@ -5,6 +5,7 @@
 #include <yaml-cpp/yaml.h>
 #include "YmlStructs.h"
 #include "constants.h"
+#include "SimpleTrie.h"
 
 class GraphicsSectionItem;
 
@@ -87,7 +88,9 @@ public:
     void removeShot(QString sectionName, QString shotName);
     void addShot(QString sectionName, int shotNum);
     YAML::Node shotActionToNode(shotAction* sa);
-    QHash<QString, dialogLine> lineById;
+
+    QHash<int, dialogLine> m_lineByID;
+    SimpleTrie m_linesTrie;
     QHash<QString, dialogLink*> m_pDialogLinkBySectionName;
     QSet<QString> dgActors, dgProps;
 
