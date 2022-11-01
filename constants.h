@@ -3,6 +3,10 @@
 
 #include <QObject>
 #include <QColor>
+#include <QHash>
+#include <QSet>
+#include <QString>
+#include <QVector>
 
 #define XKey first
 #define YValue second
@@ -21,6 +25,56 @@
 
 const double FPS = 30.0;
 #define QSvg QColorConstants::Svg
+
+enum ESectionType { ESectionNext, ESectionChoice, ESectionRandom, ESectionCondition, ESectionScript, ESectionExit };
+
+enum EShotActionType {
+    EShotUnknown,
+    EShotCam,
+    EShotCamBlendStart,
+    EShotCamBlendKey,
+    EShotCamBlendEnd,
+    EShotCamBlendTogame,
+    EShotActorAnim,
+    EShotActorAnimAdditive,
+    EShotActorAnimPose,
+    EShotActorMimicAnim,
+    EShotActorMimicPose,
+    EShotActorPlacement,
+    EShotActorPlacementStart,
+    EShotActorPlacementKey,
+    EShotActorPlacementEnd,
+    EShotActorGamestate,
+    EShotActorLookat,
+    EShotActorScabbardShow,
+    EShotActorScabbardHide,
+    EShotActorShow,
+    EShotActorHide,
+    EShotActorEffectStart,
+    EShotActorEffectStop,
+    EShotActorSound,
+    EShotActorAppearance,
+    EShotActorEquipRight,
+    EShotActorEquipLeft,
+    EShotActorUnequipRight,
+    EShotActorUnequipLeft,
+    EShotPropShow,
+    EShotPropHide,
+    EShotPropPlacement,
+    EShotPropPlacementStart,
+    EShotPropPlacementKey,
+    EShotPropPlacementEnd,
+    EShotPropEffectStart,
+    EShotPropEffectStop,
+    EShotEnvBlendIn,
+    EShotEnvBlendOut,
+    EShotFadeIn,
+    EShotFadeOut,
+    EShotWorldAddfact,
+    EShotWorldWeather,
+    EShotWorldEffectStart,
+    EShotWorldEffectStop,
+};
 
 struct CONSTANTS {
     static const int IsNavigationLine;
@@ -56,6 +110,14 @@ struct CONSTANTS {
     static const double SHOT_LABEL_HEIGHT;
     static const double SHOT_LABEL_PEN_WIDTH;
     static const double SHOT_LABEL_WIDTH;
+
+    static const QHash<QString, EShotActionType> stringToEShotAction;
+    static const QHash<EShotActionType, QString> EShotActionToString;
+    static const QHash<EShotActionType, int> EShotActionToGroupNum;
+    static const QVector<QVector<EShotActionType>> GroupNumToEShotActionShared;
+    static const QVector<QVector<EShotActionType>> GroupNumToEShotActionActor;
+    static const QVector<QVector<EShotActionType>> GroupNumToEShotActionProp;
+    static const QSet<EShotActionType> EShotActionsShared;
 
     static QColor QColorLight(int i, int total) {
         return QColor::fromHsv(i * 360 / total, 86, 255);

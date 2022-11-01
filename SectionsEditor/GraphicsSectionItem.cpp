@@ -86,7 +86,7 @@ SocketItem* GraphicsSectionItem::addCleanOutput() {
     if (m_outputSockets.size() > sLink->names.size()) {
         sLink->addChoice();
 		//qDebug() << "add clean output {" << qn(sLink->names.size() - 1) << "}, type: " << sLink->type;
-        if ( (sLink->type != choiceS && sLink->type != randomS) && (m_outputSockets.size() > 1 || sLink->type == exitS) )
+        if ( (sLink->type != ESectionChoice && sLink->type != ESectionRandom) && (m_outputSockets.size() > 1 || sLink->type == ESectionExit) )
             output->hide();
     }
     updateOutputs();
@@ -102,13 +102,13 @@ void GraphicsSectionItem::setSectionLink(sectionLink *link) {
 bool GraphicsSectionItem::isAllowedNewOutput() {
     int cnt = m_outputSockets.size();
 
-	if (sLink->type == choiceS || sLink->type == randomS) {
+	if (sLink->type == ESectionChoice || sLink->type == ESectionRandom) {
         return (cnt < 7);
     }
-	if (sLink->type == conditionS) {
+	if (sLink->type == ESectionCondition) {
         return (cnt < 2);
     }
-	return (cnt < 1 && sLink->type != exitS);
+	return (cnt < 1 && sLink->type != ESectionExit);
 }
 void GraphicsSectionItem::updateState() {
     int hasOutput = 0;
@@ -125,10 +125,10 @@ void GraphicsSectionItem::updateState() {
     bool ok = true;
     if (m_inputSocket != nullptr)
         ok &= ( (m_inputSocket->hasEdges() > 0) ^ sLink->isStart() );
-	ok &= ( (outputCnt > 0 && hasOutput > 0) || sLink->type == exitS );
-	ok &= ( (outputCnt == 2 && hasOutput == 2) || sLink->type != conditionS );
+	ok &= ( (outputCnt > 0 && hasOutput > 0) || sLink->type == ESectionExit );
+	ok &= ( (outputCnt == 2 && hasOutput == 2) || sLink->type != ESectionCondition );
 
-	if (sLink->type == choiceS) {
+	if (sLink->type == ESectionChoice) {
 		for (int i = 0; i < sLink->names.size(); ++i) {
 			if (!sLink->names[i].isEmpty() && sLink->choiceLines[i].isEmpty()) {
 				ok = false;
@@ -149,7 +149,7 @@ void GraphicsSectionItem::updateState() {
 void GraphicsSectionItem::updateSocketLabel(SocketItem* socket) {
     int socketIdx = m_outputSockets.indexOf(socket);
 	if (socketIdx != -1) {
-		if (sLink->type == choiceS && socketIdx < sLink->choiceLines.size()) {
+		if (sLink->type == ESectionChoice && socketIdx < sLink->choiceLines.size()) {
 			QString s = sLink->choiceLines[socketIdx];
 			bool needN = false;
 			for (int i = 1; i < s.length(); ++i) {
@@ -162,13 +162,13 @@ void GraphicsSectionItem::updateSocketLabel(SocketItem* socket) {
 				}
 			}
 			socket->setLabel( s );
-		} else if (sLink->type == conditionS && !sLink->conditions[0].condFact.isEmpty()) {
+		} else if (sLink->type == ESectionCondition && !sLink->conditions[0].condFact.isEmpty()) {
 			ymlCond cond = sLink->conditions[0];
 			if (socketIdx == 0)
 				socket->setLabel(cond.condFact + "\n" + cond.condOperand + QString::number(cond.condValue) + ": [on_true]");
 			else if (socketIdx == 1)
 				socket->setLabel(cond.condFact + "\n" + cond.condOperand + QString::number(cond.condValue) + ": [on_false]");
-		} else if (sLink->type == randomS) {
+		} else if (sLink->type == ESectionRandom) {
 			socket->setLabel("[random #" + QString::number(socketIdx + 1) + "]");
 		} else {
 			socket->setLabel("NEXT");
@@ -432,15 +432,15 @@ void GraphicsSectionItem::changeMe() {
 		if (sLink->type != oldData.type) {
 			// handle type changes
 			switch (sLink->type) {
-				case choiceS:
-				case randomS: {
+				case ESectionChoice:
+				case ESectionRandom: {
 					qDebug() << "Choice/Random now: show all outputs";
 					upn(i, 0, 6) {
                         m_outputSockets[i]->show();
 					}
 					break;
 				}
-				case conditionS: {
+				case ESectionCondition: {
 					qDebug() << "Condition now: show sockets 0,1 and hide other";
 					upn(i, 0, 1) {
                         m_outputSockets[i]->show();
@@ -450,8 +450,8 @@ void GraphicsSectionItem::changeMe() {
 					}
 					break;
 				}
-				case nextS:
-				case scriptS: {
+				case ESectionNext:
+				case ESectionScript: {
 					qDebug() << "Next/Script now: show socket 0 and hide other";
 					upn(i, 0, 0) {
                         m_outputSockets[i]->show();
@@ -461,7 +461,7 @@ void GraphicsSectionItem::changeMe() {
 					}
 					break;
 				}
-				case exitS: {
+				case ESectionExit: {
 					qDebug() << "Exit now: hide all sockets";
 					upn(i, 0, 6) {
                         m_outputSockets[i]->hide();

@@ -41,7 +41,7 @@ void ShotManager::setWidgets(QGraphicsScene *newDialogScene, QScrollArea *newSho
 
 bool ShotManager::isAssetSpecificType(EShotActionType type)
 {
-    return !EShotActionsShared.contains(type);
+    return !CONSTANTS::EShotActionsShared.contains(type);
 }
 
 void ShotManager::updateDialogCueText(QString shotname) {
@@ -174,7 +174,7 @@ void ShotManager::onClearEditor()
 
 double ShotManager::getMinYForAction(ShotActionBase *action)
 {
-    return CONSTANTS::SHOT_LABEL_HEIGHT * EShotActionToGroupNum[action->actionType];
+    return CONSTANTS::SHOT_LABEL_HEIGHT * CONSTANTS::EShotActionToGroupNum[action->actionType];
 }
 
 QString ShotManager::shotNameByNum(int shotNum)
@@ -363,7 +363,7 @@ void ShotManager::onLoadSectionShots(QString sectionName) {
     onRepaintVerticalLines();
 
     m_sectionType = m_pYmlManager->getSectionLink(sectionName)->type;
-    bool shotsAllowed = (m_sectionType != scriptS && m_sectionType != exitS);
+    bool shotsAllowed = (m_sectionType != ESectionScript && m_sectionType != ESectionExit);
     m_pShotArea->setEnabled(shotsAllowed);
     m_pShotLabelArea->setEnabled(shotsAllowed);
     m_pDialogScene->views().first()->setEnabled(shotsAllowed);
@@ -586,7 +586,7 @@ void ShotManager::onShotActionLoad(int shotNum, int actionNum) {
     actionRect->setFlag(QGraphicsItem::ItemIsMovable);
     actionRect->setFlag(QGraphicsItem::ItemIsSelectable);
     actionRect->setBackgroundColor( getBlockColorForActionType(sa->actionType) );
-    actionRect->setTextMain( EShotActionToString[sa->actionType] );
+    actionRect->setTextMain( CONSTANTS::EShotActionToString[sa->actionType] );
     actionRect->setTextSecondary( secondaryInfo );
     actionRect->setZValue(2.0);
     actionRect->setShotAction( sa );
@@ -607,7 +607,7 @@ void ShotManager::onShotActionLoad(int shotNum, int actionNum) {
 void ShotManager::onShotActionAdd(int shotNum, int assetID, EShotActionType actionType, double shotPoint)
 {
     m_pYmlManager->info( QString("onShotActionAdd: shotNum = %1 [%2], assetID = %3, actionType = %4")
-                         .arg(shotNum).arg(shotPoint).arg(assetID).arg(EShotActionToString[actionType]));
+                         .arg(shotNum).arg(shotPoint).arg(assetID).arg(CONSTANTS::EShotActionToString[actionType]));
     ShotActionBase sh(actionType, shotPoint);
     if (assetID >= 0) {
         sh.values["actor"] = assetID;
@@ -632,7 +632,7 @@ void ShotManager::onShotActionRemove(CustomRectItem *rect, bool updateYML)
     int assetID = rect->data("assetID").toInt();
     QString shotName = rect->data("shotName").toString();
     ShotActionBase* sa = rect->getShotAction();
-    qDebug() << "onShotActionRemove: [" << sa->start << "] " << EShotActionToString[sa->actionType] << " from " << shotName;
+    qDebug() << "onShotActionRemove: [" << sa->start << "] " << CONSTANTS::EShotActionToString[sa->actionType] << " from " << shotName;
 
     m_pAssetByID[assetID]->actionRectsByShotName[shotName].remove(rect);
     m_pAssetByID[assetID]->pScene->removeItem(rect);
@@ -826,26 +826,26 @@ void ShotManager::onSceneContextEvent(QGraphicsScene *pScene, QPoint screenPos, 
             double shotPoint = X_TO_ShotPoint(scenePos.x());
 
             if (m_pAssets[i]->assetID == -1) {
-                if (groupNum >= GroupNumToEShotActionShared.count()) {
+                if (groupNum >= CONSTANTS::GroupNumToEShotActionShared.count()) {
                     qDebug() << "onSceneContextEvent: warning: out of range: groupNum: " << groupNum;
                     return;
                 }
                 // camera, env
-                pAvailableActionsVec = GroupNumToEShotActionShared[groupNum];
+                pAvailableActionsVec = CONSTANTS::GroupNumToEShotActionShared[groupNum];
             } else if (m_pAssets[i]->isProp) {
-                if (groupNum >= GroupNumToEShotActionProp.count()) {
+                if (groupNum >= CONSTANTS::GroupNumToEShotActionProp.count()) {
                     qDebug() << "onSceneContextEvent: warning: out of range: groupNum: " << groupNum;
                     return;
                 }
                 // prop
-                pAvailableActionsVec = GroupNumToEShotActionProp[groupNum];
+                pAvailableActionsVec = CONSTANTS::GroupNumToEShotActionProp[groupNum];
             } else {
-                if (groupNum >= GroupNumToEShotActionActor.count()) {
+                if (groupNum >= CONSTANTS::GroupNumToEShotActionActor.count()) {
                     qDebug() << "onSceneContextEvent: warning: out of range: groupNum: " << groupNum;
                     return;
                 }
                 // actor
-                pAvailableActionsVec = GroupNumToEShotActionActor[groupNum];
+                pAvailableActionsVec = CONSTANTS::GroupNumToEShotActionActor[groupNum];
             }
             if (shotNum < 0) {
                 qDebug() << "onSceneContextEvent: warning: out of range: shotNum: " << shotNum;
@@ -853,7 +853,7 @@ void ShotManager::onSceneContextEvent(QGraphicsScene *pScene, QPoint screenPos, 
             }
 
             upn(j, 0, pAvailableActionsVec.count() - 1) {
-                QAction* pAction = new QAction("Add shot action: " + EShotActionToString[ pAvailableActionsVec[j] ]);
+                QAction* pAction = new QAction("Add shot action: " + CONSTANTS::EShotActionToString[ pAvailableActionsVec[j] ]);
                 pAction->setData( pAvailableActionsVec[j] );
                 menu.addAction(pAction);
                 pActions.pb(pAction);
@@ -875,7 +875,7 @@ void ShotManager::onShotContextEvent(QPointF screenPos)
 {
     CustomRectItem* rect = qobject_cast<CustomRectItem*>(sender());
     QString shotName = rect->data("shotName").toString();
-    if (m_sectionType == choiceS)
+    if (m_sectionType == ESectionChoice)
         return;
 
     QMenu menu;

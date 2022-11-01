@@ -11,7 +11,6 @@
 #include <QVariant>
 #include <QVector3D>
 #include "constants.h"
-#include "ShotEditor/ShotActionTypes.h"
 
 struct transform {
 	QVector3D pos;
@@ -367,13 +366,11 @@ struct choiceAction {
 	}
 };
 
-enum sectionType { nextS, choiceS, randomS, conditionS, scriptS, exitS };
-
 struct sectionLink {
     QVector<QString> names; // [0] - on_true, [1] - on_false if [condition]
 	QString sectionName;
 
-	sectionType type = nextS;
+    ESectionType type = ESectionNext;
     QVector<ymlCond> conditions;
     QVector<QString> choiceLines;
     QVector<choiceAction> choiceActions;
@@ -427,7 +424,7 @@ struct sectionLink {
 		return !(lhs == rhs);
 	}
     sectionLink() {}
-    sectionLink(QString _sectionName = QString(), sectionType _type = nextS) {
+    sectionLink(QString _sectionName = QString(), ESectionType _type = ESectionNext) {
         type = _type;
         sectionName = _sectionName;
     }

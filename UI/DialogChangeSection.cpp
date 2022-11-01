@@ -17,26 +17,26 @@ void DialogChangeSection::fillLinkData() {
 
 	if ( ui->nextButton->isChecked() ) {
 		if ( sk[0]->ui->conditionCheck->isChecked() ) {
-			sLink->type = conditionS;
+			sLink->type = ESectionCondition;
 			sLink->addChoice( sk[0]->ui->nextSectionBox->currentText(), QString(), choiceAction(),
 					ymlCond(sk[0]->ui->factNameLine->text(), sk[0]->ui->factOperandBox->currentText(), sk[0]->ui->factValSpin->value()) );
 			sLink->addChoice( sk[1]->ui->nextSectionBox->currentText() );
 		} else {
-			sLink->type = nextS;
+			sLink->type = ESectionNext;
 			sLink->addChoice( sk[0]->ui->nextSectionBox->currentText() );
 		}
 	} else if ( ui->exitButton->isChecked() ) {
-		sLink->type = exitS;
+		sLink->type = ESectionExit;
 	} else if ( ui->randomButton->isChecked() ) {
-		sLink->type = randomS;
+		sLink->type = ESectionRandom;
 		upn(i, 0, 6) {
 			sLink->addChoice( sk[i]->ui->nextSectionBox->currentText() );
 		}
 	} else if ( ui->scriptButton->isChecked() ) {
-		sLink->type = scriptS;
+		sLink->type = ESectionScript;
 		sLink->addChoice( sk[0]->ui->nextSectionBox->currentText() );
 	} else if ( ui->choiceButton->isChecked() ) {
-		sLink->type = choiceS;
+		sLink->type = ESectionChoice;
 		upn(i, 0, 6) {
 			ymlCond cond = ymlCond();
 
@@ -131,23 +131,23 @@ void DialogChangeSection::updateChoiceForms(sectionLink* link, QStringList secti
 
     ui->timeLimitWidget->setEnabled(false);
 	switch ( sLink->type ) {
-		case choiceS: {
+		case ESectionChoice: {
 			ui->timeLimitWidget->setEnabled(true);
 			ui->choiceButton->setChecked(true);
 			onClicked_Choice();
 			break;
 		}
-		case scriptS: {
+		case ESectionScript: {
 			ui->scriptButton->setChecked( true );
 			onClicked_Script();
 			break;
 		}
-		case randomS: {
+		case ESectionRandom: {
 			ui->randomButton->setChecked( true );
 			onClicked_Random();
 			break;
 		}
-		case exitS: {
+		case ESectionExit: {
 			ui->exitButton->setChecked( true );
 			onClicked_Exit();
 			break;

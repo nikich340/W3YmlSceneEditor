@@ -444,7 +444,7 @@ bool YmlSceneManager::loadSectionsInfo() {
                             // simple NEXT
                         if (lastSectionNode.begin()->YValue.IsScalar()) {
                             tmpLink->addChoice( lastSectionNode.begin()->YValue.as<QString>() );
-							tmpLink->type = nextS;
+                            tmpLink->type = ESectionNext;
                             // advanced NEXT with condition
                         } else if (lastSectionNode.begin()->YValue.IsMap()
                                    && lastSectionNode.begin()->YValue["condition"]
@@ -452,7 +452,7 @@ bool YmlSceneManager::loadSectionsInfo() {
                                    && lastSectionNode.begin()->YValue["condition"].size() == 3
                                    && lastSectionNode.begin()->YValue["on_true"]
                                    && lastSectionNode.begin()->YValue["on_false"]) {
-							tmpLink->type = conditionS;
+                            tmpLink->type = ESectionCondition;
                             tmpLink->addChoice( lastSectionNode.begin()->YValue["on_true"].as<QString>(), QString(), choiceAction(), lastSectionNode.begin()->YValue["condition"].as<ymlCond>() );
                             tmpLink->addChoice( lastSectionNode.begin()->YValue["on_false"].as<QString>() );
                         } else {
@@ -461,7 +461,7 @@ bool YmlSceneManager::loadSectionsInfo() {
                         }
 					} else if (lastSectionCue.toUpper() == "CHOICE"
                                && lastSectionNode.begin()->YValue.IsSequence()) {
-						tmpLink->type = choiceS;
+                        tmpLink->type = ESectionChoice;
 						qDebug() << "CHoice!";
 
                         // iterate through all choices
@@ -520,7 +520,7 @@ bool YmlSceneManager::loadSectionsInfo() {
                         }
 					} else if (lastSectionCue.toUpper() == "RANDOM"
                                && lastSectionNode.begin()->YValue.IsSequence()) {
-						tmpLink->type = randomS;
+                        tmpLink->type = ESectionRandom;
 
                         // iterate through all randoms
                         for (auto jt = lastSectionNode.begin()->YValue.begin(); jt != lastSectionNode.begin()->YValue.end(); ++jt) {
@@ -538,11 +538,11 @@ bool YmlSceneManager::loadSectionsInfo() {
                 } else if (lastSectionNode.IsScalar()
 						   && lastSectionNode.as<QString>().toUpper() == "EXIT"
                            && sectionName.startsWith("section_exit")) {
-					tmpLink->type = exitS;
+                    tmpLink->type = ESectionExit;
                    // usual randomizer section
                 } else if (sectionNode.IsSequence()
                            && sectionName.startsWith("section_randomizer")) {
-					tmpLink->type = randomS;
+                    tmpLink->type = ESectionRandom;
 
                     // iterate through all randoms
 					for (auto jt = sectionNode.begin(); jt != sectionNode.end(); ++jt) {
@@ -561,7 +561,7 @@ bool YmlSceneManager::loadSectionsInfo() {
                 }
 
                 if ( sectionName.startsWith("script_") ) {
-					tmpLink->type = scriptS;
+                    tmpLink->type = ESectionScript;
                 }
 
                 if ( sectionName.startsWith("section_start") ) {
@@ -606,7 +606,7 @@ bool YmlSceneManager::loadShotActions(const YAML::Node actsNode, shot& sh) {
 		YAML::Node actionNode = actsNode[k];
         ShotActionBase newAction;
         QString actionName = actionNode.begin()->XKey.as<QString>().toLower();
-        newAction.actionType = stringToEShotAction.value(actionName, EShotUnknown);
+        newAction.actionType = CONSTANTS::stringToEShotAction.value(actionName, EShotUnknown);
 
         QStringList keys = actionName.split(".");
         YAML::Node paramNode = actionNode.begin()->YValue;
@@ -2035,7 +2035,7 @@ void YmlSceneManager::addSectionLink(QPointF pos) {
 	}
 	sectionName = sectionName + qn(j);
     m_sectionNames.append(sectionName);
-    sectionLink* tmpLink = new sectionLink(sectionName, nextS);
+    sectionLink* tmpLink = new sectionLink(sectionName, ESectionNext);
     m_pSectionLinkBySectionName.insert(sectionName, tmpLink);
 
     m_pDialogLinkBySectionName[sectionName] = new dialogLink();
@@ -2094,12 +2094,12 @@ void YmlSceneManager::updateSectionLink(QString sectionName) {
         YAML::Node sNode = m_root["dialogscript"][sectionName];
         YAML::Node sNode2;
         switch ( pLink->type ) {
-			case exitS: {
+            case ESectionExit: {
 				// simple EXIT scalar
 				sNode2 = "EXIT";
 				break;
 			}
-			case choiceS: {
+            case ESectionChoice: {
 				YAML::Node tempSeq;
 				YAML::Node tempMap;
                 for (int i = 0; i < pLink->names.size(); ++i) {
@@ -2147,7 +2147,7 @@ void YmlSceneManager::updateSectionLink(QString sectionName) {
 				sNode2["CHOICE"] = tempSeq;
 				break;
 			}
-			case conditionS: {
+            case ESectionCondition: {
 				YAML::Node tempMap;
                 tempMap["condition"] = pLink->conditions[0];
 				tempMap["condition"].SetStyle(YAML::EmitterStyle::Flow);
@@ -2156,7 +2156,7 @@ void YmlSceneManager::updateSectionLink(QString sectionName) {
 				sNode2["NEXT"] = tempMap;
 				break;
 			}
-			case randomS: {
+            case ESectionRandom: {
 				YAML::Node tempSeq;
                 for (auto s : pLink->names) {
 					if ( s.isEmpty() )
@@ -2553,10 +2553,10 @@ YAML::Node YmlSceneManager::shotActionToNode(ShotActionBase *sa)
             break;
     }
     if (extraParams.size() == 0) {
-        actionMap[ EShotActionToString[sa->actionType] ] = mainParams;
+        actionMap[ CONSTANTS::EShotActionToString[sa->actionType] ] = mainParams;
     } else {
         extraParams[".@pos"] = mainParams;
-        actionMap[ EShotActionToString[sa->actionType] ] = extraParams;
+        actionMap[ CONSTANTS::EShotActionToString[sa->actionType] ] = extraParams;
     }
     return actionMap;
 }

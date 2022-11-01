@@ -33,7 +33,6 @@ HEADERS += \
     MainWindow.h \
     SectionsEditor/SectionsGraphicsView.h \
     SectionsEditor/SocketItem.h \
-    ShotEditor/ShotActionTypes.h \
     ShotEditor/ShotManager.h \
     ShotEditor/ShotScrollArea.h \
     SimpleTrie.h \
