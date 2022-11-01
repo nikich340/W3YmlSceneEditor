@@ -134,10 +134,16 @@ YmlSceneManager::YmlSceneManager(QObject *parent, QGraphicsScene* gScene) : QObj
     SG.init();
     //SG.getID(SACTORS, "PAUSE");
     //SG.getID(SACTORS, "CHOICE");
+}
 
-	/* read vanilla lines info */
+void YmlSceneManager::loadCsvLines()
+{
+    /* read vanilla lines info */
     QDir w3dataDir(QCoreApplication::applicationDirPath() + "/w3.data");
-    qDebug() << w3dataDir.exists() << ", " << w3dataDir.path();
+    if (!w3dataDir.exists()) {
+        error(QCoreApplication::applicationDirPath() + "/w3.data folder does not exist!");
+        return;
+    }
     QStringList csvFilesList = w3dataDir.entryList({ "*.csv" }, QDir::Files | QDir::Readable);
     for (const QString& w3LinesPath : csvFilesList) {
         QFile w3LinesFile(w3dataDir.path() + "/" + w3LinesPath);
@@ -159,20 +165,23 @@ YmlSceneManager::YmlSceneManager(QObject *parent, QGraphicsScene* gScene) : QObj
               }
               ++cnt;
               bool convertOK = true;
-              newLine.id = lst[0].toInt(&convertOK, 10);
+              newLine.id = lst[0].toUInt(&convertOK, 10);
               if (!convertOK) {
-                  error(QString("Parse csv: Incorrect id format in line #%1: %2").arg(cnt).arg(line));
+                  error(QString("Parse csv: Incorrect id format in line #%1: %2").arg(cnt).arg(lst[0]));
                   continue;
               }
-              newLine.key_hex = lst[1].toInt(&convertOK, 16);
+
+              convertOK = true;
+              newLine.key_hex = lst[1].toUInt(&convertOK, 16);
               if (!convertOK) {
-                  warning(QString("Parse csv: Incorrect hex key format in line #%1: %2").arg(cnt).arg(line));
+                  warning(QString("Parse csv: Incorrect hex key format in line #%1: %2").arg(cnt).arg(lst[1]));
                   newLine.key_hex = 0;
               }
 
+              convertOK = true;
               newLine.duration = lst[2].toDouble(&convertOK);
               if (!convertOK) {
-                  warning(QString("Parse csv: Incorrect duration format in line #%1: %2").arg(cnt).arg(line));
+                  qw << QString("Parse csv: Incorrect duration format in line #%1: %2").arg(cnt).arg(lst[2]);
                   newLine.duration = -1.0;
               }
               newLine.text = lst[3];
@@ -300,6 +309,8 @@ bool YmlSceneManager::loadYmlRepo(QString path) {
 	return true;
 }
 bool YmlSceneManager::loadYmlFile(QString path) {
+    QElapsedTimer timer;
+    timer.start();
     m_filePath = path;
 	qi << "Parsing " + path + "...";
 
@@ -341,6 +352,8 @@ bool YmlSceneManager::loadYmlFile(QString path) {
 	}
 
 	hasChanges = false;
+    info(QString("YML loaded in %1 ms: %2").arg(timer.elapsed()).arg(path));
+
     emit ymlFileLoaded(path);
     return true;
 }

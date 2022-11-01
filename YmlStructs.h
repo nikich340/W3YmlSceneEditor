@@ -235,7 +235,7 @@ public:
 
     /* called ONCE to init all */
     void init() {
-        actors = QHash<int, asset>();
+        /*actors = QHash<int, asset>();
         props = QHash<int, asset>();
         cameras = QHash<int, camera>();
         anims = QHash<int, animation>();
@@ -248,15 +248,15 @@ public:
         usedNames = QHash< int, QPair<QString, QString> >();
         defaultPose = QHash<int, int>();
         defaultMimic = QHash<int, mimic_pose>();
-        defaultPlacement = QHash<int, transform>();
+        defaultPlacement = QHash<int, transform>();*/
     }
 	// [actor] = value
 };
 
 struct dialogLine {
 	QString text;
-    int id;
-    int key_hex;
+    uint id;
+    uint key_hex;
 	double duration;
 };
 

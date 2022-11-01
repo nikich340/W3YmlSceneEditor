@@ -1,0 +1,7 @@
+<RCC>
+    <qresource prefix="/">
+        <file alias="hide.png">icons/hide.png</file>
+        <file alias="show.png">icons/show.png</file>
+        <file>splash_screen.jpg</file>
+    </qresource>
+</RCC>

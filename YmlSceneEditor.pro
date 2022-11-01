@@ -7,7 +7,8 @@ QMAKE_CXXFLAGS += -std=c++17
 QMAKE_CXXFLAGS_WARN_OFF += -Wunused-parameter -Wunused-variable
 
 # External files
-RESOURCES = w3.data/ymlSceneEditor.qrc
+RESOURCES = \
+    data/YmlSceneEditor.qrc
 
 # The following define makes your compiler emit warnings if you use
 # any Qt feature that has been marked deprecated (the exact warnings

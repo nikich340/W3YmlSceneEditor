@@ -7,7 +7,7 @@
 
 struct SimpleTrieNode {
     QHash<QChar, int> m_chars;
-    QVector<int> m_leavesData;
+    QVector<uint> m_leavesData;
     SimpleTrieNode() {}
 };
 
@@ -25,7 +25,7 @@ public:
         m_nodeIndex += 1;
         return m_nodeIndex;
     }
-    void add(const QString& str, int data) {
+    void add(const QString& str, uint data) {
         int node_idx = 0;
         upn(i, 0, str.length() - 1) {
             if (m_nodes[node_idx].m_chars.contains(str[i])) {
@@ -38,13 +38,13 @@ public:
         }
         m_nodes[node_idx].m_leavesData.push_back(data);
     }
-    QVector<int> datasForPrefix(const QString& str, int max = -1) {
+    QVector<uint> datasForPrefix(const QString& str, int max = -1) {
         int node_idx = 0;
         upn(i, 0, str.length() - 1) {
             if (m_nodes[node_idx].m_chars.contains(str[i]))
                 node_idx = m_nodes[node_idx].m_chars[str[i]];
             else
-                return QVector<int>();
+                return QVector<uint>();
         }
 
         max = std::min( max, m_nodes[node_idx].m_leavesData.size() );
@@ -52,7 +52,7 @@ public:
             return m_nodes[node_idx].m_leavesData;
         }
 
-        return QVector<int>( m_nodes[node_idx].m_leavesData.cbegin(), m_nodes[node_idx].m_leavesData.cbegin() + max );
+        return QVector<uint>( m_nodes[node_idx].m_leavesData.cbegin(), m_nodes[node_idx].m_leavesData.cbegin() + max );
     }
 };
 #endif // SIMPLETRIE_H

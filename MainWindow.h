@@ -20,6 +20,8 @@ class MainWindow : public QMainWindow
 public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
+    void loadYmlRepos();
+    void loadCsvLines();
 
 private:
     Ui::MainWindow *ui;
@@ -27,7 +29,9 @@ private:
 	ShotManager *shotManager;
 	QGraphicsScene *gScene;
     QGraphicsScene *gDialogsScene;
-	void readSceneRepos();
+    QString m_log;
+    int m_logLinesCnt = 0;
+    void addPrintLog(QString lineColor, QString line);
     void resizeEvent(QResizeEvent* event);
 	void writeSetting(QString name, QVariant value);
 	QVariant readSetting(QString name, QVariant defaultValue = QVariant());

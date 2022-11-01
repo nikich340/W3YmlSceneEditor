@@ -34,6 +34,7 @@ private:
 
 public:
     YmlSceneManager(QObject *parent = nullptr, QGraphicsScene* gScene = nullptr);
+    void loadCsvLines();
     ~YmlSceneManager();
 
 	/* scene general */
@@ -89,7 +90,7 @@ public:
     void addShot(QString sectionName, int shotNum);
     YAML::Node shotActionToNode(shotAction* sa);
 
-    QHash<int, dialogLine> m_lineByID;
+    QHash<uint, dialogLine> m_lineByID;
     SimpleTrie m_linesTrie;
     QHash<QString, dialogLink*> m_pDialogLinkBySectionName;
     QSet<QString> dgActors, dgProps;

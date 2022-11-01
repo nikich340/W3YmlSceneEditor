@@ -7,6 +7,8 @@ MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
 {
+    QElapsedTimer timer;
+    timer.start();
     ui->setupUi(this);
 	ui->actionShowhideLog->setChecked( readSetting("logFieldVisible", true).toBool() );
 	ui->infoField->setVisible( readSetting("logFieldVisible", true).toBool() );
@@ -22,10 +24,8 @@ MainWindow::MainWindow(QWidget *parent)
     gDialogsScene->setItemIndexMethod(QGraphicsScene::NoIndex);
 
 	ymlManager = new YmlSceneManager(this, gScene);
-
 	ui->gView->setScene(gScene);
     ui->gView->setYmlManager(ymlManager);
-
     ui->gScrollShot->setChildViews(ui->gScrollShotLabel, ui->gViewShotDialogs);
 
 	shotManager = new ShotManager(ymlManager, this);
@@ -57,10 +57,10 @@ MainWindow::MainWindow(QWidget *parent)
 	connect(ui->actionShowhideLog, SIGNAL(triggered()), this, SLOT(onClicked_ShowhideLog()));
 	connect(ui->actionSetRepoPath, SIGNAL(triggered()), this, SLOT(onClicked_SetRepoPath()));
 
-	readSceneRepos();
+    print_info(QString("MainWindow(): UI Loaded in %1 ms.").arg(timer.elapsed()));
 }
 
-void MainWindow::readSceneRepos() {
+void MainWindow::loadYmlRepos() {
 	QString dirPath = readSetting("sceneReposPath").toString();
 	if (dirPath.isEmpty()) {
 		print_warning("readSceneRepos(): Radish scene.repos path is not set!");
@@ -70,7 +70,10 @@ void MainWindow::readSceneRepos() {
 	QDir dir(dirPath);
 	if (!dir.exists()) {
 		print_error("readSceneRepos(): Folder " + dirPath + " does not exist!");
+        return;
 	}
+    QElapsedTimer timer;
+    timer.start();
 	QStringList files = dir.entryList(QStringList() << "*.yml" << "*.yaml" << "*.YML" << "*.YAML", QDir::Files);
 
 	int ok_cnt = 0;
@@ -85,24 +88,38 @@ void MainWindow::readSceneRepos() {
 		}
 	}
 	if (ok_cnt > 0) {
-		print_info("readSceneRepos(): Successfully loaded " + qn(ok_cnt) + " yml repo files.");
-	}
+        print_info(QString("readSceneRepos(): Successfully loaded %1 yml repo files in %2 ms.").arg(ok_cnt).arg(timer.elapsed()));
+    }
+}
+
+void MainWindow::loadCsvLines()
+{
+    ymlManager->loadCsvLines();
+}
+
+void MainWindow::addPrintLog(QString lineColor, QString line)
+{
+    ++m_logLinesCnt;
+    if (m_logLinesCnt > 500) {
+        m_logLinesCnt = 100;
+        m_log = m_log.split("\n").mid(0, 100).join("\n");
+    }
+    m_log += QString("<font color=\"%2\">%3</font><br>").arg(lineColor).arg(line);
+    ui->infoField->setHtml(m_log);
+    ui->infoField->verticalScrollBar()->setValue( ui->infoField->verticalScrollBar()->maximum() );
 }
 
 void MainWindow::print_info(QString s) {
-	QString curS = ui->infoField->toHtml();
-	ui->infoField->setHtml(curS + "<font color=\"DarkBlue\">" + s + "</font>\n");
-	ui->infoField->verticalScrollBar()->setValue( ui->infoField->verticalScrollBar()->maximum() );
+    qi << s;
+    addPrintLog("DarkBlue", s);
 }
 void MainWindow::print_warning(QString s) {
-	QString curS = ui->infoField->toHtml();
-	ui->infoField->setHtml(curS + "<font color=\"OrangeRed\">" + s + "</font>\n");
-	ui->infoField->verticalScrollBar()->setValue( ui->infoField->verticalScrollBar()->maximum() );
+    qw << s;
+    addPrintLog("OrangeRed", s);
 }
 void MainWindow::print_error(QString s) {
-	QString curS = ui->infoField->toHtml();
-	ui->infoField->setHtml(curS + "<font color=\"Crimson\"><b>" + s + "</b></font>\n");
-	ui->infoField->verticalScrollBar()->setValue( ui->infoField->verticalScrollBar()->maximum() );
+    qc << s;
+    addPrintLog("Crimson", s);
 }
 void MainWindow::onClicked_Quit()
 {

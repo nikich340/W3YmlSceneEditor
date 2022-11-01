@@ -1,6 +1,0 @@
-<RCC>
-    <qresource prefix="/">
-        <file alias="hide.png">../UI/icons/hide.png</file>
-        <file alias="show.png">../UI/icons/show.png</file>
-    </qresource>
-</RCC>
