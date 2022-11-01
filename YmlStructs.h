@@ -260,25 +260,26 @@ struct dialogLine {
 	double duration;
 };
 
-struct shotAction {
-    EShotActionType actionType;
-    double start;
+class ShotActionBase {
+public:
+    EShotActionType actionType = EShotUnknown;
+    double start = -1.0;
     QHash<QString, QVariant> values;
-    shotAction(EShotActionType _actionType = EShotUnknown, double _start = -1.0) {
+    ShotActionBase(EShotActionType _actionType = EShotUnknown, double _start = -1.0) {
         actionType = _actionType;
 		start = _start;
 	}
 };
 
 struct shot {
-    QVector<shotAction> actions;
+    QVector<ShotActionBase> actions;
 	QString shotName;
     shot(QString _shotName = QString()) {
         shotName = _shotName;
     }
     void sortActionsByStart() {
         std::sort(actions.begin(), actions.end(),
-            [](const shotAction& a, const shotAction& b) -> bool
+            [](const ShotActionBase& a, const ShotActionBase& b) -> bool
             {
                 return a.start < b.start;  // asending
             }

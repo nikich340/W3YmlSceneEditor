@@ -82,7 +82,7 @@ void CustomRectItem::setBlendOut(double blendOut) {
     updateBackground();
 }
 
-void CustomRectItem::setShotAction(shotAction* action) {
+void CustomRectItem::setShotAction(ShotActionBase* action) {
     m_shotAction = action;
 }
 

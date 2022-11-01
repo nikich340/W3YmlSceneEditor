@@ -88,7 +88,7 @@ public:
     void updateShot(QString sectionName, int shotNum);
     void removeShot(QString sectionName, QString shotName);
     void addShot(QString sectionName, int shotNum);
-    YAML::Node shotActionToNode(shotAction* sa);
+    YAML::Node shotActionToNode(ShotActionBase* sa);
 
     QHash<uint, dialogLine> m_lineByID;
     SimpleTrie m_linesTrie;

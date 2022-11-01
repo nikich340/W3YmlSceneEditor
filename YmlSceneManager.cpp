@@ -167,26 +167,26 @@ void YmlSceneManager::loadCsvLines()
               bool convertOK = true;
               newLine.id = lst[0].toUInt(&convertOK, 10);
               if (!convertOK) {
-                  error(QString("Parse csv: Incorrect id format in line #%1: %2").arg(cnt).arg(lst[0]));
+                  error(QString("Parse csv: Incorrect id format in line #%1: %2 (%3)").arg(cnt).arg(lst[0]).arg(line));
                   continue;
               }
 
               convertOK = true;
               newLine.key_hex = lst[1].toUInt(&convertOK, 16);
               if (!convertOK) {
-                  warning(QString("Parse csv: Incorrect hex key format in line #%1: %2").arg(cnt).arg(lst[1]));
+                  warning(QString("Parse csv: Incorrect hex key format in line #%1: %2 (%3)").arg(cnt).arg(lst[1]).arg(line));
                   newLine.key_hex = 0;
               }
 
               convertOK = true;
               newLine.duration = lst[2].toDouble(&convertOK);
               if (!convertOK) {
-                  qw << QString("Parse csv: Incorrect duration format in line #%1: %2").arg(cnt).arg(lst[2]);
+                  qw << QString("Parse csv: Incorrect duration format in line #%1: %2 (%3)").arg(cnt).arg(lst[2]).arg(line);
                   newLine.duration = -1.0;
               }
               newLine.text = lst[3];
               if (newLine.text.isEmpty()) {
-                  error(QString("Parse csv: Empty line #%1: %2").arg(cnt).arg(line));
+                  error(QString("Parse csv: No text in line #%1: %2").arg(cnt).arg(line));
                   continue;
               }
 
@@ -604,7 +604,7 @@ bool YmlSceneManager::loadSectionsInfo() {
 bool YmlSceneManager::loadShotActions(const YAML::Node actsNode, shot& sh) {
 	upn(k, 0, (int) actsNode.size() - 1) {
 		YAML::Node actionNode = actsNode[k];
-        shotAction newAction;
+        ShotActionBase newAction;
         QString actionName = actionNode.begin()->XKey.as<QString>().toLower();
         newAction.actionType = stringToEShotAction.value(actionName, EShotUnknown);
 
@@ -2353,7 +2353,7 @@ void YmlSceneManager::updateDialogscriptSection(QString sectionName)
     }
 }
 
-YAML::Node YmlSceneManager::shotActionToNode(shotAction *sa)
+YAML::Node YmlSceneManager::shotActionToNode(ShotActionBase *sa)
 {
     YAML::Node actionMap;
     YAML::Node mainParams;
@@ -2597,7 +2597,7 @@ void YmlSceneManager::updateShot(QString sectionName, int shotNum)
         YAML::Node shotSeq(YAML::NodeType::Sequence);
         shotSeq.SetStyle(YAML::EmitterStyle::Block);
         upn(i, 0, actionsCount - 1) {
-            shotAction* sa = &m_pDialogLinkBySectionName[sectionName]->shots[shotNum].actions[i];
+            ShotActionBase* sa = &m_pDialogLinkBySectionName[sectionName]->shots[shotNum].actions[i];
             shotSeq.push_back( shotActionToNode(sa) );
         }
         m_root["storyboard"][sectionName][shotName] = shotSeq;

@@ -28,7 +28,7 @@ private:
     int m_textSizeSecondary = 7;
     double m_duration = -1.0;
     double m_blendIn = -1.0, m_blendOut = -1.0; // duration
-    shotAction* m_shotAction = nullptr;
+    ShotActionBase* m_shotAction = nullptr;
     QHash<QString, QVariant> m_data;
     QPixmap m_buttonImageEnabled = QPixmap();
     QPixmap m_buttonImageDisabled = QPixmap();
@@ -64,7 +64,7 @@ public:
     void setDuration(double dur);
     void setBlendIn(double blendIn);
     void setBlendOut(double blendOut);
-    void setShotAction(shotAction* action);
+    void setShotAction(ShotActionBase* action);
 
     QString textLabel() {
         return m_textLabel;
@@ -105,7 +105,7 @@ public:
     double blendOut() {
         return m_blendOut;
     }
-    shotAction* getShotAction() {
+    ShotActionBase* getShotAction() {
         return m_shotAction;
     }
     const QRectF &bordersRect() {

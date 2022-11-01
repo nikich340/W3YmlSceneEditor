@@ -111,7 +111,7 @@ public:
     bool isAssetSpecificType(EShotActionType type);
 	void clearShotEditor();
     void updateDialogCueText(QString shotname);
-    double getDurationForAction(shotAction* sa);
+    double getDurationForAction(ShotActionBase* sa);
     double X_TO_SEC(double x) {
         return x / CONSTANTS::SHOT_SECOND;
     }
@@ -125,10 +125,10 @@ public:
     double X_TO_ShotPoint(double x);  // [0.0 - 1.0)
     //int getGroupNumForType(EShotActionType type);
 
-    double getMinYForAction(shotAction* action);
+    double getMinYForAction(ShotActionBase* action);
     QString shotNameByNum(int shotNum);
     void getShotInfoForPoint(QPoint point, int &shotNum, double &shotCoord, int &actorNum, int &groupNum);
-    int getAssetIDForAction(shotAction* action);
+    int getAssetIDForAction(ShotActionBase* action);
     void addLabel(QString text, EShotActionType type, double offsetX, double offsetY);
     QColor getBlockColorForActionType(EShotActionType type);
 

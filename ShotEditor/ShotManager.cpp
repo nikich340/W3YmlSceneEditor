@@ -172,7 +172,7 @@ void ShotManager::onClearEditor()
     m_assetIDByScene.clear();
 }
 
-double ShotManager::getMinYForAction(shotAction *action)
+double ShotManager::getMinYForAction(ShotActionBase *action)
 {
     return CONSTANTS::SHOT_LABEL_HEIGHT * EShotActionToGroupNum[action->actionType];
 }
@@ -227,7 +227,7 @@ void ShotManager::getShotInfoForPoint(QPoint p, int &shotNum, double &shotCoord,
                 .arg(shotNum).arg(shotNameByNum(shotNum)).arg(shotCoord);*/
 }
 
-int ShotManager::getAssetIDForAction(shotAction *action)
+int ShotManager::getAssetIDForAction(ShotActionBase *action)
 {
     if ( !isAssetSpecificType(action->actionType) )
         return -1;
@@ -260,7 +260,7 @@ int ShotManager::getAssetIDForAction(shotAction *action)
     return -1;
 }
 
-double ShotManager::getDurationForAction(shotAction* sa) {
+double ShotManager::getDurationForAction(ShotActionBase* sa) {
     double duration = -1.0;
     int id = 0;
     /*
@@ -566,7 +566,7 @@ void ShotManager::onShotActionLoad(int shotNum, int actionNum) {
     double dur_sec = m_pDialogLink->durations[shotNum];
     QString shotName = shotNameByNum(shotNum);
 
-    shotAction* sa = &m_pDialogLink->shots[shotNum].actions[actionNum];
+    ShotActionBase* sa = &m_pDialogLink->shots[shotNum].actions[actionNum];
     QString secondaryInfo = QString("[%1]").arg( sa->start, 0, 'f', 3 );
     double actionDuration = getDurationForAction(sa);
 
@@ -608,7 +608,7 @@ void ShotManager::onShotActionAdd(int shotNum, int assetID, EShotActionType acti
 {
     m_pYmlManager->info( QString("onShotActionAdd: shotNum = %1 [%2], assetID = %3, actionType = %4")
                          .arg(shotNum).arg(shotPoint).arg(assetID).arg(EShotActionToString[actionType]));
-    shotAction sh(actionType, shotPoint);
+    ShotActionBase sh(actionType, shotPoint);
     if (assetID >= 0) {
         sh.values["actor"] = assetID;
     }
@@ -631,7 +631,7 @@ void ShotManager::onShotActionRemove(CustomRectItem *rect, bool updateYML)
      */
     int assetID = rect->data("assetID").toInt();
     QString shotName = rect->data("shotName").toString();
-    shotAction* sa = rect->getShotAction();
+    ShotActionBase* sa = rect->getShotAction();
     qDebug() << "onShotActionRemove: [" << sa->start << "] " << EShotActionToString[sa->actionType] << " from " << shotName;
 
     m_pAssetByID[assetID]->actionRectsByShotName[shotName].remove(rect);
