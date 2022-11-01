@@ -54,7 +54,7 @@ int main(int argc, char *argv[])
     QApplication app(argc, argv);
 
     QPixmap splashPix = QPixmap(":/splash_screen.jpg").scaled(app.primaryScreen()->geometry().size() / 2.5, Qt::KeepAspectRatio, Qt::SmoothTransformation);
-    QSplashScreen splash(splashPix);
+    QSplashScreen splash(splashPix, Qt::WindowStaysOnTopHint);
     splash.setFont(QFont("Comic Sans MS", 12));
     splash.show();
     splash.showMessage(QString("\tYML Scene Editor for Radish\n\t\t\t\t\t\tby @nikich340 [build %1 (%2)]").arg(VERSION).arg(__DATE__), Qt::AlignLeft | Qt::AlignTop, QColorConstants::Svg::crimson);
