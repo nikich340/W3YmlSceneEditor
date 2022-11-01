@@ -11,6 +11,7 @@
 #include <QVariant>
 #include <QVector3D>
 #include "constants.h"
+#include "YmlShotActions.h"
 
 struct transform {
 	QVector3D pos;
@@ -257,17 +258,6 @@ struct dialogLine {
     uint id;
     uint key_hex;
 	double duration;
-};
-
-class ShotActionBase {
-public:
-    EShotActionType actionType = EShotUnknown;
-    double start = -1.0;
-    QHash<QString, QVariant> values;
-    ShotActionBase(EShotActionType _actionType = EShotUnknown, double _start = -1.0) {
-        actionType = _actionType;
-		start = _start;
-	}
 };
 
 struct shot {

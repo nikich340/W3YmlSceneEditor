@@ -45,6 +45,7 @@ HEADERS += \
     UI/RepoActorsDialog.h \
     UI/SocketSettingsForm.h \
     YmlSceneManager.h \
+    YmlShotActions.h \
     YmlStructs.h \
     constants.h \
     yaml-cpp/include/yaml-cpp/anchor.h \
