@@ -149,20 +149,17 @@ public:
 	// but load DEFAULT MIMIC from actors repository firstly, and production secondly..
 
 	/* names storage - store unique int IDs instead of real names (easy renaming, less RAM usage) */
-    QHash< QString, QHash<QString, int> > usedIDs; // usedNamesFor["type"].contains("name")
+    QHash<QString, int> usedIDs[ERepoMAX]; // usedNamesFor["type"].contains("name")
 												 // usedNamesFor["type"].insert("name")
-    QHash< int, QPair<QString, QString> > usedNames;
+    QHash< int, QPair<ERepoType, QString> > usedNames;
 	int newID = 0;
-	bool hasName(QString _type, QString _name) {
-		return usedIDs.contains(_type) && usedIDs[_type].contains(_name);
+    bool hasName(const ERepoType _type, const QString& _name) {
+        return usedIDs[_type].contains(_name);
 	}
-	bool hasID(int _ID) {
+    bool hasID(const int _ID) {
 		return usedNames.contains(_ID);
 	}
-	int getID(QString _type, QString _name) {
-		if ( !usedIDs.contains(_type) ) {
-			usedIDs[_type] = QHash<QString, int>();
-		}
+    int getID(const ERepoType _type, const QString& _name) {
 		if ( !usedIDs[_type].contains(_name) ) {
 			++newID;
 			usedIDs[_type][_name] = newID;
@@ -170,35 +167,35 @@ public:
 		}
 		return usedIDs[_type][_name];
 	}
-	QPair<QString, QString> getTypeName(int _ID) {
+    QPair<ERepoType, QString> getTypeName(const int _ID) {
 		if ( !usedNames.contains(_ID) ) {
-			return QPair<QString, QString>();
+            return QPair<ERepoType, QString>();
 		}
 		return usedNames[_ID];
 	}
-	QString getName(int _ID) {
+    QString getName(const int _ID) {
         return getTypeName(_ID).YValue;
 	}
-	void removeName(QString _type, QString _name) {
-		if ( usedIDs.contains(_type) &&  usedIDs[_type].contains(_name) ) {
+    void removeName(const ERepoType _type, const QString& _name) {
+        if ( usedIDs[_type].contains(_name) ) {
 			usedNames.remove( usedIDs[_type][_name] );
 			usedIDs[_type].remove(_name);
 		}
 	}
-	void removeID(int _ID) {
+    void removeID(const int _ID) {
 		if ( usedNames.contains(_ID) ) {
             usedIDs[usedNames[_ID].XKey].remove( usedNames[_ID].YValue );
 			usedNames.remove(_ID);
 		}
 	}
-	void rename(int _ID, QString _newName) {
+    void rename(const int _ID, const QString& _newName) {
         if ( usedNames.contains(_ID) && usedNames[_ID].YValue != _newName ) {
             usedIDs[usedNames[_ID].XKey].remove( usedNames[_ID].YValue );
             usedIDs[usedNames[_ID].XKey][_newName] = _ID;
             usedNames[_ID].YValue = _newName;
 		}
 	}
-	void getNameUnused(QString _type, QString _name, QString& outName, int& outID) {
+    void getNameUnused(const ERepoType _type, const QString& _name, QString& outName, int& outID) {
 		int i = 0;
 		while ( hasName(_type, _name + qn(i)) ) {
 			++i;
@@ -206,22 +203,20 @@ public:
 		outName = _name + qn(i);
 		outID = getID(_type, outName);
 	}
-	void rename(QString _type, QString _name, QString _newName) {
-		if ( usedIDs.contains(_type) &&  usedIDs[_type].contains(_name) && _name != _newName ) {
+    int getIDAny(const ERepoType _type) {
+        if (usedIDs[_type].count() > 0) {
+            return usedIDs[_type].begin().value();
+        }
+        return -1;
+    }
+    void rename(const ERepoType _type, const QString& _name, const QString& _newName) {
+        if ( usedIDs[_type].contains(_name) && _name != _newName ) {
 			int ID = usedIDs[_type][_name];
             usedNames[ID].YValue = _newName;
 			usedIDs[_type].remove(_name);
 			usedIDs[_type][_newName] = ID;
 		}
-	}
-	void removeType(QString _type) {
-		if ( usedIDs.contains(_type) ) {
-			for (auto it : usedIDs[_type]) {
-				usedNames.remove(it);
-			}
-			usedIDs[_type].clear();
-		}
-	}
+    }
 
 	/* SETTINGS */
 	QString placementTag = "NO TAG";
@@ -261,16 +256,16 @@ struct dialogLine {
 };
 
 struct shot {
-    QVector<ShotActionBase> actions;
+    QVector<ShotActionBase*> actions;
 	QString shotName;
     shot(QString _shotName = QString()) {
         shotName = _shotName;
     }
     void sortActionsByStart() {
         std::sort(actions.begin(), actions.end(),
-            [](const ShotActionBase& a, const ShotActionBase& b) -> bool
+            [](const ShotActionBase* a, const ShotActionBase* b) -> bool
             {
-                return a.start < b.start;  // asending
+                return a->start < b->start;  // asending
             }
         );
     }

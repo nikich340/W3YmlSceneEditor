@@ -76,6 +76,18 @@ enum EShotActionType {
     EShotWorldEffectStop,
 };
 
+enum ERepoType {
+    ERepoNotSet,
+    ERepoCameras,
+    ERepoAssets,
+    ERepoAnims,
+    ERepoMimicAnims,
+    ERepoAnimPoses,
+    ERepoMimicPoses,
+    ERepoSoundbanks,
+    ERepoMAX = ERepoSoundbanks
+};
+
 struct CONSTANTS {
     static const int IsNavigationLine;
     static const QColor colorSceneGradient0, colorSceneGradient1;
@@ -86,15 +98,7 @@ struct CONSTANTS {
     static const QColor colorDgViewPause, colorDgViewChoice;
     static const QVector<QColor> colorDgViewActors;
 
-    static const QString SREPO_TEMP;
-    static const QString SCAMERAS;
-    static const QString SASSETS; // for unification: actors + props
-    static const QString SANIMS;
-    static const QString SMIMICANIMS; // for unification: anim + anim.mimic
-    static const QString SANIMPOSES;
-    static const QString SMIMICPOSES;
-    static const QString SSOUNDBANKS;
-    static const QString NOT_SET;
+    static const QString REPO_TEMP;
     static const QStringList MIMICS_LIST;
 
     static const double DIAMETER;

@@ -19,14 +19,14 @@ const QVector<QColor> CONSTANTS::colorDgViewActors = {
 
 const QColor CONSTANTS::colorDgViewPause = CONSTANTS::QColorLight(3, 15), CONSTANTS::colorDgViewChoice = CONSTANTS::QColorLight(0, 15);
 
-const QString CONSTANTS::SREPO_TEMP = "_repo_temp_";
-const QString CONSTANTS::SCAMERAS = "cameras";
-const QString CONSTANTS::SASSETS = "assets"; // for unification: actors + props
-const QString CONSTANTS::SANIMS = "animations";
-const QString CONSTANTS::SMIMICANIMS = "animations"; // for unification: anim + anim.mimic
-const QString CONSTANTS::SANIMPOSES = "actor.poses";
-const QString CONSTANTS::SMIMICPOSES = "mimics";
-const QString CONSTANTS::SSOUNDBANKS = "soundbanks";
+const QString CONSTANTS::REPO_TEMP = "_repo_temp_";
+const QString ERepoCameras = "cameras";
+const QString ERepoAssets = "assets"; // for unification: actors + props
+const QString ERepoAnims = "animations";
+const QString ERepoMimicAnims = "animations"; // for unification: anim + anim.mimic
+const QString ERepoAnimPoses = "actor.poses";
+const QString ERepoMimicPoses = "mimics";
+const QString ERepoSoundbanks = "soundbanks";
 const QString CONSTANTS::NOT_SET = "---NOT SET---";
 
 const double CONSTANTS::DIAMETER = 6.0;
@@ -223,4 +223,5 @@ const QSet<EShotActionType> CONSTANTS::EShotActionsShared = {
 
 const QStringList CONSTANTS::MIMICS_LIST = { "Afraid", "Very afraid", "Aggressive", "Bursting_anger", "Confident", "Contempt", "Cry",
                                   "Determined", "Disgusted", "Drunk", "Focused", "Happy", "Very happy", "Nervous", "Neutral",
-                                  "Proud", "Sad", "Sceptic", "Seducing", "Sleeping", "Surprised", "Surprised Shocked", "NO ANIM" };
+                                             "Proud", "Sad", "Sceptic", "Seducing", "Sleeping", "Surprised", "Surprised Shocked", "NO ANIM" };
+

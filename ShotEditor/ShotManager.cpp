@@ -523,9 +523,9 @@ void ShotManager::onShotLoad(int shotNum) {
     actorCueLabel->setTextParamsMain(QColorConstants::Svg::navy, 9, "Segoe UI", Qt::AlignLeft);
     actorCueLabel->setTextParamsSecondary(QColorConstants::Svg::purple, 9, "DejaVu Sans Mono");
 
-    if (m_pDialogLink->speakers[shotNum] == m_pYmlManager->sceneGlobals()->getID(CONSTANTS::SASSETS, "PAUSE")) {
+    if (m_pDialogLink->speakers[shotNum] == m_pYmlManager->sceneGlobals()->getID(ERepoAssets, "PAUSE")) {
         actorCueLabel->setBrush( QBrush(CONSTANTS::colorDgViewPause) );
-    } else if (m_pDialogLink->speakers[shotNum] == m_pYmlManager->sceneGlobals()->getID(CONSTANTS::SASSETS, "CHOICE")) {
+    } else if (m_pDialogLink->speakers[shotNum] == m_pYmlManager->sceneGlobals()->getID(ERepoAssets, "CHOICE")) {
         actorCueLabel->setBrush( QBrush(CONSTANTS::colorDgViewChoice) );
     } else {
         int speakerIdx = -1;
@@ -566,7 +566,7 @@ void ShotManager::onShotActionLoad(int shotNum, int actionNum) {
     double dur_sec = m_pDialogLink->durations[shotNum];
     QString shotName = shotNameByNum(shotNum);
 
-    ShotActionBase* sa = &m_pDialogLink->shots[shotNum].actions[actionNum];
+    ShotActionBase* sa = m_pDialogLink->shots[shotNum].actions[actionNum];
     QString secondaryInfo = QString("[%1]").arg( sa->start, 0, 'f', 3 );
     double actionDuration = getDurationForAction(sa);
 
@@ -608,9 +608,9 @@ void ShotManager::onShotActionAdd(int shotNum, int assetID, EShotActionType acti
 {
     m_pYmlManager->info( QString("onShotActionAdd: shotNum = %1 [%2], assetID = %3, actionType = %4")
                          .arg(shotNum).arg(shotPoint).arg(assetID).arg(CONSTANTS::EShotActionToString[actionType]));
-    ShotActionBase sh(actionType, shotPoint);
+    ShotActionBase* sh = new ShotActionBase(actionType, shotPoint);
     if (assetID >= 0) {
-        sh.values["actor"] = assetID;
+        sh->values["actor"] = assetID;
     }
     // TODO! Use input UI interface to get default shotAction for this type
     m_pDialogLink->shots[shotNum].actions.pb(sh);
@@ -640,7 +640,8 @@ void ShotManager::onShotActionRemove(CustomRectItem *rect, bool updateYML)
     int shotNum = m_pDialogLink->shotNumByName(shotName);
 
     upn(i, 0, m_pDialogLink->shots[shotNum].actions.count() - 1) {
-        if (&m_pDialogLink->shots[shotNum].actions[i] == sa) {
+        if (m_pDialogLink->shots[shotNum].actions[i] == sa) {
+            delete m_pDialogLink->shots[shotNum].actions[i];
             m_pDialogLink->shots[shotNum].actions.removeAt(i);
             break;
         }
