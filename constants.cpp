@@ -20,14 +20,6 @@ const QVector<QColor> CONSTANTS::colorDgViewActors = {
 const QColor CONSTANTS::colorDgViewPause = CONSTANTS::QColorLight(3, 15), CONSTANTS::colorDgViewChoice = CONSTANTS::QColorLight(0, 15);
 
 const QString CONSTANTS::REPO_TEMP = "_repo_temp_";
-const QString ERepoCameras = "cameras";
-const QString ERepoAssets = "assets"; // for unification: actors + props
-const QString ERepoAnims = "animations";
-const QString ERepoMimicAnims = "animations"; // for unification: anim + anim.mimic
-const QString ERepoAnimPoses = "actor.poses";
-const QString ERepoMimicPoses = "mimics";
-const QString ERepoSoundbanks = "soundbanks";
-const QString CONSTANTS::NOT_SET = "---NOT SET---";
 
 const double CONSTANTS::DIAMETER = 6.0;
 const double CONSTANTS::HEIGHT = 60.0;

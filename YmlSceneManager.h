@@ -6,6 +6,7 @@
 #include "YmlStructs.h"
 #include "constants.h"
 #include "SimpleTrie.h"
+#include "YmlShotActions.h"
 
 class GraphicsSectionItem;
 

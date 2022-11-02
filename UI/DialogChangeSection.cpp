@@ -314,13 +314,13 @@ void DialogChangeSection::accept() {
 	if ( (validator.validate(str, pos) != QValidator::Acceptable) || !validChoice ) {
 		QMessageBox msg(QMessageBox::Warning, "Incorrect settings", "Wrong section name format!\nCorrect examples: " + ui->lineName->placeholderText(), QMessageBox::Ok, this);
         msg.setModal(true);
-        int ret = msg.exec(); // QMessageBox::Ok
+        msg.exec(); // QMessageBox::Ok
         return;
     }
 	if ( ui->lineName->text() != sLink->sectionName && sectionsLst.contains(ui->lineName->text()) ) {
         QMessageBox msg(QMessageBox::Warning, "Incorrect settings", "Section with the same name already exists!", QMessageBox::Ok, this);
         msg.setModal(true);
-        int ret = msg.exec(); // QMessageBox::Ok
+        msg.exec(); // QMessageBox::Ok
         return;
     }
     int cnt = 0;
@@ -331,13 +331,13 @@ void DialogChangeSection::accept() {
         if ( ui->choiceButton->isChecked() && sk[i]->ui->choiceLine->text().isEmpty() ) {
             QMessageBox msg(QMessageBox::Warning, "Incorrect settings", "Dialog line #" + QString::number(i+1) + " should not be empty!", QMessageBox::Ok, this);
             msg.setModal(true);
-            int ret = msg.exec(); // QMessageBox::Ok
+            msg.exec(); // QMessageBox::Ok
             return;
         }
 		if ( (ui->choiceButton->isChecked() || ui->nextButton->isChecked()) && sk[i]->ui->conditionCheck->isChecked() && sk[i]->ui->factNameLine->text().isEmpty() ) {
             QMessageBox msg(QMessageBox::Warning, "Incorrect settings", "Condition #" + QString::number(i+1) + " fact name should not be empty!", QMessageBox::Ok, this);
             msg.setModal(true);
-            int ret = msg.exec(); // QMessageBox::Ok
+            msg.exec(); // QMessageBox::Ok
             return;
         }
     }

@@ -10,10 +10,9 @@
 
 #define XKey first
 #define YValue second
-#define upn(x, init, n) for (int x = init; x <= n; ++x)
-#define ups(x, init, n) for (size_t x = init; x <= n; ++x)
+#define upn(x, init, n) for (int x = init; x <= (int) n; ++x)
 #define upiter(x, container) for (auto x = container.begin(); x != container.end(); ++x)
-#define dn(x, init, n) for(int x = init; x >= n; --x)
+#define dn(x, init, n) for(int x = init; x >=(int) n; --x)
 #define diter(x, container) for (auto x = container.rbegin(); x != container.rend(); ++x)
 #define pb push_back
 #define to_qstr(x) QString::fromStdString(x)

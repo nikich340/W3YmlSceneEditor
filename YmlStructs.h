@@ -11,7 +11,7 @@
 #include <QVariant>
 #include <QVector3D>
 #include "constants.h"
-#include "YmlShotActions.h"
+class ShotActionBase;
 
 struct transform {
 	QVector3D pos;
@@ -262,12 +262,7 @@ struct shot {
         shotName = _shotName;
     }
     void sortActionsByStart() {
-        std::sort(actions.begin(), actions.end(),
-            [](const ShotActionBase* a, const ShotActionBase* b) -> bool
-            {
-                return a->start < b->start;  // asending
-            }
-        );
+        std::sort(actions.begin(), actions.end());
     }
 };
 
