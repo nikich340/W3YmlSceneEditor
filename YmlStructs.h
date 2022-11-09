@@ -10,8 +10,9 @@
 #include <QString>
 #include <QVariant>
 #include <QVector3D>
+#include <yaml-cpp/yaml.h>
 #include "constants.h"
-class ShotActionBase;
+class SA_Base;
 
 struct transform {
 	QVector3D pos;
@@ -230,7 +231,7 @@ public:
 
     /* called ONCE to init all */
     void init() {
-        /*actors = QHash<int, asset>();
+        actors = QHash<int, asset>();
         props = QHash<int, asset>();
         cameras = QHash<int, camera>();
         anims = QHash<int, animation>();
@@ -239,24 +240,26 @@ public:
         mimic_poses = QHash<int, mimic_pose>();
         soundbanks = QHash<int, QSet<QString>>();
 
-        usedIDs = QHash< QString, QHash<QString, int> >();
-        usedNames = QHash< int, QPair<QString, QString> >();
+        upn(i, 0, ERepoMAX - 1) {
+            usedIDs[i] = QHash<QString, int>();
+        }
+        usedNames = QHash< int, QPair<ERepoType, QString> >();
         defaultPose = QHash<int, int>();
         defaultMimic = QHash<int, mimic_pose>();
-        defaultPlacement = QHash<int, transform>();*/
+        defaultPlacement = QHash<int, transform>();
     }
 	// [actor] = value
 };
 
 struct dialogLine {
-	QString text;
+    QString text;
     uint id;
     uint key_hex;
 	double duration;
 };
 
 struct shot {
-    QVector<ShotActionBase*> actions;
+    QVector<SA_Base*> actions;
 	QString shotName;
     shot(QString _shotName = QString()) {
         shotName = _shotName;
@@ -409,5 +412,89 @@ struct sectionLink {
         sectionName = _sectionName;
     }
 };
+
+namespace YAML {
+    template<>
+    struct convert<QString> {
+      static Node encode(const QString& rhs) {
+        Node node(rhs.toStdString());
+        return node;
+      }
+
+      static bool decode(const Node& node, QString& rhs) {
+        if (!node.IsScalar())
+            return false;
+        rhs = to_qstr(node.Scalar());
+        return true;
+      }
+     };
+
+    template<>
+    struct convert<QVector3D> {
+      static Node encode(const QVector3D& rhs) {
+        Node node;
+        node.push_back(rhs.x());
+        node.push_back(rhs.y());
+        node.push_back(rhs.z());
+        return node;
+      }
+
+      static bool decode(const Node& node, QVector3D& rhs) {
+        if (!node.IsSequence())
+            return false;
+        rhs.setX( node[0].as<float>() );
+        rhs.setY( node[1].as<float>() );
+        rhs.setZ( node[2].as<float>() );
+        return true;
+      }
+     };
+
+    template<>
+    struct convert<QColor> {
+      static Node encode(const QColor& rhs) {
+        Node node;
+        node.push_back(rhs.red());
+        node.push_back(rhs.green());
+        node.push_back(rhs.blue());
+        node.push_back(rhs.alpha());
+        return node;
+      }
+
+      static bool decode(const Node& node, QColor& rhs) {
+        if (!node.IsSequence())
+            return false;
+        rhs.setRed( node[0].as<int>() );
+        rhs.setGreen( node[1].as<int>() );
+        rhs.setBlue( node[2].as<int>() );
+        if (node.size() > 3)
+            rhs.setAlpha( node[3].as<int>() );
+        return true;
+      }
+     };
+
+      template<>
+      struct convert<ymlCond> {
+        static Node encode(const ymlCond& rhs) {
+            Node node;
+            node.push_back(rhs.condFact);
+            node.push_back(rhs.condOperand);
+            node.push_back(rhs.condValue);
+            node[0].SetTag("!");
+            node[1].SetTag("!");
+            return node;
+        }
+
+        static bool decode(const Node& node, ymlCond& rhs) {
+          if (!node.IsSequence())
+              return false;
+          rhs.condFact = node[0].as<QString>();
+          rhs.condOperand = node[1].as<QString>();
+          rhs.condValue = node[2].as<int>();
+          return true;
+        }
+      };
+      Emitter& operator<<(Emitter& out, const QString& s);
+      Emitter& operator<<(Emitter& out, const ymlCond& cond);
+}
 
 #endif // YMLSTRUCTS_H
