@@ -13,42 +13,55 @@ MainWindow::MainWindow(QWidget *parent)
 	ui->actionShowhideLog->setChecked( readSetting("logFieldVisible", true).toBool() );
 	ui->infoField->setVisible( readSetting("logFieldVisible", true).toBool() );
 
-    gScene = new QGraphicsScene(this);
-    gScene->setSceneRect(0,0, CONSTANTS::SCENE_WIDTH, CONSTANTS::SCENE_HEIGHT);
-    gScene->setItemIndexMethod(QGraphicsScene::NoIndex);
+    m_pSectionsScene = new QGraphicsScene(this);
+    m_pSectionsScene->setSceneRect(0,0, CONSTANTS::SCENE_WIDTH, CONSTANTS::SCENE_HEIGHT);
+    m_pSectionsScene->setItemIndexMethod(QGraphicsScene::NoIndex);
 
-    gDialogsScene = new QGraphicsScene(this);
-    ui->gViewShotDialogs->setScene(gDialogsScene);
+    m_pDialogsScene = new QGraphicsScene(this);
+    ui->gViewShotDialogs->setScene(m_pDialogsScene);
     ui->gViewShotDialogs->viewport()->setMouseTracking(true);
-    gDialogsScene->installEventFilter(ui->gScrollShot);
-    gDialogsScene->setItemIndexMethod(QGraphicsScene::NoIndex);
+    m_pDialogsScene->installEventFilter(ui->gScrollShot);
+    m_pDialogsScene->setItemIndexMethod(QGraphicsScene::NoIndex);
 
-	ymlManager = new YmlSceneManager(this, gScene);
-	ui->gView->setScene(gScene);
-    ui->gView->setYmlManager(ymlManager);
+    m_pYmlManager = new YmlSceneManager(this, m_pSectionsScene);
+    ui->gView->setScene(m_pSectionsScene);
+    ui->gView->setYmlManager(m_pYmlManager);
     ui->gScrollShot->setChildViews(ui->gScrollShotLabel, ui->gViewShotDialogs);
 
-	shotManager = new ShotManager(ymlManager, this);
-    shotManager->setWidgets(gDialogsScene, ui->gScrollShotLabel, ui->gScrollShot);
+    m_pShotManager = new ShotManager(m_pYmlManager, this);
+    m_pShotManager->setWidgets(m_pDialogsScene, ui->shotEditorStackedWidget, ui->gScrollShotLabel, ui->gScrollShot);
 
     QLinearGradient gradient(0, 0, CONSTANTS::SCENE_WIDTH, CONSTANTS::SCENE_HEIGHT);
     gradient.setColorAt(0, CONSTANTS::colorSceneGradient0);
     gradient.setColorAt(1.0, CONSTANTS::colorSceneGradient1);
-    gScene->setBackgroundBrush(gradient);
-    gDialogsScene->setBackgroundBrush(gradient);
+    m_pSectionsScene->setBackgroundBrush(gradient);
+    m_pDialogsScene->setBackgroundBrush(gradient);
 
-    connect(ymlManager, SIGNAL(print_info(QString)), this, SLOT(print_info(QString)));
-	connect(ymlManager, SIGNAL(print_error(QString)), this, SLOT(print_error(QString)));
-	connect(ymlManager, SIGNAL(print_warning(QString)), this, SLOT(print_warning(QString)));
-    connect(ymlManager, SIGNAL(sectionTypeChanged(QString,int)), shotManager, SLOT(onUpdateSectionType(QString,int)));
-    connect(ymlManager, SIGNAL(sectionNameChanged(QString,QString)), shotManager, SLOT(onUpdateSectionName(QString,QString)));
-    connect(ymlManager, SIGNAL(sectionLoaded(QString)), shotManager, SLOT(onLoadSectionShots(QString)));
-    connect(ymlManager, SIGNAL(sectionDeleted(QString)), shotManager, SLOT(onClearEditor()));
-    connect(ymlManager, SIGNAL(ymlFileLoaded(QString)), shotManager, SLOT(onClearEditor()));
+    m_pDialogSelectEnv = new DialogSelectEnv();
+    m_pDialogSelectEnv->setModal(true);
+    for (int SA_Num = EShotUnknown; ; ++SA_Num) {
+        EShotActionType SA_Enum = static_cast<EShotActionType>(SA_Num);
+        QWidget* pWidget = new QWidget();
+        ui->shotEditorStackedWidget->addWidget(pWidget);
+        setupSA_PageWidget(SA_Enum, pWidget);
+        pWidget->setEnabled(false);
+        if (SA_Num == EShotMAX)
+            break;
+    }
+    ui->shotEditorStackedWidget->setCurrentIndex((int)EShotCamBlendStart);
+
+    connect(m_pYmlManager, SIGNAL(print_info(QString)), this, SLOT(print_info(QString)));
+    connect(m_pYmlManager, SIGNAL(print_error(QString)), this, SLOT(print_error(QString)));
+    connect(m_pYmlManager, SIGNAL(print_warning(QString)), this, SLOT(print_warning(QString)));
+    connect(m_pYmlManager, SIGNAL(sectionTypeChanged(QString,int)), m_pShotManager, SLOT(onUpdateSectionType(QString,int)));
+    connect(m_pYmlManager, SIGNAL(sectionNameChanged(QString,QString)), m_pShotManager, SLOT(onUpdateSectionName(QString,QString)));
+    connect(m_pYmlManager, SIGNAL(sectionLoaded(QString)), m_pShotManager, SLOT(onLoadSectionShots(QString)));
+    connect(m_pYmlManager, SIGNAL(sectionDeleted(QString)), m_pShotManager, SLOT(onClearEditor()));
+    connect(m_pYmlManager, SIGNAL(ymlFileLoaded(QString)), m_pShotManager, SLOT(onClearEditor()));
     //connect(ui->gViewShotEditor, SIGNAL(wasScaled(double)), shotManager, SLOT(onScaledView(double)));
     //connect(ui->gViewShotEditor, SIGNAL(addActionIntent(QPointF p)), shotManager, SLOT(OnAddActionIntent(QPointF)));
-    connect(ui->gScrollShot, SIGNAL(lineMoveEvent(QPointF)), shotManager, SLOT(onNavigationLineMove(QPointF)));
-    connect(ui->gScrollShot, SIGNAL(contextEvent(QGraphicsScene*,QPoint,QPointF)), shotManager, SLOT(onSceneContextEvent(QGraphicsScene*,QPoint,QPointF)));
+    connect(ui->gScrollShot, SIGNAL(lineMoveEvent(QPointF)), m_pShotManager, SLOT(onNavigationLineMove(QPointF)));
+    connect(ui->gScrollShot, SIGNAL(contextEvent(QGraphicsScene*,QPoint,QPointF)), m_pShotManager, SLOT(onSceneContextEvent(QGraphicsScene*,QPoint,QPointF)));
     connect(ui->repoActorsButton, SIGNAL(clicked()), this, SLOT(onClicked_RepoActors()));
 
 	connect(ui->actionQuit, SIGNAL(triggered()), this, SLOT(onClicked_Quit()));
@@ -81,7 +94,7 @@ void MainWindow::loadYmlRepos() {
 		/*QMessageBox box(QMessageBox::Warning, "Test", "Loading: " + filePath, QMessageBox::Ok);
 		box.setModal(true);
 		box.exec();*/
-		if ( !ymlManager->loadYmlRepo(dirPath + "/" + filePath) ) {
+        if ( !m_pYmlManager->loadYmlRepo(dirPath + "/" + filePath) ) {
 			print_warning("readSceneRepos(): Can't read repo yml file: " + dirPath + "/" + filePath);
 		} else {
 			++ok_cnt;
@@ -92,9 +105,17 @@ void MainWindow::loadYmlRepos() {
     }
 }
 
-void MainWindow::loadCsvLines()
+void MainWindow::loadCsvFiles()
 {
-    ymlManager->loadCsvLines();
+    /* check w3.data dir */
+    QDir w3dataDir(QCoreApplication::applicationDirPath() + "/w3.data");
+    if (!w3dataDir.exists()) {
+        print_error(QCoreApplication::applicationDirPath() + "/w3.data folder does not exist!");
+        return;
+    }
+    m_pYmlManager->loadCsvLines();
+    m_pYmlManager->loadEnvPaths();
+    m_pDialogSelectEnv->setStorage(&m_pYmlManager->m_envStorage);
 }
 
 void MainWindow::addPrintLog(QString lineColor, QString line)
@@ -113,21 +134,25 @@ void MainWindow::print_info(QString s) {
     qi << s;
     addPrintLog("DarkBlue", s);
 }
+
 void MainWindow::print_warning(QString s) {
     qw << s;
     addPrintLog("OrangeRed", s);
 }
+
 void MainWindow::print_error(QString s) {
     qc << s;
     addPrintLog("Crimson", s);
 }
+
 void MainWindow::onClicked_Quit()
 {
     QApplication::quit();
 }
+
 void MainWindow::onClicked_Load()
 {
-	if ( ymlManager->hasChanges && ymlManager->requestSave() ) {
+    if ( m_pYmlManager->hasChanges && m_pYmlManager->requestSave() ) {
 		return;
 	}
 
@@ -140,40 +165,38 @@ void MainWindow::onClicked_Load()
 
 	QElapsedTimer timer;
 	timer.start();
-    if ( ymlManager->loadYmlFile(fileName) ) {
+    if ( m_pYmlManager->loadYmlFile(fileName) ) {
         setWindowTitle("Radish YML Scene Editor [" + fileName + "]");
     } else {
         print_error("Failed to load YML!");
     }
 
 
-	if ( ymlManager->drawSectionsGraph() ) {
+    if ( m_pYmlManager->drawSectionsGraph() ) {
         print_info("Sections graph painted in: " + QString::number(timer.elapsed()) + " ms.");
     } else {
         print_error("Failed to draw sections: INCORRECT YML!");
     }
 }
+
 void MainWindow::onClicked_Save()
 {
 	QElapsedTimer timer;
 	timer.start();
-    if ( ymlManager->saveYmlFile() ) {
+    if ( m_pYmlManager->saveYmlFile() ) {
 		print_info("Successfully saved in " + qn(timer.elapsed()) + " ms.");
     } else {
 		print_error("Failed to save yml!");
     }
 }
+
 void MainWindow::onClicked_ShowhideLog() {
-	/*if (ui->infoField->isHidden()) {
-		ui->infoField->show();
-	} else {
-		ui->infoField->hide();
-	}*/
 	bool isVisible = !ui->infoField->isVisible();
 	writeSetting("logFieldVisible", isVisible);
 	ui->infoField->setVisible( isVisible );
 	ui->actionShowhideLog->setChecked( isVisible );
 }
+
 void MainWindow::onClicked_SetRepoPath() {
 	QString folderName = QFileDialog::getExistingDirectory( this, tr("Select radish repo.scenes folder") );
 	if (folderName.isEmpty()) {
@@ -187,18 +210,20 @@ void MainWindow::onClicked_SetRepoPath() {
 		QStringList ymls = directory.entryList(QStringList() << "*.jpg" << "*.JPG",QDir::Files);*/
 		writeSetting("sceneReposPath", folderName);
 		print_info("Selected radish repo.scenes folder: " + folderName);
-		QMessageBox box(QMessageBox::Warning, "Warning", "Repository files will be loaded on next program launch.", QMessageBox::Ok);
-		box.setModal(true);
-		box.exec();
-	}
+        //QMessageBox box(QMessageBox::Warning, "Warning", "Repository files will be loaded on next program launch.", QMessageBox::Ok);
+        //box.setModal(true);
+        //box.exec();
+        m_pYmlManager->clearData(true);
+        loadYmlRepos();
+    }
 }
 
 void MainWindow::onClicked_RepoActors() {
-	if (ymlManager->hasChanges || ymlManager->hasShotChanges) {
-		ymlManager->showError("Can't change actors repository: firstly save current shot/section changes!");
+    if (m_pYmlManager->hasChanges) {
+        m_pYmlManager->showError("Can't change actors repository: first save current section changes!");
 		return;
 	}
-	RepoActorsDialog actorsRepo(ymlManager);
+    RepoActorsDialog actorsRepo(m_pYmlManager);
 	actorsRepo.setModal(true);
 	int result = actorsRepo.exec();
 	qd << result;
@@ -213,7 +238,255 @@ QVariant MainWindow::readSetting(QString name, QVariant defaultValue) {
 	if (settings.contains(name))
 		return settings.value(name);
 	else
-		return defaultValue;
+        return defaultValue;
+}
+
+void MainWindow::setupSA_PageWidget(const EShotActionType SA_Type, QWidget* pWidget)
+{
+    if (pWidget == nullptr) {
+        qc << QString("%1: pWidget is NULL.").arg(Q_FUNC_INFO);
+        return;
+    }
+    if (m_pShotManager == nullptr) {
+        qc << QString("%1: m_pShotManager is NULL.").arg(Q_FUNC_INFO);
+        return;
+    }
+    QString typeName = CONSTANTS::EShotActionToString[SA_Type];
+    QGridLayout* pLayout = new QGridLayout(pWidget);
+    QLabel* pDescriptionLabel = new QLabel();
+    pDescriptionLabel->setText( QString("<b>Description</b>: <i>%1</i>").arg(SA_Base::shortDescription(SA_Type)) );
+    //pDescriptionLabel->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Maximum);
+    //pDescriptionLabel->setWordWrap(true);
+    pLayout->setContentsMargins(6, 6, 6, 6);
+    pLayout->addWidget(new QLabel( QString("<font color=%1>[%2]</font>").arg(ShotManager::colorForActionType(SA_Type).darker(175).name()).arg(typeName) ), pLayout->rowCount()-1,0, 1,1);
+    pLayout->addWidget(pDescriptionLabel, pLayout->rowCount()-1,1, 1,2);
+    typeName.replace(".", "_");
+    pWidget->setObjectName("page_" + typeName);
+
+    QDoubleSpinBox* pStartSpin = new QDoubleSpinBox();
+    pStartSpin->setMinimum(0.0);
+    pStartSpin->setMaximum(0.999);
+    pStartSpin->setDecimals(3);
+    pStartSpin->setSingleStep(0.001);
+    pStartSpin->setObjectName("m_startSpin");
+    QSlider* pStartSlider = new QSlider();
+    pStartSlider->setObjectName("m_startSlider");
+    pStartSlider->setOrientation(Qt::Horizontal);
+    pStartSlider->setRange(0, 999);
+    pLayout->addWidget(new QLabel("Action start: "), pLayout->rowCount(),0, 1,1);
+    pLayout->addWidget(pStartSlider, pLayout->rowCount()-1,1, 1,1);
+    pLayout->addWidget(pStartSpin, pLayout->rowCount()-1,2, 1,1);
+    pLayout->setColumnStretch(1, 100); // alows value thing to expand
+    connect(pStartSpin, SIGNAL(valueChanged(double)), m_pShotManager, SLOT(onShotActionStartChanged(double)));
+    connect(pStartSlider, SIGNAL(sliderMoved(int)), m_pShotManager, SLOT(onShotActionStartChanged(int)));
+    switch (SA_Type) {
+        // SHARED
+        case EShotCam:
+        case EShotCamBlendKey:
+        case EShotCamBlendTogame:
+        {
+            // load (camera) names from sceneGlobals every time in exportWidget
+            QComboBox* pCamNamesBox = new QComboBox();
+            QPushButton* pCamButton = new QPushButton("Edit");
+            pCamNamesBox->setObjectName("v_camName");
+            pLayout->addWidget(new QLabel("Camera name: "), pLayout->rowCount(),0, 1,1);
+            pLayout->addWidget(pCamNamesBox, pLayout->rowCount()-1,1, 1,1);
+            pLayout->addWidget(pCamButton, pLayout->rowCount()-1,2, 1,1);
+            // TODO! QObject::connect(pCamButton, SIGNAL(clicked(bool)), m_pDialogEditCamera, SLOT(open()));
+            // TODO! m_pDialogEditCamera->addBoxForUpdates(pCamNamesBox); -> fills camera names
+            QObject::connect(pCamNamesBox, SIGNAL(currentIndexChanged(int)), m_pShotManager, SLOT(onShotActionChanged()));
+            break;
+        }
+        case EShotCamBlendStart:
+        case EShotCamBlendEnd:
+        {
+            // load (camera) names from sceneGlobals every time in exportWidget
+            QComboBox* pCamNamesBox = new QComboBox();
+            QPushButton* pCamButton = new QPushButton("Edit");
+            pCamNamesBox->setObjectName("v_camName");
+            pLayout->addWidget(new QLabel("Camera name: "), pLayout->rowCount(),0, 1,1);
+            pLayout->addWidget(pCamNamesBox, pLayout->rowCount()-1,1, 1,1);
+            pLayout->addWidget(pCamButton, pLayout->rowCount()-1,2, 1,1);
+            // TODO! QObject::connect(pCamButton, SIGNAL(clicked(bool)), m_pDialogEditCamera, SLOT(open()));
+            // TODO! m_pDialogEditCamera->addBoxForUpdates(pCamNamesBox); -> fills camera names
+            QObject::connect(pCamNamesBox, SIGNAL(currentIndexChanged(int)), m_pShotManager, SLOT(onShotActionChanged()));
+
+            QCheckBox* pEaseCheck = new QCheckBox("Camera ease: ");
+            pEaseCheck->setObjectName("v_camEaseCheck");
+            QComboBox* pEaseBox = new QComboBox();
+            pEaseBox->setObjectName("v_camEase");
+            pEaseBox->addItems({"smooth", "rapid"});
+            QObject::connect(pEaseCheck, SIGNAL(clicked(bool)), pEaseBox, SLOT(setEnabled(bool)));
+            QObject::connect(pEaseCheck, SIGNAL(clicked(bool)), m_pShotManager, SLOT(onShotActionChanged()));
+            pLayout->addWidget(pEaseCheck, pLayout->rowCount(),0, 1,1);
+            pLayout->addWidget(pEaseBox, pLayout->rowCount()-1,1, 1,1);
+            QObject::connect(pEaseBox, SIGNAL(currentIndexChanged(int)), m_pShotManager, SLOT(onShotActionChanged()));
+            break;
+        }
+        case EShotEnvBlendIn:
+        case EShotEnvBlendOut:
+        {
+            // load (camera) names from sceneGlobals every time in exportWidget
+            QLineEdit* pEnvPathLine = new QLineEdit();
+            QPushButton* pEnvPathButton = new QPushButton("Select");
+            pEnvPathLine->setObjectName("v_envPath");
+            pLayout->addWidget(new QLabel("Env path: "), pLayout->rowCount(),0, 1,1);
+            pLayout->addWidget(pEnvPathLine, pLayout->rowCount()-1,1, 1,1);
+            pLayout->addWidget(pEnvPathButton, pLayout->rowCount()-1,2, 1,1);
+            QObject::connect(pEnvPathLine, SIGNAL(textChanged(QString)), m_pShotManager, SLOT(onShotActionChanged()));
+            QObject::connect(pEnvPathButton, SIGNAL(clicked(bool)), m_pDialogSelectEnv, SLOT(exec()));
+            QObject::connect(m_pDialogSelectEnv, SIGNAL(envSelected(QString)), pEnvPathLine, SLOT(setText(QString)));
+            // button click -> env dialog open -> click OK -> emit new path to line -> onShotActionChanged()
+
+            QCheckBox* pBlendTimeCheck = new QCheckBox("Blend time: ");
+            pBlendTimeCheck->setObjectName("v_blendTimeCheck");
+            QDoubleSpinBox* pBlendTimeSpin = new QDoubleSpinBox();
+            pBlendTimeSpin->setObjectName("v_blendTime");
+            pBlendTimeSpin->setDecimals(3);
+            pBlendTimeSpin->setRange(0.0, 1000.0);
+            pBlendTimeSpin->setSingleStep(0.1);
+            QObject::connect(pBlendTimeCheck, SIGNAL(clicked(bool)), pBlendTimeSpin, SLOT(setEnabled(bool)));
+            QObject::connect(pBlendTimeCheck, SIGNAL(clicked(bool)), m_pShotManager, SLOT(onShotActionChanged()));
+            pLayout->addWidget(pBlendTimeCheck, pLayout->rowCount(),0, 1,1);
+            pLayout->addWidget(pBlendTimeSpin, pLayout->rowCount()-1,1, 1,1);
+            QObject::connect(pBlendTimeSpin, SIGNAL(valueChanged(double)), m_pShotManager, SLOT(onShotActionChanged()));
+
+            QCheckBox* pBlendFactorCheck = new QCheckBox("Blend factor: ");
+            pBlendFactorCheck->setObjectName("v_blendFactorCheck");
+            QDoubleSpinBox* pBlendFactorSpin = new QDoubleSpinBox();
+            pBlendFactorSpin->setObjectName("v_blendFactor");
+            pBlendTimeSpin->setDecimals(3);
+            pBlendTimeSpin->setRange(0.0, 1.0);
+            pBlendTimeSpin->setSingleStep(0.1);
+            QObject::connect(pBlendFactorCheck, SIGNAL(clicked(bool)), pBlendFactorSpin, SLOT(setEnabled(bool)));
+            QObject::connect(pBlendFactorCheck, SIGNAL(clicked(bool)), m_pShotManager, SLOT(onShotActionChanged()));
+            pLayout->addWidget(pBlendFactorCheck, pLayout->rowCount(),0, 1,1);
+            pLayout->addWidget(pBlendFactorSpin, pLayout->rowCount()-1,1, 1,1);
+            QObject::connect(pBlendFactorSpin, SIGNAL(valueChanged(double)), m_pShotManager, SLOT(onShotActionChanged()));
+
+            QCheckBox* pPriorityCheck = new QCheckBox("Env priority: ");
+            pPriorityCheck->setObjectName("v_priorityCheck");
+            QSpinBox* pPrioritySpin = new QSpinBox();
+            pPrioritySpin->setObjectName("v_priority");
+            pPrioritySpin->setRange(0, 1000000);
+            QObject::connect(pPriorityCheck, SIGNAL(clicked(bool)), pPrioritySpin, SLOT(setEnabled(bool)));
+            QObject::connect(pPriorityCheck, SIGNAL(clicked(bool)), m_pShotManager, SLOT(onShotActionChanged()));
+            pLayout->addWidget(pPriorityCheck, pLayout->rowCount(),0, 1,1);
+            pLayout->addWidget(pPrioritySpin, pLayout->rowCount()-1,1, 1,1);
+            QObject::connect(pPrioritySpin, SIGNAL(valueChanged(int)), m_pShotManager, SLOT(onShotActionChanged()));
+            break;
+        }
+        case EShotFadeIn:
+
+            break;
+        case EShotFadeOut:
+
+            break;
+        case EShotWorldAddfact:
+
+            break;
+        case EShotWorldWeather:
+
+            break;
+        case EShotWorldEffectStart:
+
+            break;
+        case EShotWorldEffectStop:
+
+            break;
+        // ACTOR
+        case EShotActorAnim:
+
+            break;
+        case EShotActorAnimAdditive:
+
+            break;
+        case EShotActorAnimPose:
+
+            break;
+        case EShotActorMimicAnim:
+
+            break;
+        case EShotActorMimicPose:
+
+            break;
+        case EShotActorPlacement:
+
+            break;
+        case EShotActorPlacementStart:
+
+            break;
+        case EShotActorPlacementKey:
+
+            break;
+        case EShotActorPlacementEnd:
+
+            break;
+        case EShotActorGamestate:
+
+            break;
+        case EShotActorLookat:
+
+            break;
+        case EShotActorScabbardShow:
+
+            break;
+        case EShotActorScabbardHide:
+
+            break;
+        case EShotActorEffectStart:
+
+            break;
+        case EShotActorEffectStop:
+
+            break;
+        case EShotActorSound:
+
+            break;
+        case EShotActorAppearance:
+
+            break;
+        case EShotActorEquipRight:
+
+            break;
+        case EShotActorEquipLeft:
+
+            break;
+        case EShotActorUnequipRight:
+
+            break;
+        case EShotActorUnequipLeft:
+
+            break;
+        // PROP
+        case EShotPropShow:
+
+            break;
+        case EShotPropHide:
+
+            break;
+        case EShotPropPlacement:
+
+            break;
+        case EShotPropPlacementStart:
+
+            break;
+        case EShotPropPlacementKey:
+
+            break;
+        case EShotPropPlacementEnd:
+
+            break;
+        case EShotPropEffectStart:
+
+            break;
+        case EShotPropEffectStop:
+
+            break;
+        default:
+           qc << QString("%1: unknown type = %2").arg(Q_FUNC_INFO).arg(CONSTANTS::EShotActionToString[SA_Type]);
+           break;
+    }
 }
 
 void MainWindow::resizeEvent(QResizeEvent* event)

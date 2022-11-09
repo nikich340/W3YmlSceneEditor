@@ -28,7 +28,7 @@ private:
     int m_textSizeSecondary = 7;
     double m_duration = -1.0;
     double m_blendIn = -1.0, m_blendOut = -1.0; // duration
-    ShotActionBase* m_shotAction = nullptr;
+    SA_Base* m_shotAction = nullptr;
     QHash<QString, QVariant> m_data;
     QPixmap m_buttonImageEnabled = QPixmap();
     QPixmap m_buttonImageDisabled = QPixmap();
@@ -44,10 +44,10 @@ private:
     void updateBackground();
 	
 protected:
-	void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget = nullptr) override;
-    QVariant itemChange(QGraphicsItem::GraphicsItemChange change, const QVariant &value) override;
-    void mouseDoubleClickEvent(QGraphicsSceneMouseEvent *event) override;
-    void contextMenuEvent(QGraphicsSceneContextMenuEvent *event) override;
+    virtual void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget = nullptr);
+    virtual QVariant itemChange(QGraphicsItem::GraphicsItemChange change, const QVariant &value);
+    virtual void mouseDoubleClickEvent(QGraphicsSceneMouseEvent *event);
+    virtual void contextMenuEvent(QGraphicsSceneContextMenuEvent *event);
 
 public:
     CustomRectItem(qreal x, qreal y, qreal width, qreal height, QGraphicsItem *parent = nullptr);
@@ -64,7 +64,7 @@ public:
     void setDuration(double dur);
     void setBlendIn(double blendIn);
     void setBlendOut(double blendOut);
-    void setShotAction(ShotActionBase* action);
+    void setShotAction(SA_Base* action);
 
     QString textLabel() {
         return m_textLabel;
@@ -105,7 +105,7 @@ public:
     double blendOut() {
         return m_blendOut;
     }
-    ShotActionBase* getShotAction() {
+    SA_Base* getShotAction() {
         return m_shotAction;
     }
     const QRectF &bordersRect() {
@@ -120,6 +120,8 @@ public:
 signals:
     void doubleClick(bool buttonState);
     void contextEvent(QPointF screenPos);
+    void selected(CustomRectItem* pItem);
+    void moved(QPointF scenePos);
 };
 
 #endif // CUSTOMRECTITEM_H

@@ -3,8 +3,6 @@ QT       += core gui
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
 CONFIG += c++17
-QMAKE_CXXFLAGS += -std=c++17
-QMAKE_CXXFLAGS_WARN_OFF += -Wunused-parameter -Wunused-variable
 
 # External files
 RESOURCES = \
@@ -35,13 +33,15 @@ HEADERS += \
     SectionsEditor/SocketItem.h \
     ShotEditor/ShotManager.h \
     ShotEditor/ShotScrollArea.h \
-    SimpleTrie.h \
+    StringStorage.h \
     UI/CustomRectItem.h \
     UI/DialogChangeSection.h \
+    UI/DialogSelectEnv.h \
     UI/InputDialogshot.h \
     UI/InputMimicPose.h \
     UI/InputPlacement.h \
     UI/InputPose.h \
+    UI/QResizableStackedWidget.h \
     UI/RepoActorsDialog.h \
     UI/SocketSettingsForm.h \
     YmlSceneManager.h \
@@ -110,6 +110,7 @@ HEADERS += \
 
 FORMS += \
     UI/DialogChangeSection.ui \
+    UI/DialogSelectEnv.ui \
     UI/InputDialogshot.ui \
     UI/InputMimicPose.ui \
     UI/InputPlacement.ui \
@@ -131,15 +132,20 @@ SOURCES += \
     SectionsEditor/SocketItem.cpp \
     ShotEditor/ShotManager.cpp \
     ShotEditor/ShotScrollArea.cpp \
+    StringStorage.cpp \
     UI/CustomRectItem.cpp \
     UI/DialogChangeSection.cpp \
+    UI/DialogSelectEnv.cpp \
     UI/InputDialogshot.cpp \
     UI/InputMimicPose.cpp \
     UI/InputPlacement.cpp \
     UI/InputPose.cpp \
+    UI/QResizableStackedWidget.cpp \
     UI/RepoActorsDialog.cpp \
     UI/SocketSettingsForm.cpp \
     YmlSceneManager.cpp \
+    YmlShotActions.cpp \
+    YmlStructs.cpp \
     constants.cpp \
     main.cpp \
     yaml-cpp/src/binary.cpp \

@@ -5,7 +5,7 @@
 #include <yaml-cpp/yaml.h>
 #include "YmlStructs.h"
 #include "constants.h"
-#include "SimpleTrie.h"
+#include "StringStorage.h"
 #include "YmlShotActions.h"
 
 class GraphicsSectionItem;
@@ -36,6 +36,7 @@ private:
 public:
     YmlSceneManager(QObject *parent = nullptr, QGraphicsScene* gScene = nullptr);
     void loadCsvLines();
+    void loadEnvPaths();
     ~YmlSceneManager();
 
 	/* scene general */
@@ -48,7 +49,6 @@ public:
     YAML::Node singleMapNode(const QString& key, const T& value);
 
 	bool hasChanges = false;
-	bool hasShotChanges = false;
 	bool readingYmlRepo = false;
 
 	bool loadYmlRepo(QString path);
@@ -89,10 +89,10 @@ public:
     void updateShot(QString sectionName, int shotNum);
     void removeShot(QString sectionName, QString shotName);
     void addShot(QString sectionName, int shotNum);
-    YAML::Node shotActionToNode(ShotActionBase* sa);
 
     QHash<uint, dialogLine> m_lineByID;
-    SimpleTrie m_linesTrie;
+    StringStorage m_linesStorage;
+    StringStorage m_envStorage;
     QHash<QString, dialogLink*> m_pDialogLinkBySectionName;
     QSet<QString> dgActors, dgProps;
 

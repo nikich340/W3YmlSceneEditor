@@ -37,6 +37,7 @@ const double CONSTANTS::SHOT_LABEL_PEN_WIDTH = 1.5;
 const double CONSTANTS::SHOT_LABEL_WIDTH = 150.0;
 
 const QHash<QString, EShotActionType> CONSTANTS::stringToEShotAction = {
+    { "unknown!",               EShotUnknown            },
     { "cam",                    EShotCam                },
     { "cam.blend.start",        EShotCamBlendStart      },
     { "cam.blend.key",          EShotCamBlendKey        },
@@ -86,6 +87,7 @@ const QHash<QString, EShotActionType> CONSTANTS::stringToEShotAction = {
     { "prop.placement.end",     EShotPropPlacementEnd   }
 };
 const QHash<EShotActionType, QString> CONSTANTS::EShotActionToString = {
+    { EShotUnknown,             "unknown!"              },
     { EShotCam,                 "cam"                   },
     { EShotCamBlendStart,       "cam.blend.start"       },
     { EShotCamBlendKey,         "cam.blend.key"         },

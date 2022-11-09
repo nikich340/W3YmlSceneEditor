@@ -21,9 +21,10 @@ ShotManager::~ShotManager()
     //onClearEditor();
 }
 
-void ShotManager::setWidgets(QGraphicsScene *newDialogScene, QScrollArea *newShotLabelArea, ShotScrollArea *newShotArea)
+void ShotManager::setWidgets(QGraphicsScene *newDialogScene, QResizableStackedWidget* newEditorStackedWidget, QScrollArea *newShotLabelArea, ShotScrollArea *newShotArea)
 {
     m_pDialogScene = newDialogScene;
+    m_pEditorStackedWidget = newEditorStackedWidget;
     m_pShotLabelArea = newShotLabelArea;
     m_pShotArea = newShotArea;
     m_pShotLabelWidget = newShotLabelArea->widget();
@@ -53,7 +54,7 @@ void ShotManager::updateDialogCueText(QString shotname) {
     m_dialogCueRectByShotname[shotname]->setTextSecondary(durationStr);
 }
 
-QColor ShotManager::getBlockColorForActionType(EShotActionType type)
+QColor ShotManager::colorForActionType(EShotActionType type)
 {
     switch (type) {
         case EShotCam:
@@ -172,9 +173,9 @@ void ShotManager::onClearEditor()
     m_assetIDByScene.clear();
 }
 
-double ShotManager::getMinYForAction(ShotActionBase *action)
+double ShotManager::getMinYForAction(SA_Base *action)
 {
-    return CONSTANTS::SHOT_LABEL_HEIGHT * CONSTANTS::EShotActionToGroupNum[action->actionType];
+    return CONSTANTS::SHOT_LABEL_HEIGHT * CONSTANTS::EShotActionToGroupNum[action->actionType()];
 }
 
 QString ShotManager::shotNameByNum(int shotNum)
@@ -226,48 +227,13 @@ void ShotManager::getShotInfoForPoint(QPoint p, int &shotNum, double &shotCoord,
                 .arg(groupNum).arg(actorNum).arg(m_pYmlManager->sceneGlobals()->getName( m_knownAssetsID[actorNum] ))
                 .arg(shotNum).arg(shotNameByNum(shotNum)).arg(shotCoord);*/
 }
-
-int ShotManager::getAssetIDForAction(ShotActionBase *action)
-{
-    if ( !isAssetSpecificType(action->actionType) )
-        return -1;
-
-    if (action->values.contains("actor"))
-        return action->values.value("actor").toInt();
-
-    int id;
-    switch (action->actionType) {
-        case EShotActorAnim:
-        case EShotActorAnimAdditive:
-            id = action->values["animation"].toInt();
-            return m_pYmlManager->sceneGlobals()->anims[id].actorID;
-            break;
-        case EShotActorMimicAnim:
-            id = action->values["animation"].toInt();
-            return m_pYmlManager->sceneGlobals()->mimics[id].actorID;
-            break;
-        case EShotActorAnimPose:
-            id = action->values["pose"].toInt();
-            return m_pYmlManager->sceneGlobals()->poses[id].actorID;
-            break;
-        case EShotActorMimicPose:
-            id = action->values["mimic"].toInt();
-            return m_pYmlManager->sceneGlobals()->mimic_poses[id].actorID;
-            break;
-        default:
-            break;
-    }
-    return -1;
-}
-
-double ShotManager::getDurationForAction(ShotActionBase* sa) {
+/*
+double ShotManager::getDurationForAction(SA_Base* sa) {
     double duration = -1.0;
     int id = 0;
-    /*
-        animation id may be production/repository anim
-        duration() will calcualte correct value for any
-    */
-    switch (sa->actionType) {
+    //    animation id may be production/repository anim
+    //    duration() will calcualte correct value for any
+    switch (sa->actionType()) {
         case EShotActorAnim:
         case EShotActorAnimAdditive:
             id = sa->values["animation"].toInt();
@@ -295,6 +261,7 @@ double ShotManager::getDurationForAction(ShotActionBase* sa) {
     }
     return duration;
 }
+*/
 
 int ShotManager::X_TO_ShotNum(double x)
 {
@@ -307,10 +274,10 @@ int ShotManager::X_TO_ShotNum(double x)
             return i;
         }
     }
-    return -1;  // -1 = out of shots range
+    return m_pDialogLink->durations.count() - 1;
 }
 
-double ShotManager::X_TO_ShotPoint(double x)
+double ShotManager::X_TO_ShotPos(double x)
 {
     double sec = 0.0;
     upn(i, 0, m_pDialogLink->durations.count() - 1) {
@@ -321,7 +288,21 @@ double ShotManager::X_TO_ShotPoint(double x)
             return (x - beginX) / (endX - beginX);
         }
     }
-    return -1.0;  // -1 = out of shots range
+    return 0.999;
+}
+
+double ShotManager::ShotPos_TO_X(int shotNum, double shotPoint)
+{
+    return ShotNum_TO_Xstart(shotNum) + SEC_TO_X( m_pDialogLink->durations[shotNum] * shotPoint );
+}
+
+double ShotManager::ShotNum_TO_Xstart(int shotNum)
+{
+    double sec = 0.0;
+    upn(i, 0, shotNum - 1) {
+        sec += m_pDialogLink->durations[i];
+    }
+    return SEC_TO_X(sec);
 }
 
 void ShotManager::onLoadSectionShots(QString sectionName) {
@@ -557,6 +538,7 @@ void ShotManager::onShotLoad(int shotNum) {
         onShotActionLoad(shotNum, j);
     }
     upn(i, 0, m_pAssets.count() - 1) {
+        //m_pAssets[i]->pView->setCacheMode(QGraphicsView::CacheBackground);
         m_pAssets[i]->pView->setViewportUpdateMode(QGraphicsView::MinimalViewportUpdate);
     }
 }
@@ -566,9 +548,9 @@ void ShotManager::onShotActionLoad(int shotNum, int actionNum) {
     double dur_sec = m_pDialogLink->durations[shotNum];
     QString shotName = shotNameByNum(shotNum);
 
-    ShotActionBase* sa = m_pDialogLink->shots[shotNum].actions[actionNum];
-    QString secondaryInfo = QString("[%1]").arg( sa->start, 0, 'f', 3 );
-    double actionDuration = getDurationForAction(sa);
+    SA_Base* sa = m_pDialogLink->shots[shotNum].actions[actionNum];
+    QString secondaryInfo = QString("[%1]").arg( sa->start(), 0, 'f', 3 );
+    double actionDuration = -1.0;
 
     // connect: click/clone/delete action ?
     CustomRectItem* actionRect = new CustomRectItem;
@@ -580,23 +562,25 @@ void ShotManager::onShotActionLoad(int shotNum, int actionNum) {
     }
     double minY = getMinYForAction(sa) + CONSTANTS::SHOT_LABEL_PEN_WIDTH;
     double maxY = minY + CONSTANTS::SHOT_LABEL_HEIGHT - actionRect->rect().height() - CONSTANTS::SHOT_LABEL_PEN_WIDTH;
-    actionRect->setBordersRect(QRectF(0, minY, m_pDialogLink->totalDuration * CONSTANTS::SHOT_SECOND, maxY - minY));
-    actionRect->setPos((start_sec + dur_sec * sa->start) * CONSTANTS::SHOT_SECOND, QRandomGenerator::global()->bounded((int)minY, (int)maxY + 1));
+    actionRect->setBordersRect(QRectF(0, minY, m_pDialogLink->totalDuration * CONSTANTS::SHOT_SECOND - 1.0, maxY - minY));
+    actionRect->setPos((start_sec + dur_sec * sa->start()) * CONSTANTS::SHOT_SECOND, QRandomGenerator::global()->bounded((int)minY, (int)maxY + 1));
     actionRect->setDuration(actionDuration);
     actionRect->setFlag(QGraphicsItem::ItemIsMovable);
     actionRect->setFlag(QGraphicsItem::ItemIsSelectable);
-    actionRect->setBackgroundColor( getBlockColorForActionType(sa->actionType) );
-    actionRect->setTextMain( CONSTANTS::EShotActionToString[sa->actionType] );
+    actionRect->setBackgroundColor( colorForActionType(sa->actionType()) );
+    actionRect->setTextMain( CONSTANTS::EShotActionToString[sa->actionType()] );
     actionRect->setTextSecondary( secondaryInfo );
     actionRect->setZValue(2.0);
     actionRect->setShotAction( sa );
     actionRect->setData( "shotName", shotName );
 
-    int assetID = getAssetIDForAction(sa);
+    int assetID = sa->assetID();
     m_pAssetByID[assetID]->pScene->addItem(actionRect);
     actionRect->setData( "assetID", assetID );
     m_pAssetByID[assetID]->actionRectsByShotName[shotName].insert(actionRect);
     connect(actionRect, SIGNAL(contextEvent(QPointF)), this, SLOT(onShotActionContextEvent(QPointF)));
+    connect(actionRect, SIGNAL(moved(QPointF)), this, SLOT(onShotActionPositionChanged(QPointF)));
+    connect(actionRect, SIGNAL(selected(CustomRectItem*)), this, SLOT(onShotActionSelected(CustomRectItem*)));
 
     /*m_pYmlManager->info(QString("Add shot: [%1] %2, assetID = %3")
                         .arg(sa->start, 0, 'f', 3 )
@@ -608,10 +592,8 @@ void ShotManager::onShotActionAdd(int shotNum, int assetID, EShotActionType acti
 {
     m_pYmlManager->info( QString("onShotActionAdd: shotNum = %1 [%2], assetID = %3, actionType = %4")
                          .arg(shotNum).arg(shotPoint).arg(assetID).arg(CONSTANTS::EShotActionToString[actionType]));
-    ShotActionBase* sh = new ShotActionBase(actionType, shotPoint);
-    if (assetID >= 0) {
-        sh->values["actor"] = assetID;
-    }
+    SA_Base* sh = SA_Base::createShotAction(actionType, m_pYmlManager->sceneGlobals(), shotPoint);
+    sh->initDefaults(assetID);
     // TODO! Use input UI interface to get default shotAction for this type
     m_pDialogLink->shots[shotNum].actions.pb(sh);
     m_pDialogLink->shots[shotNum].sortActionsByStart();
@@ -620,23 +602,19 @@ void ShotManager::onShotActionAdd(int shotNum, int assetID, EShotActionType acti
     onShotActionLoad(shotNum, m_pDialogLink->shots[shotNum].actions.count() - 1);
 }
 
-void ShotManager::onShotActionRemove(CustomRectItem *rect, bool updateYML)
+void ShotManager::onShotActionRemove(CustomRectItem *pRect, bool updateYML)
 {
-    //shotAction* sa = &m_pDialogLink->shots[shotNum].actions[actionNum];
-    /*
-     * Remove from:
-     * m_pAssetByID[assetID]->pScene
-     * m_pAssetByID[assetID]->actionRects
-     * m_blocksByShotName[shotName]
-     */
-    int assetID = rect->data("assetID").toInt();
-    QString shotName = rect->data("shotName").toString();
-    ShotActionBase* sa = rect->getShotAction();
-    qDebug() << "onShotActionRemove: [" << sa->start << "] " << CONSTANTS::EShotActionToString[sa->actionType] << " from " << shotName;
+    int assetID = pRect->data("assetID").toInt();
+    QString shotName = pRect->data("shotName").toString();
+    SA_Base* sa = pRect->getShotAction();
+    qDebug() << "onShotActionRemove: [" << sa->start() << "] " << CONSTANTS::EShotActionToString[sa->actionType()] << " from " << shotName;
 
-    m_pAssetByID[assetID]->actionRectsByShotName[shotName].remove(rect);
-    m_pAssetByID[assetID]->pScene->removeItem(rect);
-    delete rect;
+    m_pAssetByID[assetID]->actionRectsByShotName[shotName].remove(pRect);
+    m_pAssetByID[assetID]->pScene->removeItem(pRect);
+    if (m_pSelectedShotAction == pRect) {
+        onShotActionSelected(nullptr);
+    }
+    delete pRect;
     int shotNum = m_pDialogLink->shotNumByName(shotName);
 
     upn(i, 0, m_pDialogLink->shots[shotNum].actions.count() - 1) {
@@ -718,7 +696,7 @@ void ShotManager::onAssetLoad(int assetID)
         CustomRectItem* labelRect = new CustomRectItem;
         labelRect->setRect(0, 0, CONSTANTS::SHOT_LABEL_WIDTH - CONSTANTS::SHOT_LABEL_PEN_WIDTH, CONSTANTS::SHOT_LABEL_HEIGHT - CONSTANTS::SHOT_LABEL_PEN_WIDTH);
         labelRect->setPos(0, CONSTANTS::SHOT_LABEL_HEIGHT * i);
-        labelRect->setBackgroundColor( CONSTANTS::QColorDark(getBlockColorForActionType(type_samples[i]).hsvHue()) );
+        labelRect->setBackgroundColor( CONSTANTS::QColorDark(colorForActionType(type_samples[i]).hsvHue()) );
         labelRect->setPen( QPen(QSvg::honeydew, CONSTANTS::SHOT_LABEL_PEN_WIDTH, Qt::SolidLine, Qt::FlatCap, Qt::BevelJoin) );
         labelRect->setTextParamsMain(CONSTANTS::colorDgViewActors[asset_idx % CONSTANTS::colorDgViewActors.count()], 10, "Helvetica", Qt::AlignTop | Qt::AlignHCenter);
         labelRect->setTextParamsSecondary(QColorConstants::Svg::gold, 10, "Sans Serif", Qt::AlignVCenter | Qt::AlignHCenter | Qt::TextWordWrap);
@@ -768,14 +746,6 @@ void ShotManager::onAssetRemove(int assetID)
         }
     }
 
-    /*for (QString shotName : pAsset->actionRectsByShotName.keys()) {
-        for (CustomRectItem* pRectItem : pAsset->actionRectsByShotName[shotName]) {
-            pAsset->pScene->removeItem(pRectItem);
-        }
-    }
-    for (CustomRectItem* pRectItem : pAsset->labelRects) {
-        pAsset->pSceneLabel->removeItem(pRectItem);
-    }*/
     m_pShotLabelWidget->layout()->removeWidget(pAsset->pViewLabel);
     m_pShotWidget->layout()->removeWidget(pAsset->pView);
     pAsset->clearAll();
@@ -824,7 +794,7 @@ void ShotManager::onSceneContextEvent(QGraphicsScene *pScene, QPoint screenPos, 
 
             int groupNum = Y_TO_GroupNum(scenePos.y());
             int shotNum = X_TO_ShotNum(scenePos.x());
-            double shotPoint = X_TO_ShotPoint(scenePos.x());
+            double shotPoint = X_TO_ShotPos(scenePos.x());
 
             if (m_pAssets[i]->assetID == -1) {
                 if (groupNum >= CONSTANTS::GroupNumToEShotActionShared.count()) {
@@ -914,10 +884,15 @@ void ShotManager::onShotAdd(int newShotNum)
 }
 
 void ShotManager::onShotRename(QString oldShotName, QString newShotName) {
-    m_actionRectsByShotName[newShotName] = m_actionRectsByShotName[oldShotName];
-    m_actionRectsByShotName.remove(oldShotName);
-    for (CustomRectItem* rectItem : m_actionRectsByShotName[newShotName]) {
-        rectItem->setData("shotName", newShotName);
+    upn(i, 0, m_pAssets.count() - 1) {  // ? needed
+        if (!m_pAssets[i]->actionRectsByShotName.contains(oldShotName))
+            continue;
+
+        m_pAssets[i]->actionRectsByShotName[newShotName] = m_pAssets[i]->actionRectsByShotName[oldShotName];
+        m_pAssets[i]->actionRectsByShotName.remove(oldShotName);
+        for (CustomRectItem* pRectItem : m_pAssets[i]->actionRectsByShotName[newShotName]) {
+            pRectItem->setData("shotName", newShotName);
+        }
     }
 
     // TODO m_ymlManager->renameShot(shotName);
@@ -939,12 +914,127 @@ void ShotManager::onShotRemove(QString shotName) {
 
 void ShotManager::onShotActionContextEvent(QPointF screenPos)
 {
-    CustomRectItem* rect = qobject_cast<CustomRectItem*>(sender());
+    CustomRectItem* pRect = qobject_cast<CustomRectItem*>(sender());
+    // ? onShotActionSelected(pRect);
     //int assetID = rect->data("assetID").toInt();
     QMenu menu;
     QAction *removeAction = menu.addAction("Delete action");
     QAction *selectedAction = menu.exec(screenPos.toPoint());
     if (selectedAction == removeAction) {
-        onShotActionRemove(rect, true);
+        onShotActionRemove(pRect, true);
     }
+}
+
+void ShotManager::onShotActionStartChanged(double newShotPos)
+{
+    QString shotName = m_pSelectedShotAction->data("shotName").toString();
+    int shotNum = m_pDialogLink->shotNumByName( shotName );
+    //qDebug() << QString("%1, newPos = [%2], shotNum = %3 (%4)").arg(Q_FUNC_INFO).arg(newPos).arg(shotNum).arg(shotName);
+
+    double newX = ShotPos_TO_X(shotNum, newShotPos);
+    QPointF scenePos = m_pSelectedShotAction->scenePos();
+    scenePos.setX( newX );
+
+    m_pSelectedShotAction->blockSignals(true);
+    m_pSelectedShotAction->setPos(scenePos);
+    m_pSelectedShotAction->blockSignals(false);
+    QSlider* pStartSlider = m_pEditorStackedWidget->currentWidget()->findChild<QSlider*>("m_startSlider");
+    if (pStartSlider != nullptr) {
+        pStartSlider->blockSignals(true);
+        int shotPointInt = newShotPos * 1000.0;
+        pStartSlider->setValue(shotPointInt);
+        pStartSlider->blockSignals(false);
+    }
+    onShotActionChanged();
+}
+
+void ShotManager::onShotActionStartChanged(int newShotPosStep)
+{
+    QString shotName = m_pSelectedShotAction->data("shotName").toString();
+    int shotNum = m_pDialogLink->shotNumByName( shotName );
+
+    double newShotPos = newShotPosStep * 0.001;
+    double newX = ShotPos_TO_X(shotNum, newShotPos);
+    QPointF scenePos = m_pSelectedShotAction->scenePos();
+    scenePos.setX( newX );
+
+    m_pSelectedShotAction->blockSignals(true);
+    m_pSelectedShotAction->setPos(scenePos);
+    m_pSelectedShotAction->blockSignals(false);
+    QDoubleSpinBox* pStartSpin = m_pEditorStackedWidget->currentWidget()->findChild<QDoubleSpinBox*>("m_startSpin");
+    if (pStartSpin != nullptr) {
+        pStartSpin->blockSignals(true);
+        pStartSpin->setValue(newShotPos);
+        pStartSpin->blockSignals(false);
+    }
+    onShotActionChanged();
+}
+
+void ShotManager::onShotActionPositionChanged(QPointF newScenePos)
+{
+    CustomRectItem* pRect = qobject_cast<CustomRectItem*>(sender());
+    onShotActionSelected(pRect);  // ensure selected rect is pRect
+
+    int shotNum = X_TO_ShotNum(newScenePos.x());
+    QString shotName = shotNameByNum(shotNum);
+    double shotPos = X_TO_ShotPos(newScenePos.x());
+    //qDebug() << QString("%1, CALCULATED shotNum = %2 (%3) [%4]").arg(Q_FUNC_INFO).arg(shotNum).arg(shotName).arg(shotPoint);
+
+    QDoubleSpinBox* pStartSpin = m_pEditorStackedWidget->currentWidget()->findChild<QDoubleSpinBox*>("m_startSpin");
+    if (pStartSpin != nullptr) {
+        pStartSpin->blockSignals(true);
+        pStartSpin->setValue(shotPos);
+        pStartSpin->blockSignals(false);
+    }
+    QSlider* pStartSlider = m_pEditorStackedWidget->currentWidget()->findChild<QSlider*>("m_startSlider");
+    if (pStartSlider != nullptr) {
+        pStartSlider->blockSignals(true);
+        int shotPosInt = shotPos * 1000.0;
+        pStartSlider->setValue(shotPosInt);
+        pStartSlider->blockSignals(false);
+    }
+
+    QString oldShotName = m_pSelectedShotAction->data("shotName").toString();
+    //qDebug() << QString("%1, oldShotName = %2, newShotName = %3 [%4]").arg(Q_FUNC_INFO).arg(oldShotName).arg(shotName).arg(shotPoint);
+    if (shotName != oldShotName) {
+        int assetID = m_pSelectedShotAction->data("assetID").toInt();
+        m_pAssetByID[assetID]->actionRectsByShotName[oldShotName].remove(pRect);
+        //if (!m_pAssetByID[assetID]->actionRectsByShotName.contains(shotName)) TODO remove!
+        //    m_pAssetByID[assetID]->actionRectsByShotName[shotName] = QSet<CustomRectItem*>();
+        m_pSelectedShotAction->setData("shotName", shotName);
+        m_pAssetByID[assetID]->actionRectsByShotName[shotName].insert(pRect);
+    }
+    onShotActionChanged();
+}
+
+void ShotManager::onShotActionChanged()
+{
+    //qDebug() << QString("%1, sender = [%2] ").arg(Q_FUNC_INFO).arg(sender()->metaObject()->className()) << sender();
+    // m_pSelectedItem
+    if (m_pSelectedShotAction != nullptr) {
+        SA_Base* sa = m_pSelectedShotAction->getShotAction();
+        sa->importWidget();
+        sa->updateYmlNode();
+        QString shotName = m_pSelectedShotAction->data("shotName").toString();
+        m_pYmlManager->updateShot(m_sectionName, shotName);
+    }
+}
+
+void ShotManager::onShotActionSelected(CustomRectItem* pRect)
+{
+    //qDebug() << QString("%1, sender = ").arg(Q_FUNC_INFO) << sender() << ", pRect = " << qobject_cast<QObject*>(pRect);
+    if (m_pSelectedShotAction == pRect)
+        return;
+
+    if (m_pSelectedShotAction != nullptr) {
+        m_pEditorStackedWidget->currentWidget()->setEnabled(false);
+    }
+    m_pSelectedShotAction = pRect;
+    if (pRect == nullptr)
+        return;
+
+    SA_Base* sa = m_pSelectedShotAction->getShotAction();
+    m_pEditorStackedWidget->setCurrentIndex(sa->actionType());
+    m_pEditorStackedWidget->currentWidget()->setEnabled(true);
+    sa->exportWidget( m_pEditorStackedWidget->currentWidget() );
 }

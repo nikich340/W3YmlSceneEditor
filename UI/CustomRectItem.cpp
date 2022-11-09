@@ -82,7 +82,7 @@ void CustomRectItem::setBlendOut(double blendOut) {
     updateBackground();
 }
 
-void CustomRectItem::setShotAction(ShotActionBase* action) {
+void CustomRectItem::setShotAction(SA_Base* action) {
     m_shotAction = action;
 }
 
@@ -206,12 +206,15 @@ QVariant CustomRectItem::itemChange(GraphicsItemChange change, const QVariant &v
         // value is the new position.
         QPointF newPos = value.toPointF();
         if (m_bordersRect.isValid() && !m_bordersRect.contains(newPos)) {
-            //qDebug() << "m_bordersRect: is valid and does not contain newPos!";
             // Keep the item inside the borders rect.
             newPos.setX(qMin(m_bordersRect.right(), qMax(newPos.x(), m_bordersRect.left())));
             newPos.setY(qMin(m_bordersRect.bottom(), qMax(newPos.y(), m_bordersRect.top())));
             return newPos;
         }
+    } else if (change == ItemPositionHasChanged && scene()) {
+        emit moved(scenePos());
+    } else if (change == ItemSelectedHasChanged && value.toBool() && scene()) {
+        emit selected(this);
     }
     return super::itemChange(change, value);
 }

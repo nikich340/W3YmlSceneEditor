@@ -73,6 +73,7 @@ enum EShotActionType {
     EShotWorldWeather,
     EShotWorldEffectStart,
     EShotWorldEffectStop,
+    EShotMAX = EShotWorldEffectStop
 };
 
 enum ERepoType {

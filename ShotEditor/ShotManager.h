@@ -2,10 +2,12 @@
 #define SHOTMANAGER_H
 
 #include <QObject>
-#include "YmlSceneManager.h"
-#include "ShotScrollArea.h"
 #include <QColor>
+#include "QResizableStackedWidget.h"
+#include "ShotScrollArea.h"
+#include "YmlSceneManager.h"
 #include "CustomRectItem.h"
+#include "YmlShotActions.h"
 #include "constants.h"
 
 struct ShotAsset {
@@ -72,6 +74,7 @@ private:
     // general
     YmlSceneManager* m_pYmlManager = nullptr;
     dialogLink* m_pDialogLink = nullptr;
+    QResizableStackedWidget* m_pEditorStackedWidget = nullptr;
     QString m_sectionName;
     int m_sectionType;
     QPixmap m_pixShow, m_pixHide;
@@ -91,7 +94,7 @@ private:
     QVector<ShotAsset*>                 m_pAssets;
     QHash<int, ShotAsset*>              m_pAssetByID;
     QHash<QGraphicsScene*, int>         m_assetIDByScene;
-    QHash<QString, QSet<CustomRectItem*>> m_actionRectsByShotName; // TODO: remove?
+    CustomRectItem*                     m_pSelectedShotAction = nullptr;
 
     QLinearGradient createGradient(QColor startColor, QColor endColor, double W, double H);
     double sceneWidth() {
@@ -105,13 +108,13 @@ private:
 public:
     explicit ShotManager(YmlSceneManager* newYmlManager, QObject *parent = nullptr);
     ~ShotManager();
-    void setWidgets(QGraphicsScene* newDialogScene, QScrollArea* newShotLabelArea, ShotScrollArea* newShotArea);
+    void setWidgets(QGraphicsScene* newDialogScene, QResizableStackedWidget* newEditorStackedWidget, QScrollArea* newShotLabelArea, ShotScrollArea* newShotArea);
     //bool eventFilter(QObject *obj, QEvent *event) override;
 
     bool isAssetSpecificType(EShotActionType type);
 	void clearShotEditor();
     void updateDialogCueText(QString shotname);
-    double getDurationForAction(ShotActionBase* sa);
+    //double getDurationForAction(SA_Base* sa);
     double X_TO_SEC(double x) {
         return x / CONSTANTS::SHOT_SECOND;
     }
@@ -122,15 +125,16 @@ public:
         return y / CONSTANTS::SHOT_LABEL_HEIGHT;
     }
     int X_TO_ShotNum(double x);
-    double X_TO_ShotPoint(double x);  // [0.0 - 1.0)
+    double X_TO_ShotPos(double x);  // [0.0 - 1.0)
+    double ShotPos_TO_X(int shotNum, double shotPoint);
+    double ShotNum_TO_Xstart(int shotNum);
     //int getGroupNumForType(EShotActionType type);
 
-    double getMinYForAction(ShotActionBase* action);
+    double getMinYForAction(SA_Base* action);
     QString shotNameByNum(int shotNum);
     void getShotInfoForPoint(QPoint point, int &shotNum, double &shotCoord, int &actorNum, int &groupNum);
-    int getAssetIDForAction(ShotActionBase* action);
     void addLabel(QString text, EShotActionType type, double offsetX, double offsetY);
-    QColor getBlockColorForActionType(EShotActionType type);
+    static QColor colorForActionType(EShotActionType type);
 
     void updateHorizontalAdvance();
     void updateVerticalAdvance();
@@ -162,6 +166,11 @@ public slots:
     void onShotRemove(QString shotName);
 
     void onShotActionContextEvent(QPointF screenPos);
+    void onShotActionStartChanged(double newStart);
+    void onShotActionStartChanged(int newStartStep);
+    void onShotActionPositionChanged(QPointF newScenePos);
+    void onShotActionChanged();
+    void onShotActionSelected(CustomRectItem* pRect);
     void onShotActionLoad(int shotNum, int actionNum);
     void onShotActionAdd(int shotNum, int assetID, EShotActionType actionType, double shotPoint);
     void onShotActionRemove(CustomRectItem* rect, bool updateYML = true);
