@@ -61,7 +61,8 @@ bool ShotScrollArea::eventFilter(QObject *watched, QEvent *event)
         QGraphicsSceneContextMenuEvent* pContextEvent = static_cast<QGraphicsSceneContextMenuEvent*>(event);
         switch (event->type()) {
             case QEvent::GraphicsSceneMousePress:
-                if (!m_inPress && pMouseEvent->buttons() & Qt::MiddleButton) {
+                //qDebug() << "ShotScrollArea::GraphicsSceneMousePress, m_inPress: " << m_inPress << ", mouseButtons: " << pMouseEvent->buttons();
+                if (pMouseEvent->buttons() & Qt::MiddleButton) {
                     m_originX = pMouseEvent->screenPos().x();
                     m_originY = pMouseEvent->screenPos().y();
                     m_inPress = true;
@@ -71,7 +72,7 @@ bool ShotScrollArea::eventFilter(QObject *watched, QEvent *event)
                 }
                 break;
             case QEvent::GraphicsSceneMouseMove:
-                emit lineMoveEvent(pMouseEvent->scenePos());
+                //qDebug() << "ShotScrollArea::GraphicsSceneMouseMove, m_inPress: " << m_inPress << ", mouseButtons: " << pMouseEvent->buttons();
                 if (m_inPress && pMouseEvent->buttons() & Qt::MiddleButton) {
                     int dx = pMouseEvent->screenPos().x() - m_originX;
                     int dy = pMouseEvent->screenPos().y() - m_originY;
@@ -87,15 +88,20 @@ bool ShotScrollArea::eventFilter(QObject *watched, QEvent *event)
                     m_originY = pMouseEvent->screenPos().y();
                     event->accept();
                     return true;
+                } else {
+                   emit lineMoveEvent(pMouseEvent->scenePos());
                 }
                 break;
             case QEvent::GraphicsSceneMouseRelease:
-                m_originX = pMouseEvent->screenPos().x();
-                m_originY = pMouseEvent->screenPos().y();
-                m_inPress = false;
-                QApplication::restoreOverrideCursor();
-                event->accept();
-                return true;
+                //qDebug() << "ShotScrollArea::GraphicsSceneMouseRelease, m_inPress: " << m_inPress << ", mouseButtons: " << pMouseEvent->buttons();
+                if (m_inPress) {
+                    m_originX = pMouseEvent->screenPos().x();
+                    m_originY = pMouseEvent->screenPos().y();
+                    m_inPress = false;
+                    QApplication::restoreOverrideCursor();
+                    event->accept();
+                    return true;
+                }
                 break;
             case QEvent::GraphicsSceneContextMenu:
                 if (pScene->views().first() != nullptr) {

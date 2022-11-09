@@ -54,7 +54,7 @@ int main(int argc, char *argv[])
     QApplication app(argc, argv);
 
     QPixmap splashPix = QPixmap(":/splash_screen.jpg").scaled(app.primaryScreen()->geometry().size() / 2.5, Qt::KeepAspectRatio, Qt::SmoothTransformation);
-    QSplashScreen splash(splashPix, Qt::WindowStaysOnTopHint);
+    QSplashScreen splash(splashPix);
     splash.setFont(QFont("Comic Sans MS", 12));
     splash.show();
     splash.showMessage(QString("\tYML Scene Editor for Radish\n\t\t\t\t\t\tby @nikich340 [build %1 (%2)]").arg(VERSION).arg(__DATE__), Qt::AlignLeft | Qt::AlignTop, QColorConstants::Svg::crimson);
@@ -63,8 +63,8 @@ int main(int argc, char *argv[])
     MainWindow window;
     splashAppendMessage(app, splash, "Loading YML repositories...");
     window.loadYmlRepos();
-    splashAppendMessage(app, splash, "Loading CSV dialog lines...");
-    window.loadCsvLines();
+    splashAppendMessage(app, splash, "Loading CSV files...");
+    window.loadCsvFiles();
     splashAppendMessage(app, splash, "READY!");
     window.showMaximized();
     splash.finish(&window);
