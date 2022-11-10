@@ -274,6 +274,8 @@ void MainWindow::setupSA_PageWidget(const EShotActionType SA_Type, QWidget* pWid
     QSlider* pStartSlider = new QSlider(Qt::Horizontal);
     pStartSlider->setObjectName("m_startSlider");
     pStartSlider->setRange(0, 999);
+    pStartSlider->setTickPosition(QSlider::TicksBelow);
+    pStartSlider->setTickInterval(100);
     pLayout->addWidget(new QLabel("Action start: "), pLayout->rowCount(),0, 1,1);
     pLayout->addWidget(pStartSlider, pLayout->rowCount()-1,1, 1,1);
     pLayout->addWidget(pStartSpin, pLayout->rowCount()-1,2, 1,1);
@@ -344,18 +346,17 @@ void MainWindow::setupSA_PageWidget(const EShotActionType SA_Type, QWidget* pWid
 
             QCheckBox* pBlendTimeCheck = new QCheckBox("Blend time: ");
             QSlider* pBlendTimeSlider = new QSlider(Qt::Horizontal);
-            pBlendTimeSlider->setRange(0, 10 * 1000);
-            pBlendTimeSlider->setSingleStep(10);
+            pBlendTimeSlider->setRange(0, 10 * 10);
             QDoubleSpinBox* pBlendTimeSpin = new QDoubleSpinBox();
             pBlendTimeSpin->setObjectName("v_blendTime");
             pBlendTimeSpin->setDecimals(3);
             pBlendTimeSpin->setRange(0.0, 1000.0);
-            pBlendTimeSpin->setSingleStep(0.1);
+            pBlendTimeSpin->setSingleStep(0.001);
             pLayout->addWidget(pBlendTimeCheck, pLayout->rowCount(),0, 1,1);
             pLayout->addWidget(pBlendTimeSlider, pLayout->rowCount()-1,1, 1,1);
             pLayout->addWidget(pBlendTimeSpin, pLayout->rowCount()-1,2, 1,1);
             SpinSliderConnector* pBlendTimeConnector = new SpinSliderConnector(pWidget);
-            pBlendTimeConnector->setDoubleSpinSlider(pBlendTimeSpin, pBlendTimeSlider, 1000);
+            pBlendTimeConnector->setDoubleSpinSlider(pBlendTimeSpin, pBlendTimeSlider, 10);
             connect(pBlendTimeConnector, SIGNAL(valueChanged(double)), m_pShotManager, SLOT(onShotActionChanged()));
             WidgetsCheckController* pBlendTimeController = new WidgetsCheckController(pWidget);
             pBlendTimeController->setObjectName("v_blendTimeCheck");
@@ -365,18 +366,17 @@ void MainWindow::setupSA_PageWidget(const EShotActionType SA_Type, QWidget* pWid
 
             QCheckBox* pBlendFactorCheck = new QCheckBox("Blend factor: ");
             QSlider* pBlendFactorSlider = new QSlider(Qt::Horizontal);
-            pBlendFactorSlider->setRange(0, 1 * 1000);
-            pBlendFactorSlider->setSingleStep(1);
+            pBlendFactorSlider->setRange(0, 1 * 100);
             QDoubleSpinBox* pBlendFactorSpin = new QDoubleSpinBox();
             pBlendFactorSpin->setObjectName("v_blendFactor");
             pBlendFactorSpin->setDecimals(3);
             pBlendFactorSpin->setRange(0.0, 1.0);
-            pBlendFactorSpin->setSingleStep(0.1);
+            pBlendFactorSpin->setSingleStep(0.001);
             pLayout->addWidget(pBlendFactorCheck, pLayout->rowCount(),0, 1,1);
             pLayout->addWidget(pBlendFactorSlider, pLayout->rowCount()-1,1, 1,1);
             pLayout->addWidget(pBlendFactorSpin, pLayout->rowCount()-1,2, 1,1);
             SpinSliderConnector* pBlendFactorConnector = new SpinSliderConnector(pWidget);
-            pBlendFactorConnector->setDoubleSpinSlider(pBlendFactorSpin, pBlendFactorSlider, 1000);
+            pBlendFactorConnector->setDoubleSpinSlider(pBlendFactorSpin, pBlendFactorSlider, 100);
             connect(pBlendFactorConnector, SIGNAL(valueChanged(double)), m_pShotManager, SLOT(onShotActionChanged()));
             WidgetsCheckController* pBlendFactorController = new WidgetsCheckController(pWidget);
             pBlendFactorController->setObjectName("v_blendFactorCheck");
@@ -402,18 +402,17 @@ void MainWindow::setupSA_PageWidget(const EShotActionType SA_Type, QWidget* pWid
         case EShotFadeOut: {
             QLabel* pDurationLabel = new QLabel("Fade duration: ");
             QSlider* pDurationSlider = new QSlider(Qt::Horizontal);
-            pDurationSlider->setRange(0, 10 * 1000);
-            pDurationSlider->setSingleStep(10);
+            pDurationSlider->setRange(0, 10 * 10);
             QDoubleSpinBox* pDurationSpin = new QDoubleSpinBox();
             pDurationSpin->setObjectName("v_duration");
             pDurationSpin->setRange(0.0, 1000.0);
             pDurationSpin->setDecimals(3);
-            pDurationSpin->setSingleStep(0.1);
+            pDurationSpin->setSingleStep(0.001);
             pLayout->addWidget(pDurationLabel, pLayout->rowCount(),0, 1,1);
             pLayout->addWidget(pDurationSlider, pLayout->rowCount()-1,1, 1,1);
             pLayout->addWidget(pDurationSpin, pLayout->rowCount()-1,2, 1,1);
             SpinSliderConnector* pDurationConnector = new SpinSliderConnector(pWidget);
-            pDurationConnector->setDoubleSpinSlider(pDurationSpin, pDurationSlider, 1000);
+            pDurationConnector->setDoubleSpinSlider(pDurationSpin, pDurationSlider, 10);
             connect(pDurationConnector, SIGNAL(valueChanged(double)), m_pShotManager, SLOT(onShotActionChanged()));
 
             QCheckBox* pColorCheck = new QCheckBox("Screen color: ");

@@ -110,7 +110,7 @@ inner_encode(const T& rhs, std::stringstream& stream){
       stream << ".inf";
     }
   } else {
-    stream << std::setprecision(5) << std::fixed << rhs;
+    stream << std::setprecision(15) << rhs;
   }
 }
 
