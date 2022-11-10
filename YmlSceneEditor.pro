@@ -44,6 +44,8 @@ HEADERS += \
     UI/QResizableStackedWidget.h \
     UI/RepoActorsDialog.h \
     UI/SocketSettingsForm.h \
+    UI/SpinSliderConnector.h \
+    UI/WidgetsCheckController.h \
     YmlSceneManager.h \
     YmlShotActions.h \
     YmlStructs.h \
@@ -143,6 +145,8 @@ SOURCES += \
     UI/QResizableStackedWidget.cpp \
     UI/RepoActorsDialog.cpp \
     UI/SocketSettingsForm.cpp \
+    UI/SpinSliderConnector.cpp \
+    UI/WidgetsCheckController.cpp \
     YmlSceneManager.cpp \
     YmlShotActions.cpp \
     YmlStructs.cpp \

@@ -167,11 +167,10 @@ public slots:
 
     void onShotActionContextEvent(QPointF screenPos);
     void onShotActionStartChanged(double newStart);
-    void onShotActionStartChanged(int newStartStep);
     void onShotActionPositionChanged(QPointF newScenePos);
     void onShotActionChanged();
     void onShotActionSelected(CustomRectItem* pRect);
-    void onShotActionLoad(int shotNum, int actionNum);
+    void onShotActionLoad(int shotNum, SA_Base* pSA);
     void onShotActionAdd(int shotNum, int assetID, EShotActionType actionType, double shotPoint);
     void onShotActionRemove(CustomRectItem* rect, bool updateYML = true);
     //void onShotActionUpdate(CustomRectItem* rect, bool updateYML = true);

@@ -1,6 +1,8 @@
 #include "MainWindow.h"
 #include "ui_mainwindow.h"
 #include <QtWidgets>
+#include "UI/SpinSliderConnector.h"
+#include "UI/WidgetsCheckController.h"
 #include "constants.h"
 
 MainWindow::MainWindow(QWidget *parent)
@@ -269,122 +271,179 @@ void MainWindow::setupSA_PageWidget(const EShotActionType SA_Type, QWidget* pWid
     pStartSpin->setDecimals(3);
     pStartSpin->setSingleStep(0.001);
     pStartSpin->setObjectName("m_startSpin");
-    QSlider* pStartSlider = new QSlider();
+    QSlider* pStartSlider = new QSlider(Qt::Horizontal);
     pStartSlider->setObjectName("m_startSlider");
-    pStartSlider->setOrientation(Qt::Horizontal);
     pStartSlider->setRange(0, 999);
     pLayout->addWidget(new QLabel("Action start: "), pLayout->rowCount(),0, 1,1);
     pLayout->addWidget(pStartSlider, pLayout->rowCount()-1,1, 1,1);
     pLayout->addWidget(pStartSpin, pLayout->rowCount()-1,2, 1,1);
     pLayout->setColumnStretch(1, 100); // alows value thing to expand
-    connect(pStartSpin, SIGNAL(valueChanged(double)), m_pShotManager, SLOT(onShotActionStartChanged(double)));
-    connect(pStartSlider, SIGNAL(sliderMoved(int)), m_pShotManager, SLOT(onShotActionStartChanged(int)));
+    SpinSliderConnector* pStartTimeConnector = new SpinSliderConnector(pWidget);
+    pStartTimeConnector->setDoubleSpinSlider(pStartSpin, pStartSlider, 1000);
+    connect(pStartTimeConnector, SIGNAL(valueChanged(double)), m_pShotManager, SLOT(onShotActionStartChanged(double)));
     switch (SA_Type) {
         // SHARED
         case EShotCam:
         case EShotCamBlendKey:
         case EShotCamBlendTogame:
         {
-            // load (camera) names from sceneGlobals every time in exportWidget
+            QLabel* pCamLabel = new QLabel("Camera name: ");
             QComboBox* pCamNamesBox = new QComboBox();
             QPushButton* pCamButton = new QPushButton("Edit");
             pCamNamesBox->setObjectName("v_camName");
-            pLayout->addWidget(new QLabel("Camera name: "), pLayout->rowCount(),0, 1,1);
+            pLayout->addWidget(pCamLabel, pLayout->rowCount(),0, 1,1);
             pLayout->addWidget(pCamNamesBox, pLayout->rowCount()-1,1, 1,1);
             pLayout->addWidget(pCamButton, pLayout->rowCount()-1,2, 1,1);
-            // TODO! QObject::connect(pCamButton, SIGNAL(clicked(bool)), m_pDialogEditCamera, SLOT(open()));
+            // TODO! connect(pCamButton, SIGNAL(clicked(bool)), m_pDialogEditCamera, SLOT(open()));
             // TODO! m_pDialogEditCamera->addBoxForUpdates(pCamNamesBox); -> fills camera names
-            QObject::connect(pCamNamesBox, SIGNAL(currentIndexChanged(int)), m_pShotManager, SLOT(onShotActionChanged()));
+            connect(pCamNamesBox, SIGNAL(currentIndexChanged(int)), m_pShotManager, SLOT(onShotActionChanged()));
             break;
         }
         case EShotCamBlendStart:
         case EShotCamBlendEnd:
         {
-            // load (camera) names from sceneGlobals every time in exportWidget
+            QLabel* pCamLabel = new QLabel("Camera name: ");
             QComboBox* pCamNamesBox = new QComboBox();
             QPushButton* pCamButton = new QPushButton("Edit");
             pCamNamesBox->setObjectName("v_camName");
-            pLayout->addWidget(new QLabel("Camera name: "), pLayout->rowCount(),0, 1,1);
+            pLayout->addWidget(pCamLabel, pLayout->rowCount(),0, 1,1);
             pLayout->addWidget(pCamNamesBox, pLayout->rowCount()-1,1, 1,1);
             pLayout->addWidget(pCamButton, pLayout->rowCount()-1,2, 1,1);
-            // TODO! QObject::connect(pCamButton, SIGNAL(clicked(bool)), m_pDialogEditCamera, SLOT(open()));
+            // TODO! connect(pCamButton, SIGNAL(clicked(bool)), m_pDialogEditCamera, SLOT(open()));
             // TODO! m_pDialogEditCamera->addBoxForUpdates(pCamNamesBox); -> fills camera names
-            QObject::connect(pCamNamesBox, SIGNAL(currentIndexChanged(int)), m_pShotManager, SLOT(onShotActionChanged()));
+            connect(pCamNamesBox, SIGNAL(currentIndexChanged(int)), m_pShotManager, SLOT(onShotActionChanged()));
 
             QCheckBox* pEaseCheck = new QCheckBox("Camera ease: ");
-            pEaseCheck->setObjectName("v_camEaseCheck");
             QComboBox* pEaseBox = new QComboBox();
             pEaseBox->setObjectName("v_camEase");
             pEaseBox->addItems({"smooth", "rapid"});
-            QObject::connect(pEaseCheck, SIGNAL(clicked(bool)), pEaseBox, SLOT(setEnabled(bool)));
-            QObject::connect(pEaseCheck, SIGNAL(clicked(bool)), m_pShotManager, SLOT(onShotActionChanged()));
             pLayout->addWidget(pEaseCheck, pLayout->rowCount(),0, 1,1);
             pLayout->addWidget(pEaseBox, pLayout->rowCount()-1,1, 1,1);
-            QObject::connect(pEaseBox, SIGNAL(currentIndexChanged(int)), m_pShotManager, SLOT(onShotActionChanged()));
+            WidgetsCheckController* pEaseController = new WidgetsCheckController(pWidget);
+            pEaseController->setObjectName("v_camEaseCheck");
+            pEaseController->setCheckbox(pEaseCheck);
+            pEaseController->addWidget(pEaseBox);
+            connect(pEaseController, SIGNAL(clicked(bool)), m_pShotManager, SLOT(onShotActionChanged()));
+            connect(pEaseBox, SIGNAL(currentIndexChanged(int)), m_pShotManager, SLOT(onShotActionChanged()));
             break;
         }
         case EShotEnvBlendIn:
         case EShotEnvBlendOut:
         {
-            // load (camera) names from sceneGlobals every time in exportWidget
+            QLabel* pEnvLabel = new QLabel("Env path: ");
             QLineEdit* pEnvPathLine = new QLineEdit();
             QPushButton* pEnvPathButton = new QPushButton("Select");
             pEnvPathLine->setObjectName("v_envPath");
-            pLayout->addWidget(new QLabel("Env path: "), pLayout->rowCount(),0, 1,1);
+            pLayout->addWidget(pEnvLabel, pLayout->rowCount(),0, 1,1);
             pLayout->addWidget(pEnvPathLine, pLayout->rowCount()-1,1, 1,1);
             pLayout->addWidget(pEnvPathButton, pLayout->rowCount()-1,2, 1,1);
-            QObject::connect(pEnvPathLine, SIGNAL(textChanged(QString)), m_pShotManager, SLOT(onShotActionChanged()));
-            QObject::connect(pEnvPathButton, SIGNAL(clicked(bool)), m_pDialogSelectEnv, SLOT(exec()));
-            QObject::connect(m_pDialogSelectEnv, SIGNAL(envSelected(QString)), pEnvPathLine, SLOT(setText(QString)));
+            connect(pEnvPathLine, SIGNAL(textChanged(QString)), m_pShotManager, SLOT(onShotActionChanged()));
+            connect(pEnvPathButton, SIGNAL(clicked(bool)), m_pDialogSelectEnv, SLOT(exec()));
+            connect(m_pDialogSelectEnv, SIGNAL(envSelected(QString)), pEnvPathLine, SLOT(setText(QString)));
             // button click -> env dialog open -> click OK -> emit new path to line -> onShotActionChanged()
 
             QCheckBox* pBlendTimeCheck = new QCheckBox("Blend time: ");
-            pBlendTimeCheck->setObjectName("v_blendTimeCheck");
+            QSlider* pBlendTimeSlider = new QSlider(Qt::Horizontal);
+            pBlendTimeSlider->setRange(0, 10 * 1000);
+            pBlendTimeSlider->setSingleStep(10);
             QDoubleSpinBox* pBlendTimeSpin = new QDoubleSpinBox();
             pBlendTimeSpin->setObjectName("v_blendTime");
             pBlendTimeSpin->setDecimals(3);
             pBlendTimeSpin->setRange(0.0, 1000.0);
             pBlendTimeSpin->setSingleStep(0.1);
-            QObject::connect(pBlendTimeCheck, SIGNAL(clicked(bool)), pBlendTimeSpin, SLOT(setEnabled(bool)));
-            QObject::connect(pBlendTimeCheck, SIGNAL(clicked(bool)), m_pShotManager, SLOT(onShotActionChanged()));
             pLayout->addWidget(pBlendTimeCheck, pLayout->rowCount(),0, 1,1);
-            pLayout->addWidget(pBlendTimeSpin, pLayout->rowCount()-1,1, 1,1);
-            QObject::connect(pBlendTimeSpin, SIGNAL(valueChanged(double)), m_pShotManager, SLOT(onShotActionChanged()));
+            pLayout->addWidget(pBlendTimeSlider, pLayout->rowCount()-1,1, 1,1);
+            pLayout->addWidget(pBlendTimeSpin, pLayout->rowCount()-1,2, 1,1);
+            SpinSliderConnector* pBlendTimeConnector = new SpinSliderConnector(pWidget);
+            pBlendTimeConnector->setDoubleSpinSlider(pBlendTimeSpin, pBlendTimeSlider, 1000);
+            connect(pBlendTimeConnector, SIGNAL(valueChanged(double)), m_pShotManager, SLOT(onShotActionChanged()));
+            WidgetsCheckController* pBlendTimeController = new WidgetsCheckController(pWidget);
+            pBlendTimeController->setObjectName("v_blendTimeCheck");
+            pBlendTimeController->setCheckbox(pBlendTimeCheck);
+            pBlendTimeController->addWidget(pBlendTimeSpin);
+            connect(pBlendTimeController, SIGNAL(clicked(bool)), m_pShotManager, SLOT(onShotActionChanged()));
 
             QCheckBox* pBlendFactorCheck = new QCheckBox("Blend factor: ");
-            pBlendFactorCheck->setObjectName("v_blendFactorCheck");
+            QSlider* pBlendFactorSlider = new QSlider(Qt::Horizontal);
+            pBlendFactorSlider->setRange(0, 1 * 1000);
+            pBlendFactorSlider->setSingleStep(1);
             QDoubleSpinBox* pBlendFactorSpin = new QDoubleSpinBox();
             pBlendFactorSpin->setObjectName("v_blendFactor");
-            pBlendTimeSpin->setDecimals(3);
-            pBlendTimeSpin->setRange(0.0, 1.0);
-            pBlendTimeSpin->setSingleStep(0.1);
-            QObject::connect(pBlendFactorCheck, SIGNAL(clicked(bool)), pBlendFactorSpin, SLOT(setEnabled(bool)));
-            QObject::connect(pBlendFactorCheck, SIGNAL(clicked(bool)), m_pShotManager, SLOT(onShotActionChanged()));
+            pBlendFactorSpin->setDecimals(3);
+            pBlendFactorSpin->setRange(0.0, 1.0);
+            pBlendFactorSpin->setSingleStep(0.1);
             pLayout->addWidget(pBlendFactorCheck, pLayout->rowCount(),0, 1,1);
-            pLayout->addWidget(pBlendFactorSpin, pLayout->rowCount()-1,1, 1,1);
-            QObject::connect(pBlendFactorSpin, SIGNAL(valueChanged(double)), m_pShotManager, SLOT(onShotActionChanged()));
+            pLayout->addWidget(pBlendFactorSlider, pLayout->rowCount()-1,1, 1,1);
+            pLayout->addWidget(pBlendFactorSpin, pLayout->rowCount()-1,2, 1,1);
+            SpinSliderConnector* pBlendFactorConnector = new SpinSliderConnector(pWidget);
+            pBlendFactorConnector->setDoubleSpinSlider(pBlendFactorSpin, pBlendFactorSlider, 1000);
+            connect(pBlendFactorConnector, SIGNAL(valueChanged(double)), m_pShotManager, SLOT(onShotActionChanged()));
+            WidgetsCheckController* pBlendFactorController = new WidgetsCheckController(pWidget);
+            pBlendFactorController->setObjectName("v_blendFactorCheck");
+            pBlendFactorController->setCheckbox(pBlendFactorCheck);
+            pBlendFactorController->addWidget(pBlendFactorSpin);
+            connect(pBlendFactorController, SIGNAL(clicked(bool)), m_pShotManager, SLOT(onShotActionChanged()));
 
             QCheckBox* pPriorityCheck = new QCheckBox("Env priority: ");
-            pPriorityCheck->setObjectName("v_priorityCheck");
             QSpinBox* pPrioritySpin = new QSpinBox();
             pPrioritySpin->setObjectName("v_priority");
             pPrioritySpin->setRange(0, 1000000);
-            QObject::connect(pPriorityCheck, SIGNAL(clicked(bool)), pPrioritySpin, SLOT(setEnabled(bool)));
-            QObject::connect(pPriorityCheck, SIGNAL(clicked(bool)), m_pShotManager, SLOT(onShotActionChanged()));
             pLayout->addWidget(pPriorityCheck, pLayout->rowCount(),0, 1,1);
-            pLayout->addWidget(pPrioritySpin, pLayout->rowCount()-1,1, 1,1);
-            QObject::connect(pPrioritySpin, SIGNAL(valueChanged(int)), m_pShotManager, SLOT(onShotActionChanged()));
+            pLayout->addWidget(pPrioritySpin, pLayout->rowCount()-1,2, 1,1);
+            connect(pPrioritySpin, SIGNAL(valueChanged(int)), m_pShotManager, SLOT(onShotActionChanged()));
+            WidgetsCheckController* pPriorityController = new WidgetsCheckController(pWidget);
+            pPriorityController->setObjectName("v_priorityCheck");
+            pPriorityController->setCheckbox(pPriorityCheck);
+            pPriorityController->addWidget(pPrioritySpin);
+            connect(pPriorityController, SIGNAL(clicked(bool)), m_pShotManager, SLOT(onShotActionChanged()));
             break;
         }
         case EShotFadeIn:
+        case EShotFadeOut: {
+            QLabel* pDurationLabel = new QLabel("Fade duration: ");
+            QSlider* pDurationSlider = new QSlider(Qt::Horizontal);
+            pDurationSlider->setRange(0, 10 * 1000);
+            pDurationSlider->setSingleStep(10);
+            QDoubleSpinBox* pDurationSpin = new QDoubleSpinBox();
+            pDurationSpin->setObjectName("v_duration");
+            pDurationSpin->setRange(0.0, 1000.0);
+            pDurationSpin->setDecimals(3);
+            pDurationSpin->setSingleStep(0.1);
+            pLayout->addWidget(pDurationLabel, pLayout->rowCount(),0, 1,1);
+            pLayout->addWidget(pDurationSlider, pLayout->rowCount()-1,1, 1,1);
+            pLayout->addWidget(pDurationSpin, pLayout->rowCount()-1,2, 1,1);
+            SpinSliderConnector* pDurationConnector = new SpinSliderConnector(pWidget);
+            pDurationConnector->setDoubleSpinSlider(pDurationSpin, pDurationSlider, 1000);
+            connect(pDurationConnector, SIGNAL(valueChanged(double)), m_pShotManager, SLOT(onShotActionChanged()));
 
+            QCheckBox* pColorCheck = new QCheckBox("Screen color: ");
+            QLabel* pColorLabel = new QLabel();
+            pColorLabel->setObjectName("v_color");
+            pColorLabel->setAutoFillBackground(true);
+            QPushButton* pColorButton = new QPushButton("Select");
+            pLayout->addWidget(pColorCheck, pLayout->rowCount(),0, 1,1);
+            pLayout->addWidget(pColorLabel, pLayout->rowCount()-1,1, 1,1);
+            pLayout->addWidget(pColorButton, pLayout->rowCount()-1,2, 1,1);
+            WidgetsCheckController* pColorController = new WidgetsCheckController(pWidget);
+            pColorController->setObjectName("v_colorCheck");
+            pColorController->setCheckbox(pColorCheck);
+            pColorController->addWidget(pColorLabel);
+            pColorController->addWidget(pColorButton);
+            connect(pColorController, SIGNAL(clicked(bool)), m_pShotManager, SLOT(onShotActionChanged()));
+            connect(pColorButton, &QAbstractButton::clicked, this, [pColorLabel, this]() {
+                QColor color = QColorDialog::getColor(Qt::black, this, "Select screen color", QColorDialog::ShowAlphaChannel);
+                if (color.isValid()) {
+                    QPalette palette = pColorLabel->palette();
+                    palette.setColor(QPalette::Window, color);
+                    pColorLabel->setPalette(palette);
+                    m_pShotManager->onShotActionChanged();
+                }
+            });
             break;
-        case EShotFadeOut:
-
+        }
+        case EShotWorldAddfact:{
             break;
-        case EShotWorldAddfact:
-
-            break;
+        }
         case EShotWorldWeather:
 
             break;
