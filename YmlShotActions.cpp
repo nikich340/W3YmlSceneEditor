@@ -1,6 +1,7 @@
 #include <QDebug>
 #include <QGridLayout>
 #include <QCheckBox>
+#include "UI/WidgetsCheckController.h"
 #include <QComboBox>
 #include <QSlider>
 #include <QDoubleSpinBox>
@@ -51,13 +52,13 @@ SA_Base* SA_Base::createShotAction(const EShotActionType SA_Type, sceneInfo* pSG
         case EShotEnvBlendOut:
             ret = new SA_EnvBlendOut;
             break;
-        /*case EShotFadeIn:
+        case EShotFadeIn:
             ret = new SA_FadeIn;
             break;
         case EShotFadeOut:
             ret = new SA_FadeOut;
             break;
-        case EShotWorldAddfact:
+        /*case EShotWorldAddfact:
             ret = new SA_WorldAddfact;
             break;
         case EShotWorldWeather:
@@ -188,9 +189,9 @@ QString SA_Base::shortDescription(const EShotActionType SA_Type)
         case EShotEnvBlendOut:
             return "Blends out from specified .env (use absolute path). <br>Makes sense after env.blendin with the same path.";
         case EShotFadeIn:
-            return "-";
+            return "Fade in monotone-colored screen. <br>Makes sense only after fade.out with ≥0.1s interval.";
         case EShotFadeOut:
-            return "-";
+            return "Fade out to monotone-colored screen.";
         case EShotWorldAddfact:
             return "-";
         case EShotWorldWeather:
@@ -362,27 +363,22 @@ bool SA_Cam::importYmlNode(const YAML::Node& paramNode, QString& outMessage)
         return false;
 
     if (m_isExtended) {
-        outMessage = QString("%1: cam action must be a sequence").arg(Q_FUNC_INFO);
-        return false;
-    } else {
-        QString name = paramNode[1].as<QString>();
-        if ( !m_pSG->hasName(ERepoCameras, name) ) {
-            outMessage = QString("%1: cam %2 not found in repo").arg(Q_FUNC_INFO).arg(name);
-            return false;
-        }
-        v_camNameID = m_pSG->getID(ERepoCameras, name);
+       outMessage = QString("%1: Expected values sequence").arg(Q_FUNC_INFO);
+       return false;
     }
+    QString name = paramNode[1].as<QString>();
+    if ( !m_pSG->hasName(ERepoCameras, name) ) {
+        outMessage = QString("%1: cam %2 not found in repo").arg(Q_FUNC_INFO).arg(name);
+        return false;
+    }
+    v_camNameID = m_pSG->getID(ERepoCameras, name);
     return true;
 }
 
 void SA_Cam::updateYmlNode()
 {
     super::updateYmlNode();
-    if (!m_isExtended) {
-        m_ymlNode[ m_actionTypeStr ].push_back( m_pSG->getName(v_camNameID) );
-    } else {
-        m_ymlNode[ m_actionTypeStr ][ ".@pos" ].push_back( m_pSG->getName(v_camNameID) );
-    }
+    m_ymlNode[ m_actionTypeStr ].push_back( m_pSG->getName(v_camNameID) );
 }
 
 void SA_Cam::importWidget()
@@ -418,6 +414,10 @@ bool SA_CamBlendStart::importYmlNode(const YAML::Node& paramNode, QString& outMe
 {
     if ( !super::importYmlNode(paramNode, outMessage) )
         return false;
+    if (m_isExtended) {
+       outMessage = QString("%1: Expected values sequence").arg(Q_FUNC_INFO);
+       return false;
+    }
     if ( paramNode.size() > 2 ) {
         v_camEase = paramNode[2].as<QString>();
         m_optionValues.insert("v_camEase");
@@ -432,13 +432,8 @@ bool SA_CamBlendStart::importYmlNode(const YAML::Node& paramNode, QString& outMe
 void SA_CamBlendStart::updateYmlNode()
 {
     super::updateYmlNode();
-    if (!m_isExtended) {
-        if (m_optionValues.contains("v_camEase"))
-            m_ymlNode[ m_actionTypeStr ].push_back( v_camEase );
-    } else {
-        if (m_optionValues.contains("v_camEase"))
-            m_ymlNode[ m_actionTypeStr ][ ".@pos" ].push_back( v_camEase );
-    }
+    if (m_optionValues.contains("v_camEase"))
+        m_ymlNode[ m_actionTypeStr ].push_back( v_camEase );
 }
 
 void SA_CamBlendStart::importWidget()
@@ -456,7 +451,7 @@ void SA_CamBlendStart::importWidget()
 void SA_CamBlendStart::exportWidget(QWidget* pWidget)
 {
     super::exportWidget(pWidget);
-    QCheckBox* pEaseCheck = m_pWidget->findChild<QCheckBox*>("v_camEaseCheck");
+    WidgetsCheckController* pEaseCheck = m_pWidget->findChild<WidgetsCheckController*>("v_camEaseCheck");
     pEaseCheck->setChecked(m_optionValues.contains("v_camEase"));
     QComboBox* pEaseBox = m_pWidget->findChild<QComboBox*>("v_camEase");
     pEaseBox->setCurrentText(v_camEase);
@@ -468,6 +463,7 @@ bool SA_EnvBlendIn::importYmlNode(const YAML::Node& paramNode, QString& outMessa
         return false;
     if (!m_isExtended) {
         v_envPath = paramNode[1].as<QString>();
+        v_envPath.replace("\\", "/");
         if (paramNode.size() > 2) {
             v_blendTime = paramNode[2].as<double>();
             m_optionValues.insert("v_blendTime");
@@ -504,9 +500,9 @@ void SA_EnvBlendIn::updateYmlNode()
         if (m_optionValues.contains("v_blendTime"))
             m_ymlNode[ m_actionTypeStr ][ ".@pos" ].push_back( v_blendTime );
         if (m_optionValues.contains("v_blendFactor"))
-            m_ymlNode[ "blendFactor" ] = v_blendFactor;
+            m_ymlNode[ m_actionTypeStr ][ "blendFactor" ] = v_blendFactor;
         if (m_optionValues.contains("v_priority"))
-            m_ymlNode[ "priority" ] = v_priority;
+            m_ymlNode[ m_actionTypeStr ][ "priority" ] = v_priority;
     }
 }
 
@@ -515,6 +511,7 @@ void SA_EnvBlendIn::importWidget()
     super::importWidget();
     QLineEdit* pEnvPathLine = m_pWidget->findChild<QLineEdit*>("v_envPath");
     v_envPath = pEnvPathLine->text();
+    v_envPath.replace("\\", "/");
 
     QDoubleSpinBox* pBlendTimeSpin = m_pWidget->findChild<QDoubleSpinBox*>("v_blendTime");
     if (pBlendTimeSpin->isEnabled()) {
@@ -528,7 +525,7 @@ void SA_EnvBlendIn::importWidget()
     if (pBlendFactorSpin->isEnabled()) {
         m_isExtended = true;
         m_optionValues.insert("v_blendFactor");
-        v_blendTime = pBlendFactorSpin->value();
+        v_blendFactor = pBlendFactorSpin->value();
     } else {
         m_optionValues.remove("v_blendFactor");
     }
@@ -537,7 +534,7 @@ void SA_EnvBlendIn::importWidget()
     if (pPrioritySpin->isEnabled()) {
         m_isExtended = true;
         m_optionValues.insert("v_priority");
-        v_blendTime = pPrioritySpin->value();
+        v_priority = pPrioritySpin->value();
     } else {
         m_optionValues.remove("v_priority");
     }
@@ -546,18 +543,74 @@ void SA_EnvBlendIn::importWidget()
 void SA_EnvBlendIn::exportWidget(QWidget* pWidget)
 {
     super::exportWidget(pWidget);
-    QCheckBox* pBlendTimeSpinCheck = m_pWidget->findChild<QCheckBox*>("v_blendTimeCheck");
+    QLineEdit* pEnvPathLine = m_pWidget->findChild<QLineEdit*>("v_envPath");
+    pEnvPathLine->setText(v_envPath);
+
+    WidgetsCheckController* pBlendTimeSpinCheck = m_pWidget->findChild<WidgetsCheckController*>("v_blendTimeCheck");
     pBlendTimeSpinCheck->setChecked(m_optionValues.contains("v_blendTime"));
     QDoubleSpinBox* pBlendTimeSpin = m_pWidget->findChild<QDoubleSpinBox*>("v_blendTime");
     pBlendTimeSpin->setValue(v_blendTime);
 
-    QCheckBox* pBlendFactorCheck = m_pWidget->findChild<QCheckBox*>("v_blendTimeCheck");
+    WidgetsCheckController* pBlendFactorCheck = m_pWidget->findChild<WidgetsCheckController*>("v_blendFactorCheck");
     pBlendFactorCheck->setChecked(m_optionValues.contains("v_blendFactor"));
     QDoubleSpinBox* pBlendFactorSpin = m_pWidget->findChild<QDoubleSpinBox*>("v_blendFactor");
     pBlendFactorSpin->setValue(v_blendFactor);
 
-    QCheckBox* pPriorityCheck = m_pWidget->findChild<QCheckBox*>("v_priorityCheck");
+    WidgetsCheckController* pPriorityCheck = m_pWidget->findChild<WidgetsCheckController*>("v_priorityCheck");
     pPriorityCheck->setChecked(m_optionValues.contains("v_priority"));
     QSpinBox* pPrioritySpin = m_pWidget->findChild<QSpinBox*>("v_priority");
     pPrioritySpin->setValue(v_priority);
+}
+
+bool SA_FadeIn::importYmlNode(const YAML::Node& paramNode, QString& outMessage)
+{
+    if ( !super::importYmlNode(paramNode, outMessage) )
+        return false;
+    if (m_isExtended) {
+       outMessage = QString("%1: Expected values sequence").arg(Q_FUNC_INFO);
+       return false;
+    }
+    v_duration = paramNode[1].as<double>();
+    if (paramNode.size() > 2) {
+        v_color = paramNode[2].as<QColor>();
+        m_optionValues.insert("v_color");
+    }
+
+    return true;
+}
+
+void SA_FadeIn::updateYmlNode()
+{
+    super::updateYmlNode();
+    m_ymlNode[ m_actionTypeStr ].push_back( v_duration );
+    if (m_optionValues.contains("v_color"))
+        m_ymlNode[ m_actionTypeStr ].push_back( v_color );
+}
+
+void SA_FadeIn::importWidget()
+{
+    super::importWidget();
+    QDoubleSpinBox* pDurationSpin = m_pWidget->findChild<QDoubleSpinBox*>("v_duration");
+    v_duration = pDurationSpin->value();
+    QLabel* pColorLabel = m_pWidget->findChild<QLabel*>("v_color");
+    if (pColorLabel->isEnabled()) {
+        m_optionValues.insert("v_color");
+        v_color = pColorLabel->palette().color(QPalette::Window);
+    } else {
+        m_optionValues.remove("v_color");
+    }
+}
+
+void SA_FadeIn::exportWidget(QWidget* pWidget)
+{
+    super::exportWidget(pWidget);
+    QDoubleSpinBox* pDurationSpin = m_pWidget->findChild<QDoubleSpinBox*>("v_duration");
+    pDurationSpin->setValue(v_duration);
+
+    QLabel* pColorLabel = m_pWidget->findChild<QLabel*>("v_color");
+    QPalette colorPalette = pColorLabel->palette();
+    colorPalette.setColor(QPalette::Window, v_color);
+    pColorLabel->setPalette(colorPalette);
+    WidgetsCheckController* pColorCheck = m_pWidget->findChild<WidgetsCheckController*>("v_colorCheck");
+    pColorCheck->setChecked(m_optionValues.contains("v_color"));
 }

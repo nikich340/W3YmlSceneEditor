@@ -556,6 +556,7 @@ bool YmlSceneManager::loadShotActions(const YAML::Node actsNode, shot& sh) {
             error(errorMsg);
             continue;
         }
+        pNewAction->updateYmlNode();
         qd << QString("%1: Created SA with type: %2").arg(Q_FUNC_INFO).arg(pNewAction->actionTypeStr());
         sh.actions.pb(pNewAction);
     }
@@ -2007,6 +2008,7 @@ void YmlSceneManager::updateShot(QString sectionName, int shotNum)
         }
         YAML::Node shotSeq(YAML::NodeType::Sequence);
         shotSeq.SetStyle(YAML::EmitterStyle::Block);
+        m_pDialogLinkBySectionName[sectionName]->shots[shotNum].sortActionsByStart();
         upn(i, 0, actionsCount - 1) {
             SA_Base* sa = m_pDialogLinkBySectionName[sectionName]->shots[shotNum].actions[i];
             shotSeq.push_back( sa->ymlNode() );

@@ -105,4 +105,22 @@ class SA_EnvBlendOut : public SA_EnvBlendIn {
     EShotActionType actionType() override { return EShotEnvBlendOut; }
 };
 
+class SA_FadeIn : public SA_Base {
+protected:
+    double v_duration = 1.0;
+    QColor v_color = QColor(Qt::black);
+public:
+    using super = SA_Base;
+    EShotActionType actionType() override { return EShotFadeIn; }
+    virtual bool importYmlNode(const YAML::Node& paramNode, QString& outMessage);
+    virtual void updateYmlNode();
+    virtual void importWidget();
+    virtual void exportWidget(QWidget* pWidget);
+};
+
+class SA_FadeOut : public SA_FadeIn {
+    using super = SA_FadeIn;
+    EShotActionType actionType() override { return EShotFadeOut; }
+};
+
 #endif // YMLShotActions_H
