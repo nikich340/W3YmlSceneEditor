@@ -150,7 +150,7 @@ public:
 	// but load DEFAULT MIMIC from actors repository firstly, and production secondly..
 
 	/* names storage - store unique int IDs instead of real names (easy renaming, less RAM usage) */
-    QHash<QString, int> usedIDs[ERepoMAX]; // usedNamesFor["type"].contains("name")
+    QHash<QString, int> usedIDs[ERepoMAX + 1]; // usedNamesFor["type"].contains("name")
 												 // usedNamesFor["type"].insert("name")
     QHash< int, QPair<ERepoType, QString> > usedNames;
 	int newID = 0;
@@ -240,13 +240,27 @@ public:
         mimic_poses = QHash<int, mimic_pose>();
         soundbanks = QHash<int, QSet<QString>>();
 
-        upn(i, 0, ERepoMAX - 1) {
+        upn(i, 0, ERepoMAX) {
             usedIDs[i] = QHash<QString, int>();
         }
         usedNames = QHash< int, QPair<ERepoType, QString> >();
         defaultPose = QHash<int, int>();
         defaultMimic = QHash<int, mimic_pose>();
         defaultPlacement = QHash<int, transform>();
+    }
+    ~sceneInfo() {
+        actors.clear();
+        props.clear();
+        cameras.clear();
+        anims.clear();
+        mimics.clear();
+        poses.clear();
+        mimic_poses.clear();
+        soundbanks.clear();
+        upn(i, 0, ERepoMAX) {
+            usedIDs[i].clear();
+        }
+        usedNames.clear();
     }
 	// [actor] = value
 };
